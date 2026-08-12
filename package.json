@@ -7,23 +7,62 @@
     "#evals/*": "./evals/*"
   },
   "scripts": {
-    "build": "eve build",
-    "dev": "eve dev",
-    "start": "eve start",
-    "typecheck": "tsc"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "eve:dev": "eve dev",
+    "eve:build": "eve build",
+    "typecheck": "tsc",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:seed": "node prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "verify": "node scripts/verify-pipeline.ts"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "@radix-ui/react-use-controllable-state": "1.2.2",
+    "@react-pdf/renderer": "^4.5.1",
+    "@shikijs/core": "4.1.0",
+    "@shikijs/engine-javascript": "4.1.0",
+    "@shikijs/engine-oniguruma": "4.1.0",
+    "@streamdown/cjk": "1.0.3",
+    "@streamdown/code": "1.1.1",
+    "@streamdown/math": "1.0.2",
+    "@streamdown/mermaid": "1.0.2",
+    "@tailwindcss/postcss": "4.3.0",
     "@vercel/connect": "0.4.3",
     "ai": "^7.0.38",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "cmdk": "1.1.1",
     "eve": "^0.31.3",
+    "lucide-react": "1.16.0",
+    "motion": "12.40.0",
+    "nanoid": "5.1.11",
+    "next": "16.3.0-preview.6",
+    "radix-ui": "1.4.3",
+    "react": "^19.2.6",
+    "react-dom": "19.2.6",
+    "shiki": "4.1.0",
+    "streamdown": "2.5.0",
+    "tailwind-merge": "3.6.0",
+    "tailwindcss": "4.3.0",
+    "unpdf": "^1.8.0",
+    "use-stick-to-bottom": "1.1.4",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@types/node": "24.x",
-    "typescript": "7.0.2"
+    "@types/node": "~26.2.0",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "19.2.3",
+    "prisma": "^7.9.1",
+    "typescript": "6.0.3"
   },
   "engines": {
     "node": "24.x"
   }
-
 }
