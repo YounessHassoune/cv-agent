@@ -1,0 +1,61 @@
+import { NextResponse } from "next/server";
+import { db } from "@/agent/lib/db.ts";
+import {
+  EMAIL_PATTERN,
+  hashPassword,
+  normalizeEmail,
+  passwordProblem,
+} from "@/agent/lib/password.ts";
+import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/agent/lib/session.ts";
+
+export async function POST(request: Request) {
+  const form = await request.formData();
+  const name = String(form.get("name") ?? "").trim();
+  const email = normalizeEmail(form.get("email"));
+  const password = String(form.get("password") ?? "");
+
+  const fail = (error: string) =>
+    NextResponse.redirect(
+      new URL(
+        `/signup?error=${error}&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`,
+        request.url,
+      ),
+      303,
+    );
+
+  if (!EMAIL_PATTERN.test(email)) return fail("email");
+  if (passwordProblem(password)) return fail("password");
+
+  const existing = await db.user.findUnique({ where: { email } });
+  if (existing) {
+    // A Google-first account can claim its password here; a password account
+    // already exists and should sign in instead.
+    if (existing.passwordHash) return fail("exists");
+    await db.user.update({
+      where: { id: existing.id },
+      data: { passwordHash: await hashPassword(password), name: existing.name ?? (name || null) },
+    });
+    const { token, maxAge } = signSession(existing.id, existing.email);
+    const response = NextResponse.redirect(new URL("/profile", request.url), 303);
+    response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
+    return response;
+  }
+
+  const user = await db.user.create({
+    data: { email, name: name || null, passwordHash: await hashPassword(password) },
+  });
+
+  // Seed the master profile so the builder opens with the name already filled.
+  await db.profile.create({
+    data: {
+      userId: user.id,
+      fullName: name || email.split("@")[0],
+      contact: { email, links: [] },
+    },
+  });
+
+  const { token, maxAge } = signSession(user.id, user.email);
+  const response = NextResponse.redirect(new URL("/profile", request.url), 303);
+  response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
+  return response;
+}

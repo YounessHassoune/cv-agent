@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
-import { Nav } from "@/app/_components/nav";
+import { themeScript } from "@/components/theme-toggle";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -27,14 +27,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <html className={cn(sans.variable, mono.variable)} lang="en">
+    <html className={cn(sans.variable, mono.variable)} lang="en" suppressHydrationWarning>
+      <head>
+        {/* Applies the stored theme before paint so dark mode never flashes. */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
-        <TooltipProvider>
-          <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
-            <Nav />
-            <div className="min-h-0 flex-1 overflow-auto">{children}</div>
-          </div>
-        </TooltipProvider>
+        <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>
   );

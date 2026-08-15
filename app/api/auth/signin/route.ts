@@ -1,27 +1,35 @@
 import { NextResponse } from "next/server";
-import { SESSION_COOKIE, signSession } from "@/agent/lib/session.ts";
+import { db } from "@/agent/lib/db.ts";
+import { EMAIL_PATTERN, normalizeEmail, verifyPassword } from "@/agent/lib/password.ts";
+import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/agent/lib/session.ts";
 
 /**
- * Minimal email-keyed sign-in: the email becomes the stable userId that scopes
- * every profile and application. Swap this route (and the `appSession()` AuthFn
- * in agent/channels/eve.ts) for Auth.js or Clerk when you need real identity.
+ * Email + password sign-in. The signed cookie carries the `User.id`, which is
+ * the key every profile and application is scoped by (see agent/lib/auth.ts).
  */
 export async function POST(request: Request) {
   const form = await request.formData();
-  const email = String(form.get("email") ?? "").trim().toLowerCase();
+  const email = normalizeEmail(form.get("email"));
+  const password = String(form.get("password") ?? "");
 
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    return NextResponse.redirect(new URL("/signin?error=invalid", request.url), 303);
+  const fail = (error: string) =>
+    NextResponse.redirect(
+      new URL(`/signin?error=${error}&email=${encodeURIComponent(email)}`, request.url),
+      303,
+    );
+
+  if (!EMAIL_PATTERN.test(email) || password.length === 0) return fail("invalid");
+
+  const user = await db.user.findUnique({ where: { email } });
+
+  // Same message whether the account is missing, Google-only, or the password
+  // is wrong — otherwise this route doubles as an account-existence oracle.
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    return fail("credentials");
   }
 
-  const { token, maxAge } = signSession(email, email);
-  const response = NextResponse.redirect(new URL("/profile", request.url), 303);
-  response.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge,
-  });
+  const { token, maxAge } = signSession(user.id, user.email);
+  const response = NextResponse.redirect(new URL("/", request.url), 303);
+  response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
   return response;
 }

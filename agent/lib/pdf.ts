@@ -9,6 +9,7 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import { extractText, getDocumentProxy } from "unpdf";
+import { type CvTemplate, resolveTemplate } from "../../lib/cv-templates";
 import type { Cv } from "./cv-schema";
 
 const h = React.createElement;
@@ -31,33 +32,50 @@ export function titlesFor(language: string) {
   return SECTION_TITLES[language.slice(0, 2).toLowerCase()] ?? SECTION_TITLES.en;
 }
 
-// Single column, standard font, no tables/graphics — ATS-parseable by design.
-const styles = StyleSheet.create({
-  page: { padding: 36, fontSize: 9.5, fontFamily: "Helvetica", color: "#111", lineHeight: 1.35 },
-  name: { fontSize: 18, fontFamily: "Helvetica-Bold" },
-  headline: { fontSize: 10.5, marginTop: 2, color: "#333" },
-  contact: { fontSize: 8.5, marginTop: 4, color: "#444" },
-  section: { marginTop: 12 },
-  sectionTitle: {
-    fontSize: 11,
-    fontFamily: "Helvetica-Bold",
-    textTransform: "uppercase",
-    borderBottomWidth: 1,
-    borderBottomColor: "#999",
-    paddingBottom: 2,
-    marginBottom: 6,
-  },
-  entry: { marginBottom: 8 },
-  entryHeader: { flexDirection: "row", justifyContent: "space-between" },
-  entryTitle: { fontFamily: "Helvetica-Bold", fontSize: 10 },
-  entryMeta: { fontSize: 8.5, color: "#444" },
-  bullet: { flexDirection: "row", marginTop: 2 },
-  bulletGlyph: { width: 10 },
-  bulletText: { flex: 1 },
-  skillRow: { marginBottom: 2 },
-});
+/**
+ * Every template is single column, plain text, standard headings and a core PDF
+ * font — the parts an ATS actually parses. Only typography and spacing vary.
+ */
+function stylesFor(template: CvTemplate) {
+  const t = template.pdf;
+  return StyleSheet.create({
+    page: {
+      padding: t.padding,
+      fontSize: t.fontSize,
+      fontFamily: t.fontFamily,
+      color: "#111",
+      lineHeight: t.lineHeight,
+    },
+    header: { marginBottom: 2, textAlign: t.centerHeader ? "center" : "left" },
+    name: { fontSize: t.nameSize, fontFamily: t.boldFontFamily },
+    headline: { fontSize: t.fontSize + 1, marginTop: 2, color: "#333" },
+    contact: { fontSize: t.fontSize - 1, marginTop: 4, color: "#444" },
+    section: { marginTop: t.entryGap + 4 },
+    sectionTitle: {
+      fontSize: t.sectionTitleSize,
+      fontFamily: t.boldFontFamily,
+      textTransform: t.uppercaseSectionTitles ? "uppercase" : "none",
+      borderBottomWidth: t.sectionRule ? 1 : 0,
+      borderBottomColor: "#999",
+      paddingBottom: t.sectionRule ? 2 : 0,
+      marginBottom: 6,
+      letterSpacing: t.uppercaseSectionTitles ? 0.5 : 0,
+    },
+    entry: { marginBottom: t.entryGap },
+    entryHeader: { flexDirection: "row", justifyContent: "space-between" },
+    entryTitle: { fontFamily: t.boldFontFamily, fontSize: t.fontSize + 0.5 },
+    entryMeta: { fontSize: t.fontSize - 1, color: "#444" },
+    bullet: { flexDirection: "row", marginTop: 2 },
+    bulletGlyph: { width: 10 },
+    bulletText: { flex: 1 },
+    skillRow: { marginBottom: 2 },
+    bold: { fontFamily: t.boldFontFamily },
+  });
+}
 
-function Section(title: string, children: React.ReactNode[]) {
+type Styles = ReturnType<typeof stylesFor>;
+
+function Section(styles: Styles, title: string, children: React.ReactNode[]) {
   return h(
     View,
     { style: styles.section },
@@ -66,7 +84,7 @@ function Section(title: string, children: React.ReactNode[]) {
   );
 }
 
-function Bullets(bullets: string[]) {
+function Bullets(styles: Styles, bullets: string[]) {
   return bullets.map((b, i) =>
     h(
       View,
@@ -77,7 +95,8 @@ function Bullets(bullets: string[]) {
   );
 }
 
-function CvDocument({ cv }: { cv: Cv }) {
+function CvDocument({ cv, templateId }: { cv: Cv; templateId?: string }) {
+  const styles = stylesFor(resolveTemplate(templateId));
   const t = titlesFor(cv.language);
   const contactParts = [
     cv.header.email,
@@ -93,25 +112,31 @@ function CvDocument({ cv }: { cv: Cv }) {
       Page,
       { size: "A4", style: styles.page },
       // Header
-      h(Text, { style: styles.name }, cv.header.fullName),
-      h(Text, { style: styles.headline }, cv.header.headline),
-      h(Text, { style: styles.contact }, contactParts.join("  ·  ")),
+      h(
+        View,
+        { style: styles.header },
+        h(Text, { style: styles.name }, cv.header.fullName),
+        h(Text, { style: styles.headline }, cv.header.headline),
+        h(Text, { style: styles.contact }, contactParts.join("  ·  ")),
+      ),
       // Summary
-      ...(cv.summary ? [Section(t.summary, [h(Text, { key: "s" }, cv.summary)])] : []),
+      ...(cv.summary ? [Section(styles, t.summary, [h(Text, { key: "s" }, cv.summary)])] : []),
       // Skills
       Section(
+        styles,
         t.skills,
         cv.skills.map((group, i) =>
           h(
             Text,
             { style: styles.skillRow, key: i },
-            h(Text, { style: { fontFamily: "Helvetica-Bold" } }, `${group.category}: `),
+            h(Text, { style: styles.bold }, `${group.category}: `),
             group.items.join(", "),
           ),
         ),
       ),
       // Experience
       Section(
+        styles,
         t.experience,
         cv.experiences.map((exp, i) =>
           h(
@@ -128,7 +153,7 @@ function CvDocument({ cv }: { cv: Cv }) {
                   (exp.location ? `  ·  ${exp.location}` : ""),
               ),
             ),
-            ...Bullets(exp.bullets),
+            ...Bullets(styles, exp.bullets),
           ),
         ),
       ),
@@ -136,6 +161,7 @@ function CvDocument({ cv }: { cv: Cv }) {
       ...(cv.projects.length > 0
         ? [
             Section(
+              styles,
               t.projects,
               cv.projects.map((p, i) =>
                 h(
@@ -147,7 +173,7 @@ function CvDocument({ cv }: { cv: Cv }) {
                     h(Text, { style: styles.entryTitle }, p.title),
                     ...(p.link ? [h(Text, { style: styles.entryMeta }, p.link)] : []),
                   ),
-                  ...Bullets(p.bullets),
+                  ...Bullets(styles, p.bullets),
                 ),
               ),
             ),
@@ -157,6 +183,7 @@ function CvDocument({ cv }: { cv: Cv }) {
       ...(cv.education.length > 0
         ? [
             Section(
+              styles,
               t.education,
               cv.education.map((e, i) =>
                 h(
@@ -172,7 +199,7 @@ function CvDocument({ cv }: { cv: Cv }) {
       // Languages
       ...(cv.languages.length > 0
         ? [
-            Section(t.languages, [
+            Section(styles, t.languages, [
               h(
                 Text,
                 { key: "l" },
@@ -185,9 +212,12 @@ function CvDocument({ cv }: { cv: Cv }) {
   );
 }
 
-export async function renderCvPdf(cv: Cv): Promise<Uint8Array<ArrayBuffer>> {
+export async function renderCvPdf(
+  cv: Cv,
+  templateId?: string,
+): Promise<Uint8Array<ArrayBuffer>> {
   const buffer = await renderToBuffer(
-    h(CvDocument, { cv }) as unknown as React.ReactElement<DocumentProps>,
+    h(CvDocument, { cv, templateId }) as unknown as React.ReactElement<DocumentProps>,
   );
   return Uint8Array.from(buffer);
 }

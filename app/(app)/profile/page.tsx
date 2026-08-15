@@ -1,5 +1,6 @@
 import { db } from "@/agent/lib/db.ts";
 import { requireUser } from "@/app/lib/current-user";
+import { DEFAULT_TEMPLATE } from "@/lib/cv-templates";
 import { type ProfileForm, ProfileEditor } from "./profile-editor";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,9 @@ const isoDate = (value: Date | null) => (value ? value.toISOString().slice(0, 10
 const empty: ProfileForm = {
   fullName: "",
   headline: "",
+  summary: "",
+  photoUrl: "",
+  template: DEFAULT_TEMPLATE,
   contact: { email: "", phone: "", location: "", links: [] },
   languages: [],
   education: [],
@@ -33,6 +37,9 @@ export default async function ProfilePage() {
   const initial: ProfileForm = {
     fullName: profile.fullName,
     headline: profile.headline ?? "",
+    summary: profile.summary ?? "",
+    photoUrl: profile.photoUrl ?? "",
+    template: profile.template ?? DEFAULT_TEMPLATE,
     contact: {
       email: contact.email ?? user.email,
       phone: contact.phone ?? "",

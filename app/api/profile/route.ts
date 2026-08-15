@@ -2,10 +2,24 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/agent/lib/db.ts";
 import { getCurrentUser } from "@/app/lib/current-user";
+import { CV_TEMPLATE_IDS, DEFAULT_TEMPLATE } from "@/lib/cv-templates";
+
+/** ~1.4MB of base64 ≈ a 1MB image; the editor downscales well below this. */
+const MAX_PHOTO_CHARS = 1_400_000;
 
 const ProfileInput = z.object({
   fullName: z.string().min(1),
   headline: z.string().optional(),
+  summary: z.string().max(2000).optional(),
+  template: z.enum(CV_TEMPLATE_IDS).optional(),
+  photoUrl: z
+    .string()
+    .max(MAX_PHOTO_CHARS, "Photo is too large — use an image under 1MB.")
+    .refine(
+      (value) => value.startsWith("data:image/"),
+      "Photo must be an inline image data URL.",
+    )
+    .optional(),
   contact: z.object({
     email: z.string(),
     phone: z.string().optional(),
@@ -70,6 +84,9 @@ export async function PUT(request: Request) {
   const data = {
     fullName: input.fullName,
     headline: input.headline ?? null,
+    summary: input.summary ?? null,
+    photoUrl: input.photoUrl ?? null,
+    template: input.template ?? DEFAULT_TEMPLATE,
     contact: input.contact,
     languages: input.languages,
     education: input.education,

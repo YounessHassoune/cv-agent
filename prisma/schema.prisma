@@ -9,11 +9,33 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Account record for email+password and Google sign-in. `Profile.userId` and
+/// `Application.userId` hold this row's `id`, so deleting a user is deliberate
+/// (no cascade) — profiles are removed explicitly by the delete-account route.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  image        String?
+  /// Null for Google-only accounts until the user sets a password.
+  passwordHash String?
+  googleId     String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 model Profile {
   id          String       @id @default(cuid())
   userId      String       @unique
   fullName    String
   headline    String?
+  /// Master summary. The agent rewrites a tailored one per application.
+  summary     String?
+  /// Data URL of the (downscaled) profile photo. Preview only — the compiled
+  /// PDF stays photo-free, which is what ATS parsers prefer.
+  photoUrl    String?
+  /// Default CV template id (see lib/cv-templates.ts).
+  template    String       @default("modern")
   contact     Json // { email, phone?, location?, links: string[] }
   languages   Json         @default("[]") // [{ name, level }]
   education   Json         @default("[]") // [{ institution, degree, start?, end? }]
@@ -66,6 +88,8 @@ model Application {
   jdKeywords  Json? // analyze_jd output, reused by score_ats and the review UI
   jdEmbedding Json? // cached JD embedding so loop iterations only re-embed the CV
   language    String   @default("en")
+  /// Template this application's PDF was compiled with.
+  template    String   @default("modern")
   cvJson      Json? // latest tailored CV snapshot (CvSchema)
   cvText      String? // text extracted from the compiled PDF
   atsReport   Json? // { total, breakdown, matched, missing, suggestions }

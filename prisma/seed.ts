@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../agent/generated/prisma/client.ts";
+import { buildApplicationRows } from "./seed-applications.ts";
 
 try {
   process.loadEnvFile();
@@ -9,8 +10,26 @@ const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });
 
-// Matches the `local-dev` fallback in agent/lib/auth.ts, so `eve dev` picks it up.
-const userId = process.env.DEV_USER_ID ?? "local-dev";
+/**
+ * Seeds whichever account you actually sign in as: an explicit DEV_USER_ID
+ * wins, otherwise the most recently registered user, and finally the
+ * `local-dev` principal that `eve dev` falls back to.
+ */
+async function resolveUserId(): Promise<string> {
+  if (process.env.DEV_USER_ID) return process.env.DEV_USER_ID;
+
+  const newest = await db.user.findFirst({
+    orderBy: { createdAt: "desc" },
+    select: { id: true, email: true },
+  });
+  if (newest) {
+    console.log(`Seeding the most recently registered account: ${newest.email}`);
+    return newest.id;
+  }
+
+  console.log("No registered users found — seeding the `local-dev` principal.");
+  return "local-dev";
+}
 
 /**
  * SAMPLE profile so the tailoring pipeline can be exercised end to end.
@@ -18,6 +37,8 @@ const userId = process.env.DEV_USER_ID ?? "local-dev";
  * treats whatever is in here as literal truth and may claim nothing else.
  */
 async function main() {
+  const userId = await resolveUserId();
+
   await db.profile.deleteMany({ where: { userId } });
 
   const profile = await db.profile.create({
@@ -25,6 +46,8 @@ async function main() {
       userId,
       fullName: "Sample User",
       headline: "Full-Stack Engineer",
+      summary:
+        "Full-stack engineer with 5 years shipping high-traffic commerce and analytics platforms in TypeScript, React and Node.js.",
       contact: {
         email: "sample.user@example.com",
         phone: "+1 555 0100",
@@ -123,9 +146,17 @@ async function main() {
     include: { skills: true, experiences: true, projects: true },
   });
 
+  // Sample applications so /applications isn't empty on a fresh install.
+  // Replaced wholesale on every run, like the profile above.
+  await db.application.deleteMany({ where: { userId } });
+  const applications = await db.application.createMany({
+    data: buildApplicationRows(userId),
+  });
+
   console.log(
     `Seeded profile for userId="${userId}": ${profile.skills.length} skills, ` +
-      `${profile.experiences.length} experiences, ${profile.projects.length} projects.`,
+      `${profile.experiences.length} experiences, ${profile.projects.length} projects, ` +
+      `${applications.count} sample applications.`,
   );
   console.log("Replace this sample data with your real background before applying to jobs.");
 }

@@ -1,5 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
+import { CV_TEMPLATE_IDS } from "../../lib/cv-templates";
 import { resolveUserId } from "../lib/auth";
 import { CvSchema } from "../lib/cv-schema";
 import { db } from "../lib/db";
@@ -13,8 +14,14 @@ export default defineTool({
   inputSchema: z.object({
     applicationId: z.string(),
     cv: CvSchema,
+    template: z
+      .enum(CV_TEMPLATE_IDS)
+      .optional()
+      .describe(
+        "Layout to render. Omit to use the template already chosen on this application or in the user's profile. All templates are ATS-safe.",
+      ),
   }),
-  async *execute({ applicationId, cv }, ctx) {
+  async *execute({ applicationId, cv, template }, ctx) {
     const userId = resolveUserId(ctx);
 
     const loop = cvLoop.get();
@@ -46,12 +53,16 @@ export default defineTool({
 
     yield { phase: "rendering", applicationId, iteration: loop.iterations + 1 };
 
-    const pdfBytes = await renderCvPdf(cv);
+    // Explicit choice wins, then whatever this application already used, then
+    // the profile default.
+    const templateId = template ?? application.template ?? profile.template;
+
+    const pdfBytes = await renderCvPdf(cv, templateId);
     const { text, pageCount } = await extractPdfText(pdfBytes);
 
     await db.application.update({
       where: { id: application.id },
-      data: { cvJson: cv, cvText: text, pdfBytes, atsReport: undefined },
+      data: { cvJson: cv, cvText: text, pdfBytes, template: templateId, atsReport: undefined },
     });
 
     cvLoop.update((s) => ({ ...s, applicationId: application.id, iterations: s.iterations + 1 }));

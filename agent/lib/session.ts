@@ -59,6 +59,17 @@ export function verifySession(token: string | undefined | null): AppSession | nu
   }
 }
 
+/** Cookie attributes shared by every route that writes the session. */
+export function sessionCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge,
+  };
+}
+
 /** Reads the session cookie straight off a Request (used by the eve channel). */
 export function sessionFromRequest(request: Request): AppSession | null {
   const header = request.headers.get("cookie");
