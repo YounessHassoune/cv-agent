@@ -25,6 +25,7 @@
   --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-field: var(--field);
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -37,7 +38,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
-  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
   --shadow-soft: 0 1px 2px oklch(0 0 0 / 4%), 0 8px 24px -12px oklch(0 0 0 / 12%);
   --shadow-lift: 0 1px 2px oklch(0 0 0 / 5%), 0 16px 40px -16px oklch(0 0 0 / 18%);
@@ -46,31 +47,33 @@
 
 :root {
   color-scheme: light;
-  /* Cool neutral canvas with white elevated surfaces, indigo brand accent. */
-  --background: oklch(0.978 0.002 265);
-  --foreground: oklch(0.19 0.015 265);
+  /* Cool blue-grey canvas, white elevated surfaces, saturated blue brand accent.
+     `--field` is the filled input/well tone the forms sit on. */
+  --background: oklch(0.977 0.005 250);
+  --foreground: oklch(0.235 0.01 255);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.015 265);
+  --card-foreground: oklch(0.235 0.01 255);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.19 0.015 265);
-  --primary: oklch(0.48 0.18 265);
+  --popover-foreground: oklch(0.235 0.01 255);
+  --primary: oklch(0.48 0.2 264);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.958 0.004 265);
-  --secondary-foreground: oklch(0.28 0.015 265);
-  --muted: oklch(0.958 0.004 265);
-  --muted-foreground: oklch(0.53 0.015 265);
-  --accent: oklch(0.955 0.012 265);
-  --accent-foreground: oklch(0.32 0.05 265);
-  --destructive: oklch(0.58 0.22 27);
-  --success: oklch(0.62 0.15 155);
+  --secondary: oklch(0.955 0.008 262);
+  --secondary-foreground: oklch(0.32 0.02 262);
+  --muted: oklch(0.962 0.006 258);
+  --muted-foreground: oklch(0.47 0.028 268);
+  --accent: oklch(0.925 0.035 268);
+  --accent-foreground: oklch(0.36 0.05 266);
+  --destructive: oklch(0.55 0.21 27);
+  --success: oklch(0.6 0.14 155);
   --warning: oklch(0.72 0.15 75);
-  --border: oklch(0.918 0.005 265);
-  --input: oklch(0.918 0.005 265);
-  --ring: oklch(0.48 0.18 265);
+  --border: oklch(0.905 0.012 265);
+  --input: oklch(0.9 0.014 265);
+  --field: oklch(0.964 0.005 258);
+  --ring: oklch(0.48 0.2 264);
   --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.19 0.015 265);
-  --sidebar-accent: oklch(0.958 0.008 265);
-  --sidebar-border: oklch(0.918 0.005 265);
+  --sidebar-foreground: oklch(0.235 0.01 255);
+  --sidebar-accent: oklch(0.925 0.035 268);
+  --sidebar-border: oklch(0.905 0.012 265);
   /* The CV sheet stays paper-white in both themes so previews match the PDF. */
   --paper: oklch(1 0 0);
   --paper-foreground: oklch(0.18 0 0);
@@ -79,35 +82,44 @@
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.165 0.012 265);
+  --background: oklch(0.168 0.012 262);
   --foreground: oklch(0.97 0.004 265);
-  --card: oklch(0.212 0.014 265);
+  --card: oklch(0.214 0.014 262);
   --card-foreground: oklch(0.97 0.004 265);
-  --popover: oklch(0.212 0.014 265);
+  --popover: oklch(0.214 0.014 262);
   --popover-foreground: oklch(0.97 0.004 265);
-  --primary: oklch(0.72 0.14 265);
-  --primary-foreground: oklch(0.17 0.03 265);
-  --secondary: oklch(0.27 0.016 265);
+  --primary: oklch(0.72 0.15 264);
+  --primary-foreground: oklch(0.17 0.04 264);
+  --secondary: oklch(0.27 0.018 262);
   --secondary-foreground: oklch(0.97 0.004 265);
-  --muted: oklch(0.27 0.016 265);
-  --muted-foreground: oklch(0.7 0.015 265);
-  --accent: oklch(0.3 0.03 265);
-  --accent-foreground: oklch(0.95 0.01 265);
+  --muted: oklch(0.27 0.018 262);
+  --muted-foreground: oklch(0.72 0.018 265);
+  --accent: oklch(0.31 0.045 265);
+  --accent-foreground: oklch(0.95 0.02 265);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.72 0.15 155);
   --warning: oklch(0.78 0.14 75);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.62 0.14 265);
-  --sidebar: oklch(0.19 0.013 265);
+  --field: oklch(1 0 0 / 6%);
+  --ring: oklch(0.62 0.15 264);
+  --sidebar: oklch(0.192 0.013 262);
   --sidebar-foreground: oklch(0.97 0.004 265);
-  --sidebar-accent: oklch(0.26 0.02 265);
+  --sidebar-accent: oklch(0.29 0.04 265);
   --sidebar-border: oklch(1 0 0 / 8%);
   --paper: oklch(0.98 0 0);
   --paper-foreground: oklch(0.18 0 0);
   --shadow-soft: 0 1px 2px oklch(0 0 0 / 30%), 0 8px 24px -12px oklch(0 0 0 / 50%);
   --shadow-lift: 0 1px 2px oklch(0 0 0 / 35%), 0 16px 40px -16px oklch(0 0 0 / 60%);
   --shadow-paper: 0 1px 3px oklch(0 0 0 / 40%), 0 24px 48px -24px oklch(0 0 0 / 70%);
+}
+
+/* The design's 1440px canvas. Past that, wide screens get margin rather than
+   stretched cards and over-long text lines. */
+@utility container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 90rem;
 }
 
 * {

@@ -33,7 +33,7 @@ export default function AuthLayout({ children }: { readonly children: ReactNode 
           <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <FileTextIcon className="size-4.5" />
           </span>
-          <span className="font-medium text-[0.95rem] tracking-tight">CV Tailor</span>
+          <span className="font-medium text-[0.95rem] tracking-tight">ApplyFlow</span>
         </Link>
 
         <div className="relative max-w-md space-y-10">
@@ -73,7 +73,7 @@ export default function AuthLayout({ children }: { readonly children: ReactNode 
             <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <FileTextIcon className="size-4" />
             </span>
-            <span className="font-medium text-sm tracking-tight">CV Tailor</span>
+            <span className="font-medium text-sm tracking-tight">ApplyFlow</span>
           </Link>
           <ThemeToggle />
         </div>

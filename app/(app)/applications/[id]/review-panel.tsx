@@ -25,24 +25,28 @@ export function ReviewPanel({
   readonly template: string;
 }) {
   return (
-    <Tabs className="flex h-full min-h-0 flex-col gap-3" defaultValue="preview">
-      <TabsList className="w-full">
-        <TabsTrigger value="preview">
+    <Tabs
+      className="flex h-full min-h-0 flex-col gap-0 overflow-hidden rounded-xl border bg-secondary/50"
+      defaultValue="preview"
+    >
+      {/* Segmented bar sits on the panel's own header strip, as in the design. */}
+      <TabsList className="w-full shrink-0 gap-2 rounded-none border-b bg-card p-2">
+        <TabsTrigger className="py-2 data-[state=active]:border-border" value="preview">
           <ScrollTextIcon className="size-3.5" />
           Preview
         </TabsTrigger>
-        <TabsTrigger value="pdf">
+        <TabsTrigger className="py-2 data-[state=active]:border-border" value="pdf">
           <FileTextIcon className="size-3.5" />
           PDF
         </TabsTrigger>
-        <TabsTrigger value="chat">
+        <TabsTrigger className="py-2 data-[state=active]:border-border" value="chat">
           <MessageSquareIcon className="size-3.5" />
           Chat
         </TabsTrigger>
       </TabsList>
 
       <TabsContent
-        className="scrollbar-slim min-h-0 overflow-y-auto rounded-xl bg-muted/40 p-4 data-[state=inactive]:hidden"
+        className="scrollbar-slim min-h-0 overflow-y-auto p-6 data-[state=inactive]:hidden"
         forceMount
         value="preview"
       >
@@ -55,26 +59,22 @@ export function ReviewPanel({
         )}
       </TabsContent>
 
-      <TabsContent
-        className="min-h-0 data-[state=inactive]:hidden"
-        forceMount
-        value="pdf"
-      >
+      <TabsContent className="min-h-0 p-4 data-[state=inactive]:hidden" forceMount value="pdf">
         {hasPdf ? (
           <iframe
-            className="h-full min-h-96 w-full rounded-xl border bg-muted/40"
+            className="h-full min-h-96 w-full rounded-lg border bg-card"
             src={`/api/applications/${applicationId}/pdf`}
             title="Compiled CV"
           />
         ) : (
-          <div className="flex h-full min-h-96 items-center justify-center rounded-xl border border-dashed text-muted-foreground text-sm">
+          <div className="flex h-full min-h-96 items-center justify-center rounded-lg border border-dashed text-muted-foreground text-sm">
             No PDF compiled yet.
           </div>
         )}
       </TabsContent>
 
       <TabsContent
-        className="min-h-0 overflow-hidden rounded-xl border bg-card data-[state=inactive]:hidden"
+        className="min-h-0 overflow-hidden bg-card data-[state=inactive]:hidden"
         forceMount
         value="chat"
       >

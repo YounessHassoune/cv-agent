@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PasswordSection } from "./password-section";
 
-export const metadata: Metadata = { title: "Settings · CV Tailor" };
+export const metadata: Metadata = { title: "Settings · ApplyFlow" };
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
@@ -29,63 +29,71 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6">
-      <div className="space-y-1">
-        <h1 className="font-medium text-2xl tracking-tight">Settings</h1>
-        <p className="text-muted-foreground text-sm">Your account, sign-in methods and theme.</p>
+    <div className="mx-auto w-full max-w-200 space-y-8 px-4 py-8 md:px-10 md:py-12">
+      <div className="space-y-2">
+        <h1 className="font-bold text-3xl tracking-tight sm:text-4xl">Settings</h1>
+        <p className="text-muted-foreground">Your account, sign-in methods and theme.</p>
       </div>
 
-      <section className="surface-card space-y-5 rounded-xl p-5">
-        <h2 className="font-medium text-sm">Account</h2>
+      <section className="surface-card space-y-6 rounded-xl p-6 md:p-8">
+        <h2 className="border-b pb-4 font-semibold text-lg tracking-tight">Account</h2>
 
         <div className="flex items-center gap-4">
           <Avatar className="size-12 border">
             {user.image ? <AvatarImage alt="" src={user.image} /> : null}
-            <AvatarFallback className="text-sm">{initialsOf(user)}</AvatarFallback>
+            <AvatarFallback className="font-semibold">{initialsOf(user)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="truncate font-medium">{user.name ?? "Your account"}</p>
+            <p className="truncate font-semibold text-lg tracking-tight">
+              {user.name ?? "Your account"}
+            </p>
             <p className="truncate text-muted-foreground text-sm">{user.email}</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">
-            <MailIcon className="size-3" />
+        <div className="flex flex-wrap gap-3">
+          <Badge className="border bg-field px-3 py-1.5" variant="outline">
+            <MailIcon className="size-3.5 text-muted-foreground" />
             {account?.passwordHash ? "Password enabled" : "No password set"}
           </Badge>
           {account?.googleId ? (
-            <Badge variant="secondary">
-              <KeyRoundIcon className="size-3" />
+            <Badge className="border bg-field px-3 py-1.5" variant="outline">
+              <KeyRoundIcon className="size-3.5 text-muted-foreground" />
               Google linked
             </Badge>
           ) : null}
           {account?.createdAt ? (
-            <Badge variant="outline">Member since {account.createdAt.toLocaleDateString()}</Badge>
+            <Badge className="border bg-field px-3 py-1.5" variant="outline">
+              Member since {account.createdAt.toLocaleDateString()}
+            </Badge>
           ) : null}
         </div>
 
-        <dl className="grid gap-3 border-t pt-4 sm:grid-cols-3">
-          <div>
+        <dl className="grid grid-cols-3 gap-4 border-t pt-6">
+          <div className="space-y-1">
             <dt className="text-muted-foreground text-xs">Applications</dt>
-            <dd className="font-medium text-lg tabular-nums">{applicationCount}</dd>
+            <dd className="font-semibold text-2xl tabular-nums tracking-tight">
+              {applicationCount}
+            </dd>
           </div>
-          <div>
+          <div className="space-y-1">
             <dt className="text-muted-foreground text-xs">Roles on file</dt>
-            <dd className="font-medium text-lg tabular-nums">
+            <dd className="font-semibold text-2xl tabular-nums tracking-tight">
               {profile?._count.experiences ?? 0}
             </dd>
           </div>
-          <div>
+          <div className="space-y-1">
             <dt className="text-muted-foreground text-xs">Skills on file</dt>
-            <dd className="font-medium text-lg tabular-nums">{profile?._count.skills ?? 0}</dd>
+            <dd className="font-semibold text-2xl tabular-nums tracking-tight">
+              {profile?._count.skills ?? 0}
+            </dd>
           </div>
         </dl>
       </section>
 
-      <section className="surface-card space-y-4 rounded-xl p-5">
+      <section className="surface-card space-y-4 rounded-xl p-6 md:p-8">
         <div className="space-y-1">
-          <h2 className="font-medium text-sm">Appearance</h2>
+          <h2 className="font-semibold text-lg tracking-tight">Appearance</h2>
           <p className="text-muted-foreground text-sm">
             Dark mode follows your system by default.
           </p>
@@ -95,15 +103,19 @@ export default async function SettingsPage() {
 
       <PasswordSection hasPassword={Boolean(account?.passwordHash)} />
 
-      <section className="space-y-4 rounded-xl border border-destructive/30 bg-destructive/5 p-5">
+      <section className="space-y-4 rounded-xl border border-destructive/25 bg-destructive/5 p-6 md:p-8">
         <div className="space-y-1">
-          <h2 className="font-medium text-sm">Sign out</h2>
+          <h2 className="font-semibold text-destructive text-lg tracking-tight">Sign out</h2>
           <p className="text-muted-foreground text-sm">
             End this session on this device. Your profile and applications stay put.
           </p>
         </div>
         <form action="/api/auth/signout" method="post">
-          <Button size="sm" type="submit" variant="outline">
+          <Button
+            className="border-destructive/30 bg-card text-destructive hover:bg-destructive/10 hover:text-destructive"
+            type="submit"
+            variant="outline"
+          >
             Sign out
           </Button>
         </form>

@@ -8,7 +8,7 @@ import { AuthError } from "../_components/auth-error";
 import { AuthForm, Field, PasswordInput } from "../_components/auth-fields";
 import { GoogleButton } from "../_components/google-button";
 
-export const metadata: Metadata = { title: "Create account · CV Tailor" };
+export const metadata: Metadata = { title: "Create account · ApplyFlow" };
 export const dynamic = "force-dynamic";
 
 export default async function SignUpPage({
@@ -22,7 +22,7 @@ export default async function SignUpPage({
   return (
     <div className="space-y-6">
       <div className="space-y-1.5">
-        <h1 className="font-medium text-2xl tracking-tight">Create your account</h1>
+        <h1 className="font-semibold text-2xl tracking-tight">Create your account</h1>
         <p className="text-muted-foreground text-sm">
           Build your master profile once, then tailor it to every role.
         </p>

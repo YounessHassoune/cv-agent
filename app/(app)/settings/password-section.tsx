@@ -44,9 +44,11 @@ export function PasswordSection({ hasPassword }: { readonly hasPassword: boolean
   };
 
   return (
-    <section className="surface-card space-y-4 rounded-xl p-5">
+    <section className="surface-card space-y-6 rounded-xl p-6 md:p-8">
       <div className="space-y-1">
-        <h2 className="font-medium text-sm">{hasPassword ? "Change password" : "Set a password"}</h2>
+        <h2 className="font-semibold text-lg tracking-tight">
+          {hasPassword ? "Change password" : "Set a password"}
+        </h2>
         <p className="text-muted-foreground text-sm">
           {hasPassword
             ? "You'll stay signed in on this device."
@@ -54,13 +56,14 @@ export function PasswordSection({ hasPassword }: { readonly hasPassword: boolean
         </p>
       </div>
 
-      <form className="grid gap-3 sm:grid-cols-2" onSubmit={submit}>
+      <form className="grid gap-4 md:grid-cols-2" onSubmit={submit}>
         {hasPassword ? (
           <div className="space-y-1.5">
-            <Label className="text-muted-foreground text-xs">Current password</Label>
+            <Label className="text-xs">Current password</Label>
             <Input
               autoComplete="current-password"
               name="currentPassword"
+              placeholder="••••••••"
               required
               type="password"
             />
@@ -68,12 +71,18 @@ export function PasswordSection({ hasPassword }: { readonly hasPassword: boolean
         ) : null}
 
         <div className="space-y-1.5">
-          <Label className="text-muted-foreground text-xs">New password</Label>
-          <Input autoComplete="new-password" name="newPassword" required type="password" />
+          <Label className="text-xs">New password</Label>
+          <Input
+            autoComplete="new-password"
+            name="newPassword"
+            placeholder="••••••••"
+            required
+            type="password"
+          />
         </div>
 
-        <div className="flex items-center gap-3 sm:col-span-2">
-          <Button disabled={status === "saving"} size="sm" type="submit">
+        <div className="flex flex-wrap items-center gap-3 md:col-span-2">
+          <Button className="px-5" disabled={status === "saving"} type="submit">
             {status === "saving" ? "Saving…" : "Update password"}
           </Button>
           {status === "saved" ? (

@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { isActive, primaryNav, secondaryNav } from "./nav-config";
-import { MobileNav } from "./sidebar";
+import { MobileNav, SidebarToggle } from "./sidebar";
 import { UserMenu } from "./user-menu";
 
 function useSection() {
@@ -27,11 +27,12 @@ export function Topbar({
   const section = useSection();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b bg-background/85 px-4 backdrop-blur-md sm:px-6">
-      <MobileNav />
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b bg-card/85 px-4 backdrop-blur-md sm:px-6">
+      <MobileNav initials={initials} name={name ?? email} />
+      <SidebarToggle />
 
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-sm">{section.label}</p>
+        <p className="truncate font-semibold text-[0.95rem] tracking-tight">{section.label}</p>
         <p className="hidden truncate text-muted-foreground text-xs sm:block">
           {section.description}
         </p>

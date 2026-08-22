@@ -3,7 +3,7 @@ import {
   LayoutGridIcon,
   type LucideIcon,
   SettingsIcon,
-  SparklesIcon,
+  MessagesSquare,
   UserRoundIcon,
 } from "lucide-react";
 
@@ -17,21 +17,21 @@ export type NavItem = {
 export const primaryNav: NavItem[] = [
   {
     href: "/",
-    label: "Tailor Chat",
-    icon: SparklesIcon,
-    description: "Paste a job description and generate a CV",
+    label: "Chat",
+    icon: MessagesSquare,
+    description: "",
   },
   {
     href: "/applications",
     label: "Applications",
     icon: LayoutGridIcon,
-    description: "Every tailored CV you have generated",
+    description: "",
   },
   {
     href: "/profile",
     label: "CV Builder",
     icon: UserRoundIcon,
-    description: "Your master profile — the only source of facts",
+    description: "",
   },
 ];
 
@@ -40,7 +40,7 @@ export const secondaryNav: NavItem[] = [
     href: "/settings",
     label: "Settings",
     icon: SettingsIcon,
-    description: "Account and appearance",
+    description: "",
   },
 ];
 

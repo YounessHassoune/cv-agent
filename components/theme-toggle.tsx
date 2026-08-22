@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 export type Theme = "light" | "dark" | "system";
 
-export const THEME_STORAGE_KEY = "cv-tailor-theme";
+export const THEME_STORAGE_KEY = "applyflow-theme";
 
 /**
  * Inlined in <head> so the stored theme is applied before first paint —
@@ -83,14 +83,14 @@ export function ThemePicker() {
   ];
 
   return (
-    <div className="inline-flex rounded-lg bg-muted p-[3px]">
+    <div className="inline-flex rounded-lg border bg-field p-1">
       {options.map((option) => (
         <button
           className={cn(
-            "inline-flex items-center gap-2 rounded-md px-3 py-1.5 font-medium text-sm transition-colors",
+            "inline-flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors",
             theme === option.value
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
+              ? "border bg-card text-foreground shadow-xs"
+              : "border border-transparent text-muted-foreground hover:text-foreground",
           )}
           key={option.value}
           onClick={() => setTheme(option.value)}

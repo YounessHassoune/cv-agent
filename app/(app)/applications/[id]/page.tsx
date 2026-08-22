@@ -6,7 +6,6 @@ import type { AtsReport } from "@/agent/lib/ats.ts";
 import { db } from "@/agent/lib/db.ts";
 import { requireUser } from "@/app/lib/current-user";
 import type { CvPreviewData } from "@/components/cv-preview";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { resolveTemplate } from "@/lib/cv-templates";
@@ -51,11 +50,13 @@ function toPreview(cv: StoredCv | null): CvPreviewData | null {
   };
 }
 
-function scoreTone(score: number) {
-  if (score >= 85) return { text: "text-success", bar: "bg-success" };
-  if (score >= 70) return { text: "text-warning", bar: "bg-warning" };
-  return { text: "text-destructive", bar: "bg-destructive" };
-}
+const statusTone: Record<string, string> = {
+  DRAFT: "bg-secondary text-muted-foreground",
+  PENDING_REVIEW: "bg-warning/15 text-warning",
+  APPROVED: "bg-success/15 text-success",
+  APPLIED: "bg-primary/12 text-primary",
+  REJECTED: "bg-destructive/12 text-destructive",
+};
 
 function ScoreBar({
   label,
@@ -65,12 +66,12 @@ function ScoreBar({
   readonly value: number | null;
 }) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-xs">
+    <div className="space-y-2">
+      <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">{label}</span>
-        <span className="font-mono tabular-nums">{value === null ? "n/a" : value}</span>
+        <span className="font-semibold tabular-nums">{value === null ? "n/a" : value}</span>
       </div>
-      <Progress value={value ?? 0} />
+      <Progress className="h-2" value={value ?? 0} />
     </div>
   );
 }
@@ -108,10 +109,9 @@ export default async function ApplicationPage({
   const report = application.atsReport as AtsReport | null;
   const cv = toPreview(application.cvJson as StoredCv | null);
   const title = cv?.headline ?? "Untitled draft";
-  const tone = report ? scoreTone(report.total) : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-440 flex-col gap-6 px-4 py-6 sm:px-6">
+    <div className="container flex flex-col gap-6 px-4 py-6 sm:px-6 lg:px-10">
       <div className="space-y-4">
         <Button asChild className="-ml-2 text-muted-foreground" size="sm" variant="ghost">
           <Link href="/applications">
@@ -121,10 +121,17 @@ export default async function ApplicationPage({
         </Button>
 
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-medium text-2xl tracking-tight">{title}</h1>
-              <Badge variant="secondary">{application.status.replace(/_/g, " ")}</Badge>
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-bold text-2xl tracking-tight">{title}</h1>
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-1 font-bold text-[0.65rem] uppercase tracking-wider",
+                  statusTone[application.status] ?? "bg-secondary text-muted-foreground",
+                )}
+              >
+                {application.status.replace(/_/g, " ")}
+              </span>
             </div>
             <p className="text-muted-foreground text-xs">
               Created {application.createdAt.toLocaleString()} ·{" "}
@@ -137,82 +144,92 @@ export default async function ApplicationPage({
         </div>
       </div>
 
-      <div className="grid min-h-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+      <div className="grid min-h-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         {/* Left: ATS insight and the job description it was scored against. */}
-        <div className="scrollbar-slim space-y-4 xl:max-h-[calc(100dvh-14rem)] xl:overflow-y-auto xl:pr-1">
+        <div className="scrollbar-slim space-y-6 xl:max-h-[calc(100dvh-14rem)] xl:overflow-y-auto xl:pr-1">
           {report ? (
-            <section className="surface-card space-y-5 rounded-xl p-5">
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-muted-foreground text-xs">ATS match</p>
-                  <p className="flex items-baseline gap-1.5">
-                    <span className={cn("font-medium text-4xl tabular-nums", tone?.text)}>
-                      {report.total}
+            <>
+              <section className="surface-card space-y-6 rounded-xl p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-sm">ATS match</p>
+                    <p className="flex items-baseline gap-1.5">
+                      <span className="font-bold text-4xl text-primary tracking-tighter">
+                        {report.total}
+                      </span>
+                      <span className="text-muted-foreground text-sm">/ 100</span>
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="rounded-full border bg-field px-2.5 py-1 font-medium text-xs">
+                      {report.matched.length} matched
                     </span>
-                    <span className="text-muted-foreground text-sm">/ 100</span>
-                  </p>
-                </div>
-                <div className="flex gap-2 text-xs">
-                  <Badge variant="secondary">{report.matched.length} matched</Badge>
-                  <Badge variant="outline">{report.missing.length} missing</Badge>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <ScoreBar label="Keywords (40%)" value={report.breakdown.keyword} />
-                <ScoreBar label="Semantic relevance (40%)" value={report.breakdown.semantic} />
-                <ScoreBar label="Structure & metrics (20%)" value={report.breakdown.structure} />
-              </div>
-
-              {report.missing.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="font-medium text-xs">Missing keywords</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {report.missing.map((term) => (
-                      <span
-                        className="rounded-full border border-destructive/30 bg-destructive/5 px-2.5 py-1 text-xs"
-                        key={term}
-                      >
-                        {term}
-                      </span>
-                    ))}
+                    <span className="rounded-full border bg-field px-2.5 py-1 font-medium text-xs">
+                      {report.missing.length} missing
+                    </span>
                   </div>
                 </div>
-              ) : null}
 
-              {report.matched.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="font-medium text-xs">Matched keywords</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {report.matched.map((term) => (
-                      <span
-                        className="rounded-full bg-success/10 px-2.5 py-1 text-success text-xs"
-                        key={term}
-                      >
-                        {term}
-                      </span>
-                    ))}
-                  </div>
+                <div className="space-y-5">
+                  <ScoreBar label="Keywords (40%)" value={report.breakdown.keyword} />
+                  <ScoreBar label="Semantic relevance (40%)" value={report.breakdown.semantic} />
+                  <ScoreBar label="Structure & metrics (20%)" value={report.breakdown.structure} />
                 </div>
-              ) : null}
+              </section>
 
-              {report.suggestions.length > 0 ? (
-                <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
-                  <p className="flex items-center gap-2 font-medium text-xs">
-                    <LightbulbIcon className="size-3.5 text-warning" />
-                    Suggestions
-                  </p>
-                  <ul className="space-y-1.5 text-muted-foreground text-xs leading-relaxed">
-                    {report.suggestions.map((suggestion) => (
-                      <li className="flex gap-2" key={suggestion}>
-                        <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground/50" />
-                        {suggestion}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {report.missing.length + report.matched.length + report.suggestions.length > 0 ? (
+                <section className="surface-card space-y-6 rounded-xl p-6">
+                  {report.missing.length > 0 ? (
+                    <div className="space-y-3">
+                      <h2 className="font-semibold text-sm">Missing keywords</h2>
+                      <div className="flex flex-wrap gap-2">
+                        {report.missing.map((term) => (
+                          <span
+                            className="rounded-full border border-destructive/25 bg-destructive/8 px-3 py-1.5 font-medium text-destructive text-xs"
+                            key={term}
+                          >
+                            {term}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {report.matched.length > 0 ? (
+                    <div className="space-y-3">
+                      <h2 className="font-semibold text-sm">Matched keywords</h2>
+                      <div className="flex flex-wrap gap-2">
+                        {report.matched.map((term) => (
+                          <span
+                            className="rounded-full border border-primary/20 bg-primary/8 px-3 py-1.5 font-medium text-primary text-xs"
+                            key={term}
+                          >
+                            {term}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {report.suggestions.length > 0 ? (
+                    <div className="space-y-2 rounded-lg border bg-field/70 p-4">
+                      <h2 className="flex items-center gap-1.5 font-semibold text-sm">
+                        <LightbulbIcon className="size-4 text-warning" />
+                        Suggestions
+                      </h2>
+                      <ul className="space-y-1.5 text-muted-foreground text-xs leading-relaxed">
+                        {report.suggestions.map((suggestion) => (
+                          <li className="flex gap-2" key={suggestion}>
+                            <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground/50" />
+                            {suggestion}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </section>
               ) : null}
-            </section>
+            </>
           ) : (
             <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground text-sm">
               No ATS score recorded for this draft yet.
@@ -220,15 +237,17 @@ export default async function ApplicationPage({
           )}
 
           <section className="surface-card space-y-3 rounded-xl p-5">
-            <h2 className="font-medium text-sm">Job description</h2>
+            <h2 className="font-semibold text-sm">Job description</h2>
             <pre className="scrollbar-slim max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/50 p-3 font-sans text-muted-foreground text-xs leading-relaxed">
               {application.jdText}
             </pre>
           </section>
         </div>
 
-        {/* Right: the document itself, plus the chat scoped to this application. */}
-        <div className="min-h-0 xl:sticky xl:top-4 xl:h-[calc(100dvh-14rem)]">
+        {/* Right: the document itself, plus the chat scoped to this application.
+            Needs an explicit height below xl too, where it is no longer a
+            full-height grid column and `h-full` would collapse it. */}
+        <div className="h-[75dvh] min-h-0 xl:sticky xl:top-4 xl:h-[calc(100dvh-14rem)]">
           <ReviewPanel
             applicationId={application.id}
             cv={cv}

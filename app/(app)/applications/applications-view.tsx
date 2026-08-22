@@ -32,11 +32,11 @@ export type ApplicationRow = {
 const statusFilters = ["All", "DRAFT", "PENDING_REVIEW", "APPROVED", "APPLIED", "REJECTED"];
 
 const statusTone: Record<string, string> = {
-  DRAFT: "bg-muted text-muted-foreground",
+  DRAFT: "bg-secondary text-muted-foreground",
   PENDING_REVIEW: "bg-warning/15 text-warning",
   APPROVED: "bg-success/15 text-success",
-  APPLIED: "bg-primary/15 text-primary",
-  REJECTED: "bg-destructive/15 text-destructive",
+  APPLIED: "bg-primary/12 text-primary",
+  REJECTED: "bg-destructive/12 text-destructive",
 };
 
 const pretty = (status: string) =>
@@ -63,19 +63,18 @@ function StatCard({
   return (
     <div
       className={cn(
-        "surface-card flex flex-col justify-between gap-3 rounded-xl p-4",
-        accent && "border-primary/25 bg-primary/5",
+        "surface-card flex flex-col justify-between gap-3 rounded-xl p-5",
+        accent && "border-l-4 border-l-primary",
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-muted-foreground text-xs">{label}</span>
-        <Icon className={cn("size-4", accent ? "text-primary" : "text-muted-foreground")} />
+        <span className="font-semibold text-[0.7rem] text-muted-foreground uppercase tracking-wide">
+          {label}
+        </span>
+        <Icon className={cn("size-4 shrink-0", accent ? "text-primary" : "text-muted-foreground")} />
       </div>
       <span
-        className={cn(
-          "font-medium text-2xl tabular-nums tracking-tight",
-          accent && "text-primary",
-        )}
+        className={cn("font-bold text-3xl tabular-nums tracking-tight", accent && "text-primary")}
       >
         {value}
       </span>
@@ -106,13 +105,11 @@ export function ApplicationsView({
   }, [applications, query, status]);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="container space-y-6 px-4 py-6 sm:px-6 lg:px-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="font-medium text-2xl tracking-tight">Applications</h1>
-          <p className="text-muted-foreground text-sm">
-            Every CV the agent has tailored, newest first.
-          </p>
+          <h1 className="font-bold text-3xl tracking-tight sm:text-4xl">Applications</h1>
+          <p className="text-muted-foreground">Every CV the agent has tailored, newest first.</p>
         </div>
         <Button asChild>
           <Link href="/">
@@ -150,24 +147,24 @@ export function ApplicationsView({
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative min-w-56 flex-1">
-              <SearchIcon className="-translate-y-1/2 absolute top-1/2 left-3 size-4 text-muted-foreground" />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="relative w-full lg:max-w-96">
+              <SearchIcon className="-translate-y-1/2 absolute top-1/2 left-3.5 size-4 text-muted-foreground" />
               <Input
-                className="h-9 pl-9"
+                className="pl-10"
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search roles or job descriptions…"
                 value={query}
               />
             </div>
-            <div className="scrollbar-slim flex gap-1.5 overflow-x-auto">
+            <div className="flex flex-wrap gap-2 lg:justify-end">
               {statusFilters.map((option) => (
                 <button
                   className={cn(
-                    "shrink-0 rounded-full border px-3 py-1.5 font-medium text-xs transition-colors",
+                    "shrink-0 rounded-full border px-4 py-1.5 font-medium text-sm transition-colors",
                     option === status
-                      ? "border-primary/30 bg-primary/10 text-foreground"
-                      : "border-transparent bg-muted/60 text-muted-foreground hover:text-foreground",
+                      ? "border-border bg-secondary text-foreground"
+                      : "bg-card text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
                   )}
                   key={option}
                   onClick={() => setStatus(option)}
@@ -194,44 +191,48 @@ export function ApplicationsView({
                       href={`/applications/${application.id}`}
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 space-y-1">
-                          <p className="truncate font-medium transition-colors group-hover:text-primary">
+                        <div className="min-w-0 space-y-1.5">
+                          <p className="truncate font-semibold text-lg tracking-tight transition-colors group-hover:text-primary">
                             {application.title}
                           </p>
-                          <p className="line-clamp-2 text-muted-foreground text-xs leading-relaxed">
+                          <p className="line-clamp-2 text-muted-foreground text-sm leading-relaxed">
                             {application.jdSnippet}
                           </p>
                         </div>
                         <span
                           className={cn(
-                            "shrink-0 rounded-full px-2.5 py-1 font-medium text-xs",
-                            statusTone[application.status] ?? "bg-muted text-muted-foreground",
+                            "shrink-0 rounded-md px-2 py-1 font-bold text-[0.65rem] uppercase tracking-wider",
+                            statusTone[application.status] ?? "bg-secondary text-muted-foreground",
                           )}
                         >
                           {pretty(application.status)}
                         </span>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <div className="flex items-baseline justify-between text-xs">
+                      <div className="space-y-2">
+                        <div className="flex items-baseline justify-between text-sm">
                           <span className="text-muted-foreground">ATS score</span>
-                          <span className={cn("font-medium tabular-nums", tone?.text)}>
+                          <span className={cn("font-bold tabular-nums", tone?.text)}>
                             {application.score === null ? "Not scored" : `${application.score}/100`}
                           </span>
                         </div>
-                        <Progress
-                          indicatorClassName={tone?.bar}
-                          value={application.score ?? 0}
-                        />
+                        <Progress indicatorClassName={tone?.bar} value={application.score ?? 0} />
                       </div>
 
-                      <div className="mt-auto flex flex-wrap items-center gap-2 border-t pt-3 text-muted-foreground text-xs">
+                      <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t pt-4 text-muted-foreground text-xs">
                         <span>{application.createdAt}</span>
                         <span aria-hidden="true">·</span>
                         <span className="uppercase">{application.language}</span>
+                        <span aria-hidden="true">·</span>
                         {application.missing > 0 ? (
-                          <Badge variant="outline">{application.missing} keywords missing</Badge>
-                        ) : null}
+                          <span className="rounded-md border bg-field px-2 py-1">
+                            {application.missing} keywords missing
+                          </span>
+                        ) : (
+                          <span className="rounded-md border bg-field px-2 py-1">
+                            No keyword gaps
+                          </span>
+                        )}
                         {application.hasPdf ? <Badge variant="secondary">PDF ready</Badge> : null}
                       </div>
                     </Link>

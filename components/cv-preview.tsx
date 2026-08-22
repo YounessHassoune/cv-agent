@@ -1,3 +1,5 @@
+import { UserRoundIcon } from "lucide-react";
+
 import { type CvTemplateId, resolveTemplate } from "@/lib/cv-templates";
 import { cn } from "@/lib/utils";
 
@@ -90,12 +92,20 @@ export function CvPreview({
   cv,
   template,
   className,
+  showPhoto,
 }: {
   readonly cv: CvPreviewData;
   readonly template?: string;
   readonly className?: string;
+  /**
+   * Reserve the photo slot even before one is uploaded, so the header keeps
+   * its shape while the builder is still empty. Defaults to showing the slot
+   * only once there is a photo to put in it.
+   */
+  readonly showPhoto?: boolean;
 }) {
   const skin = skins[resolveTemplate(template).id];
+  const photo = showPhoto ?? Boolean(cv.photoUrl);
   const contact = [cv.email, cv.phone, cv.location, ...(cv.links ?? [])].filter(Boolean);
   const hasBody =
     (cv.summary?.length ?? 0) > 0 ||
@@ -135,12 +145,16 @@ export function CvPreview({
       {contact.length > 0 ? (
         <div
           className={cn(
-            "flex flex-wrap gap-x-6 gap-y-1 bg-black/4 px-8 py-2.5 text-[0.58rem] opacity-70 sm:px-10",
+            "flex flex-wrap gap-x-4 gap-y-1 bg-black/4 px-8 py-2.5 text-[0.58rem] opacity-70 sm:px-10",
             skin.header === "text-center" && "justify-center",
           )}
         >
+          {/* Each item stays on one line so a narrow column wraps between
+              entries instead of breaking an email or URL across rows. */}
           {contact.map((item, i) => (
-            <span key={`${item}-${i}`}>{item}</span>
+            <span className="whitespace-nowrap" key={`${item}-${i}`}>
+              {item}
+            </span>
           ))}
         </div>
       ) : null}
@@ -150,19 +164,27 @@ export function CvPreview({
           className={cn(
             "mb-5",
             skin.header,
-            cv.photoUrl &&
+            photo &&
               (skin.header === "text-center"
                 ? "flex flex-col items-center gap-3"
                 : "flex items-center gap-5"),
           )}
         >
-          {cv.photoUrl ? (
+          {photo && cv.photoUrl ? (
             // biome-ignore lint/performance/noImgElement: inline data URL, not a remote asset
             <img
               alt=""
               className="size-16 shrink-0 rounded-full object-cover ring-1 ring-black/10"
               src={cv.photoUrl}
             />
+          ) : null}
+          {photo && !cv.photoUrl ? (
+            <span
+              aria-hidden="true"
+              className="flex size-16 shrink-0 items-center justify-center rounded-full border border-black/15 border-dashed bg-black/3 text-black/25"
+            >
+              <UserRoundIcon className="size-7" />
+            </span>
           ) : null}
           <div className="min-w-0">
             <h2 className={skin.name}>{cv.fullName || "Your name"}</h2>
