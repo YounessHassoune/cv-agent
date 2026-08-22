@@ -1,9 +1,11 @@
 "use client";
 
+import type { ClientSessionState, MessageStreamEvent } from "eve/client";
 import { FileTextIcon, MessageSquareIcon, ScrollTextIcon } from "lucide-react";
 
 import { AgentChat } from "@/app/(app)/_components/agent-chat";
 import { type CvPreviewData, CvPreview } from "@/components/cv-preview";
+import { PdfViewer } from "@/components/pdf-viewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 /**
@@ -17,12 +19,16 @@ export function ReviewPanel({
   cv,
   hasPdf,
   template,
+  chatEvents,
+  chatSession,
 }: {
   readonly applicationId: string;
   readonly title: string;
   readonly cv: CvPreviewData | null;
   readonly hasPdf: boolean;
   readonly template: string;
+  readonly chatEvents?: readonly MessageStreamEvent[];
+  readonly chatSession?: ClientSessionState;
 }) {
   return (
     <Tabs
@@ -61,10 +67,10 @@ export function ReviewPanel({
 
       <TabsContent className="min-h-0 p-4 data-[state=inactive]:hidden" forceMount value="pdf">
         {hasPdf ? (
-          <iframe
-            className="h-full min-h-96 w-full rounded-lg border bg-card"
+          <PdfViewer
+            className="min-h-96"
             src={`/api/applications/${applicationId}/pdf`}
-            title="Compiled CV"
+            title={`${title} — CV.pdf`}
           />
         ) : (
           <div className="flex h-full min-h-96 items-center justify-center rounded-lg border border-dashed text-muted-foreground text-sm">
@@ -81,6 +87,9 @@ export function ReviewPanel({
         <AgentChat
           contextPrefix={`Context: I'm reviewing application ${applicationId} ("${title}"). Use get_profile and this application's stored job description and ATS report when answering.`}
           heading="Tailor AI"
+          initialEvents={chatEvents}
+          initialSession={chatSession}
+          persistUrl={`/api/applications/${applicationId}/chat`}
           placeholder="Ask for a change to this CV…"
           subheading="Ask for rewrites, keyword coverage or a fresh PDF for this application."
           suggestions={[

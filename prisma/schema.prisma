@@ -94,6 +94,12 @@ model Application {
   cvText      String? // text extracted from the compiled PDF
   atsReport   Json? // { total, breakdown, matched, missing, suggestions }
   pdfBytes    Bytes?
+  /// Persisted eve chat for this application. `chatEvents` is the ordered
+  /// stream prefix replayed into `useEveAgent({ initialEvents })`, and
+  /// `chatSession` the `{ sessionId, streamIndex }` cursor that continues the
+  /// same durable session. Null until the first turn settles.
+  chatEvents  Json?
+  chatSession Json?
   status      Status   @default(DRAFT)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

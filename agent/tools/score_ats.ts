@@ -3,7 +3,7 @@ import { z } from "zod";
 import { type JdKeyword, scoreAts } from "../lib/ats";
 import { resolveUserId } from "../lib/auth";
 import { db } from "../lib/db";
-import { titlesFor } from "../lib/pdf";
+import { titlesFor } from "../../lib/cv-sections";
 
 export default defineTool({
   description:

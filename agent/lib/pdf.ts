@@ -9,101 +9,196 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import { extractText, getDocumentProxy } from "unpdf";
-import { type CvTemplate, resolveTemplate } from "../../lib/cv-templates";
-import type { Cv } from "./cv-schema";
+import { titlesFor } from "../../lib/cv-sections.ts";
+import {
+  CV_ALPHA,
+  CV_INK,
+  CV_SEPARATOR,
+  type CvTemplate,
+  inkFlat,
+  pt,
+  resolveTemplate,
+  shadeFlat,
+} from "../../lib/cv-templates.ts";
+import type { Cv } from "./cv-schema.ts";
+
+export { SECTION_TITLES, titlesFor } from "../../lib/cv-sections.ts";
 
 const h = React.createElement;
 
 /**
- * Localized section titles. The ATS structure check verifies these same
- * strings, so template and scorer can never drift apart.
- */
-export const SECTION_TITLES: Record<
-  string,
-  { summary: string; skills: string; experience: string; projects: string; education: string; languages: string }
-> = {
-  en: { summary: "Summary", skills: "Skills", experience: "Experience", projects: "Projects", education: "Education", languages: "Languages" },
-  fr: { summary: "Profil", skills: "Compétences", experience: "Expérience", projects: "Projets", education: "Formation", languages: "Langues" },
-  es: { summary: "Perfil", skills: "Habilidades", experience: "Experiencia", projects: "Proyectos", education: "Educación", languages: "Idiomas" },
-  de: { summary: "Profil", skills: "Kenntnisse", experience: "Berufserfahrung", projects: "Projekte", education: "Ausbildung", languages: "Sprachen" },
-};
-
-export function titlesFor(language: string) {
-  return SECTION_TITLES[language.slice(0, 2).toLowerCase()] ?? SECTION_TITLES.en;
-}
-
-/**
- * Every template is single column, plain text, standard headings and a core PDF
- * font — the parts an ATS actually parses. Only typography and spacing vary.
+ * The print half of the CV renderer, and a deliberate mirror of
+ * `components/cv-preview.tsx`: same sections in the same order, same contact
+ * strip, chips and pills, sized from the same shared template layout. What the
+ * user approves on screen is what downloads.
+ *
+ * Every template stays single column, plain text, standard headings and a core
+ * PDF font — the parts an ATS actually parses. Only typography and spacing vary.
  */
 function stylesFor(template: CvTemplate) {
-  const t = template.pdf;
+  const l = template.layout;
+  const bold = l.serif ? "Times-Bold" : "Helvetica-Bold";
+  const textAlign = l.centered ? ("center" as const) : ("left" as const);
+  // Templates that skip the rule lean on a lighter title instead, and the serif
+  // template draws its rule heavier. Both match the preview skins.
+  const ruleAlpha = l.serif ? CV_ALPHA.ruleStrong : CV_ALPHA.rule;
+  const chipPadY = pt(0.125);
+
   return StyleSheet.create({
     page: {
-      padding: t.padding,
-      fontSize: t.fontSize,
-      fontFamily: t.fontFamily,
-      color: "#111",
-      lineHeight: t.lineHeight,
+      paddingHorizontal: pt(l.padX),
+      paddingTop: pt(l.padY),
+      paddingBottom: pt(l.padY),
+      fontSize: pt(l.base),
+      fontFamily: l.serif ? "Times-Roman" : "Helvetica",
+      lineHeight: l.lineHeight,
+      color: CV_INK,
     },
-    header: { marginBottom: 2, textAlign: t.centerHeader ? "center" : "left" },
-    name: { fontSize: t.nameSize, fontFamily: t.boldFontFamily },
-    headline: { fontSize: t.fontSize + 1, marginTop: 2, color: "#333" },
-    contact: { fontSize: t.fontSize - 1, marginTop: 4, color: "#444" },
-    section: { marginTop: t.entryGap + 4 },
+    bold: { fontFamily: bold },
+    muted: { color: inkFlat(CV_ALPHA.muted) },
+    soft: { color: inkFlat(CV_ALPHA.soft) },
+
+    // Full-bleed contact strip: the page padding is pulled back so the band
+    // reaches the paper edge, the way the preview's does.
+    strip: {
+      marginTop: -pt(l.padY),
+      marginHorizontal: -pt(l.padX),
+      marginBottom: pt(l.padY),
+      paddingHorizontal: pt(l.padX),
+      paddingVertical: pt(0.3),
+      backgroundColor: shadeFlat(CV_ALPHA.strip),
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: l.centered ? "center" : "flex-start",
+      columnGap: pt(1),
+      rowGap: pt(0.15),
+    },
+    stripItem: { fontSize: pt(l.meta), color: inkFlat(CV_ALPHA.muted), lineHeight: 1.2 },
+
+    header: { marginBottom: pt(l.sectionGap) },
+    name: {
+      fontSize: pt(l.name),
+      fontFamily: bold,
+      letterSpacing: -pt(l.name * 0.02),
+      textAlign,
+    },
+    headline: {
+      fontSize: pt(l.headline),
+      color: inkFlat(CV_ALPHA.muted),
+      marginTop: pt(0.1),
+      textAlign,
+    },
+
+    section: { marginBottom: pt(l.sectionGap) },
     sectionTitle: {
-      fontSize: t.sectionTitleSize,
-      fontFamily: t.boldFontFamily,
-      textTransform: t.uppercaseSectionTitles ? "uppercase" : "none",
-      borderBottomWidth: t.sectionRule ? 1 : 0,
-      borderBottomColor: "#999",
-      paddingBottom: t.sectionRule ? 2 : 0,
-      marginBottom: 6,
-      letterSpacing: t.uppercaseSectionTitles ? 0.5 : 0,
+      fontSize: pt(l.sectionTitle),
+      fontFamily: bold,
+      color: l.sectionRule ? CV_INK : inkFlat(CV_ALPHA.muted),
+      textTransform: "uppercase",
+      letterSpacing: pt(l.sectionTitle * l.sectionTracking),
+      textAlign,
+      // The rule hugs the title, so the tall body line-height is dropped here.
+      lineHeight: 1.2,
+      borderBottomWidth: l.sectionRule ? 0.75 : 0,
+      borderBottomColor: shadeFlat(ruleAlpha),
+      paddingBottom: l.sectionRule ? pt(0.25) : 0,
+      marginBottom: pt(0.5),
     },
-    entry: { marginBottom: t.entryGap },
-    entryHeader: { flexDirection: "row", justifyContent: "space-between" },
-    entryTitle: { fontFamily: t.boldFontFamily, fontSize: t.fontSize + 0.5 },
-    entryMeta: { fontSize: t.fontSize - 1, color: "#444" },
-    bullet: { flexDirection: "row", marginTop: 2 },
-    bulletGlyph: { width: 10 },
+
+    /** Gaps sit *between* entries, never after the last one. */
+    entryGap: { marginBottom: pt(l.entryGap) },
+    eduGap: { marginBottom: pt(0.375) },
+    entryHeader: { flexDirection: "row", justifyContent: "space-between", columnGap: pt(0.75) },
+    entryTitle: { flexShrink: 1 },
+
+    chip: {
+      backgroundColor: shadeFlat(CV_ALPHA.chip),
+      borderRadius: pt(0.5),
+      paddingHorizontal: pt(0.375),
+      paddingVertical: chipPadY,
+    },
+    chipText: { fontSize: pt(l.meta), color: inkFlat(CV_ALPHA.muted), lineHeight: 1.2 },
+
+    skillGroup: { marginBottom: pt(0.5) },
+    skillLabel: {
+      fontSize: pt(l.label),
+      fontFamily: bold,
+      color: inkFlat(CV_ALPHA.soft),
+      marginBottom: pt(0.2),
+    },
+    pillRow: { flexDirection: "row", flexWrap: "wrap", columnGap: pt(0.25), rowGap: pt(0.2) },
+    pill: {
+      backgroundColor: shadeFlat(CV_ALPHA.pill),
+      borderRadius: pt(0.5),
+      paddingHorizontal: pt(0.375),
+      paddingVertical: chipPadY,
+    },
+    pillText: { fontSize: pt(l.label), lineHeight: 1.2 },
+
+    bullet: { flexDirection: "row", marginTop: pt(0.1) },
+    bulletDot: {
+      width: pt(0.19),
+      height: pt(0.19),
+      borderRadius: pt(0.1),
+      backgroundColor: inkFlat(CV_ALPHA.soft),
+      marginTop: pt(l.base) * 0.55,
+      marginRight: pt(0.375),
+    },
     bulletText: { flex: 1 },
-    skillRow: { marginBottom: 2 },
-    bold: { fontFamily: t.boldFontFamily },
+
+    stack: { fontSize: pt(l.meta), color: inkFlat(CV_ALPHA.soft), marginTop: pt(0.2) },
+    link: { fontSize: pt(l.meta), color: inkFlat(CV_ALPHA.soft) },
   });
 }
 
 type Styles = ReturnType<typeof stylesFor>;
 
+/** `space-y-*` semantics: the gap goes on every item but the last. */
+function spaced(gap: Styles[keyof Styles], i: number, length: number, base?: Styles[keyof Styles]) {
+  const rest = i < length - 1 ? [gap] : [];
+  return base ? [base, ...rest] : rest;
+}
+
 function Section(styles: Styles, title: string, children: React.ReactNode[]) {
   return h(
     View,
-    { style: styles.section },
+    { style: styles.section, key: title },
     h(Text, { style: styles.sectionTitle }, title),
     ...children,
   );
 }
 
+function Chip(styles: Styles, label: string) {
+  return h(View, { style: styles.chip }, h(Text, { style: styles.chipText }, label));
+}
+
 function Bullets(styles: Styles, bullets: string[]) {
-  return bullets.map((b, i) =>
+  return bullets.map((bullet, i) =>
     h(
       View,
       { style: styles.bullet, key: i },
-      h(Text, { style: styles.bulletGlyph }, "•"),
-      h(Text, { style: styles.bulletText }, b),
+      h(View, { style: styles.bulletDot }),
+      h(Text, { style: styles.bulletText }, bullet),
     ),
   );
+}
+
+function Stack(styles: Styles, stack: string[] | undefined) {
+  if (!stack || stack.length === 0) return [];
+  return [h(Text, { style: styles.stack, key: "stack" }, stack.join(CV_SEPARATOR))];
+}
+
+function dateRange(start?: string, end?: string) {
+  if (!start && !end) return null;
+  return `${start ?? ""} — ${end || "Present"}`;
 }
 
 function CvDocument({ cv, templateId }: { cv: Cv; templateId?: string }) {
   const styles = stylesFor(resolveTemplate(templateId));
   const t = titlesFor(cv.language);
-  const contactParts = [
-    cv.header.email,
-    cv.header.phone,
-    cv.header.location,
-    ...cv.header.links,
-  ].filter((p): p is string => Boolean(p));
+  const contact = [cv.header.email, cv.header.phone, cv.header.location, ...cv.header.links].filter(
+    (part): part is string => Boolean(part),
+  );
 
   return h(
     Document,
@@ -111,91 +206,140 @@ function CvDocument({ cv, templateId }: { cv: Cv; templateId?: string }) {
     h(
       Page,
       { size: "A4", style: styles.page },
-      // Header
+
+      // Contact strip, above the identity block
+      ...(contact.length > 0
+        ? [
+            h(
+              View,
+              { style: styles.strip, key: "strip" },
+              ...contact.map((item, i) => h(Text, { style: styles.stripItem, key: i }, item)),
+            ),
+          ]
+        : []),
+
+      // Identity
       h(
         View,
         { style: styles.header },
         h(Text, { style: styles.name }, cv.header.fullName),
-        h(Text, { style: styles.headline }, cv.header.headline),
-        h(Text, { style: styles.contact }, contactParts.join("  ·  ")),
+        ...(cv.header.headline ? [h(Text, { style: styles.headline }, cv.header.headline)] : []),
       ),
+
       // Summary
       ...(cv.summary ? [Section(styles, t.summary, [h(Text, { key: "s" }, cv.summary)])] : []),
-      // Skills
-      Section(
-        styles,
-        t.skills,
-        cv.skills.map((group, i) =>
-          h(
-            Text,
-            { style: styles.skillRow, key: i },
-            h(Text, { style: styles.bold }, `${group.category}: `),
-            group.items.join(", "),
-          ),
-        ),
-      ),
-      // Experience
-      Section(
-        styles,
-        t.experience,
-        cv.experiences.map((exp, i) =>
-          h(
-            View,
-            { style: styles.entry, key: i },
-            h(
-              View,
-              { style: styles.entryHeader },
-              h(Text, { style: styles.entryTitle }, `${exp.role} — ${exp.company}`),
-              h(
-                Text,
-                { style: styles.entryMeta },
-                [exp.start, exp.end].filter(Boolean).join(" – ") +
-                  (exp.location ? `  ·  ${exp.location}` : ""),
+
+      // Skills — a labelled row of pills per category
+      ...(cv.skills.length > 0
+        ? [
+            Section(
+              styles,
+              t.skills,
+              cv.skills.map((group, i) =>
+                h(
+                  View,
+                  { style: spaced(styles.skillGroup, i, cv.skills.length), key: i, wrap: false },
+                  h(Text, { style: styles.skillLabel }, group.category),
+                  h(
+                    View,
+                    { style: styles.pillRow },
+                    ...group.items.map((item, j) =>
+                      h(
+                        View,
+                        { style: styles.pill, key: j },
+                        h(Text, { style: styles.pillText }, item),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
-            ...Bullets(styles, exp.bullets),
-          ),
-        ),
-      ),
+          ]
+        : []),
+
+      // Experience
+      ...(cv.experiences.length > 0
+        ? [
+            Section(
+              styles,
+              t.experience,
+              cv.experiences.map((exp, i) => {
+                const meta = [dateRange(exp.start, exp.end), exp.location]
+                  .filter(Boolean)
+                  .join(CV_SEPARATOR);
+                return h(
+                  View,
+                  { style: spaced(styles.entryGap, i, cv.experiences.length), key: i, wrap: false },
+                  h(
+                    View,
+                    { style: styles.entryHeader },
+                    h(
+                      Text,
+                      { style: styles.entryTitle },
+                      h(Text, { style: styles.bold }, exp.role),
+                      h(Text, { style: styles.muted }, `${CV_SEPARATOR}${exp.company}`),
+                    ),
+                    ...(meta ? [Chip(styles, meta)] : []),
+                  ),
+                  ...Bullets(styles, exp.bullets),
+                  ...Stack(styles, exp.stack),
+                );
+              }),
+            ),
+          ]
+        : []),
+
       // Projects
       ...(cv.projects.length > 0
         ? [
             Section(
               styles,
               t.projects,
-              cv.projects.map((p, i) =>
+              cv.projects.map((project, i) =>
                 h(
                   View,
-                  { style: styles.entry, key: i },
+                  { style: spaced(styles.entryGap, i, cv.projects.length), key: i, wrap: false },
                   h(
                     View,
                     { style: styles.entryHeader },
-                    h(Text, { style: styles.entryTitle }, p.title),
-                    ...(p.link ? [h(Text, { style: styles.entryMeta }, p.link)] : []),
+                    h(Text, { style: [styles.entryTitle, styles.bold] }, project.title),
+                    ...(project.link ? [h(Text, { style: styles.link }, project.link)] : []),
                   ),
-                  ...Bullets(styles, p.bullets),
+                  ...Bullets(styles, project.bullets),
+                  ...Stack(styles, project.stack),
                 ),
               ),
             ),
           ]
         : []),
+
       // Education
       ...(cv.education.length > 0
         ? [
             Section(
               styles,
               t.education,
-              cv.education.map((e, i) =>
+              cv.education.map((entry, i) =>
                 h(
                   View,
-                  { style: [styles.entryHeader, { marginBottom: 2 }], key: i },
-                  h(Text, { style: styles.entryTitle }, `${e.degree} — ${e.institution}`),
-                  ...(e.dates ? [h(Text, { style: styles.entryMeta }, e.dates)] : []),
+                  {
+                    style: spaced(styles.eduGap, i, cv.education.length, styles.entryHeader),
+                    key: i,
+                    wrap: false,
+                  },
+                  h(
+                    Text,
+                    { style: styles.entryTitle },
+                    h(Text, { style: styles.bold }, entry.degree),
+                    h(Text, { style: styles.muted }, `${CV_SEPARATOR}${entry.institution}`),
+                  ),
+                  ...(entry.dates ? [Chip(styles, entry.dates)] : []),
                 ),
               ),
             ),
           ]
         : []),
+
       // Languages
       ...(cv.languages.length > 0
         ? [
@@ -203,7 +347,7 @@ function CvDocument({ cv, templateId }: { cv: Cv; templateId?: string }) {
               h(
                 Text,
                 { key: "l" },
-                cv.languages.map((l) => `${l.name} (${l.level})`).join("  ·  "),
+                cv.languages.map((lang) => `${lang.name} (${lang.level})`).join(CV_SEPARATOR),
               ),
             ]),
           ]

@@ -26,62 +26,78 @@ type SeedApplication = {
 const baseCv = (headline: string, summary: string) => ({
   language: "en",
   header: {
-    fullName: "Sample User",
+    fullName: "Alex Moreau",
     headline,
-    email: "sample.user@example.com",
-    phone: "+1 555 0100",
-    location: "Remote",
-    links: ["github.com/sample-user", "linkedin.com/in/sample-user"],
+    email: "alex.moreau@example.com",
+    phone: "+33 6 12 34 56 78",
+    location: "Lyon, France · Open to remote",
+    links: ["github.com/alex-moreau", "linkedin.com/in/alex-moreau", "alexmoreau.dev"],
   },
   summary,
   skills: [
-    { category: "Languages", items: ["TypeScript", "JavaScript", "SQL", "Python"] },
-    { category: "Frameworks", items: ["React", "Next.js", "Node.js", "Express"] },
+    { category: "Languages", items: ["TypeScript", "JavaScript", "SQL"] },
+    { category: "Frontend", items: ["React", "Next.js", "Tailwind CSS"] },
+    { category: "Mobile", items: ["React Native", "Expo", "iOS / Android release"] },
+    { category: "Backend", items: ["Node.js", "Express", "REST / GraphQL"] },
     { category: "Data", items: ["PostgreSQL", "Redis", "Prisma"] },
-    { category: "Cloud & DevOps", items: ["Docker", "AWS", "CI/CD", "Terraform"] },
+    { category: "Cloud & DevOps", items: ["Docker", "AWS", "CI/CD"] },
   ],
   experiences: [
     {
       company: "Northwind Commerce",
-      role: "Senior Software Engineer",
+      role: "Senior Full-Stack Engineer",
       location: "Remote",
       start: "Mar 2022",
       bullets: [
-        "Rebuilt the checkout service, cutting p95 latency from 820ms to 460ms by adding Redis-backed pricing caches",
-        "Led migration of 40+ REST endpoints to a typed Node.js/TypeScript service layer, reducing production type errors by 70%",
-        "Introduced a Playwright end-to-end suite covering the top 12 revenue flows, catching 15 regressions before release in year one",
+        "Rebuilt the checkout service, cutting p95 latency from 820ms to 460ms with Redis-backed pricing caches",
+        "Migrated 40+ REST endpoints to a typed Node.js/TypeScript service layer, reducing production type errors by 70%",
+        "Shipped the React Native companion app to iOS and Android, reaching 45k installs in the first year",
+        "Introduced a Playwright end-to-end suite over the top 12 revenue flows, catching 15 regressions before release",
       ],
-      stack: ["TypeScript", "Node.js", "React", "PostgreSQL", "Redis", "AWS"],
+      stack: ["TypeScript", "React", "Node.js", "React Native", "PostgreSQL", "Redis", "AWS"],
     },
     {
       company: "Bluepeak Analytics",
-      role: "Software Engineer",
+      role: "Mobile Engineer (React Native)",
       location: "Lyon, France",
       start: "Jul 2020",
       end: "Feb 2022",
       bullets: [
-        "Built an internal reporting dashboard used daily by 200+ analysts, replacing a manual spreadsheet process",
-        "Cut nightly ETL runtime by 35% by rewriting aggregation queries and adding partitioned indexes in PostgreSQL",
+        "Built the company's first React Native app from scratch, replacing two separate native codebases",
+        "Implemented offline-first sync with SQLite and a background queue, so field analysts could work without signal",
+        "Raised crash-free sessions from 97.2% to 99.6% by adding Sentry and fixing the top 10 reported crashes",
       ],
-      stack: ["Python", "PostgreSQL", "Docker", "React"],
+      stack: ["React Native", "TypeScript", "Redux Toolkit", "SQLite", "Sentry"],
     },
   ],
   projects: [
     {
       title: "Ledgerly",
-      link: "github.com/sample-user/ledgerly",
+      link: "github.com/alex-moreau/ledgerly",
       bullets: [
-        "Designed a double-entry ledger API in TypeScript with Prisma and PostgreSQL, reaching 600+ GitHub stars",
+        "Designed a double-entry ledger API in TypeScript with Prisma and PostgreSQL, now at 600+ GitHub stars",
       ],
       stack: ["TypeScript", "Prisma", "PostgreSQL"],
     },
+    {
+      title: "Trailmark",
+      link: "github.com/alex-moreau/trailmark",
+      bullets: [
+        "Built a React Native app that records GPS tracks offline and syncs when a connection returns",
+      ],
+      stack: ["React Native", "Expo", "TypeScript", "SQLite"],
+    },
   ],
   education: [
-    { institution: "State University", degree: "BSc Computer Science", dates: "2016 — 2020" },
+    {
+      institution: "Université Claude Bernard Lyon 1",
+      degree: "BSc Computer Science",
+      dates: "2015 — 2018",
+    },
   ],
   languages: [
-    { name: "English", level: "Fluent" },
     { name: "French", level: "Native" },
+    { name: "English", level: "Fluent (C1)" },
   ],
 });
 
@@ -89,7 +105,7 @@ export const SEED_APPLICATIONS: SeedApplication[] = [
   {
     headline: "Senior Full-Stack Engineer",
     summary:
-      "Full-stack engineer with 5 years building high-traffic commerce systems in TypeScript and React. Cut checkout latency 44% at Northwind and led a 40-endpoint migration to a typed service layer.",
+      "Full-stack engineer with 6 years building high-traffic commerce systems in TypeScript and React. Cut checkout latency 44% at Northwind and led a 40-endpoint migration to a typed service layer.",
     jdText: `Senior Full-Stack Engineer — TechFlow Systems (Remote, US)
 
 We are looking for a senior full-stack engineer to own our customer-facing platform end to end.
@@ -153,7 +169,7 @@ Requirements:
   {
     headline: "Backend Engineer, Payments",
     summary:
-      "Backend engineer focused on transactional systems: built a double-entry ledger API in TypeScript and cut nightly ETL runtime 35% through query and index work in PostgreSQL.",
+      "Backend engineer focused on transactional systems: built a double-entry ledger API in TypeScript and Prisma at 94% test coverage, and migrated 40+ REST endpoints to a typed Node.js service layer.",
     jdText: `Backend Engineer, Payments — Global Finance Bank (New York, Hybrid)
 
 Join the payments platform team building the ledger behind our card products.
@@ -200,7 +216,7 @@ What we look for:
   {
     headline: "Ingénieur Full-Stack",
     summary:
-      "Ingénieur full-stack avec 5 ans d'expérience sur des plateformes e-commerce à fort trafic en TypeScript et React.",
+      "Ingénieur full-stack avec 6 ans d'expérience sur des plateformes e-commerce à fort trafic en TypeScript, React et React Native.",
     jdText: `Ingénieur Full-Stack — RetailNova (Paris, France)
 
 Nous recherchons un ingénieur full-stack pour renforcer l'équipe plateforme.

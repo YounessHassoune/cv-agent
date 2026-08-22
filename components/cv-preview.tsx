@@ -1,6 +1,7 @@
 import { UserRoundIcon } from "lucide-react";
 
-import { type CvTemplateId, resolveTemplate } from "@/lib/cv-templates";
+import { titlesFor } from "@/lib/cv-sections";
+import { CV_ALPHA, CV_SEPARATOR, ink, resolveTemplate, shade } from "@/lib/cv-templates";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,6 +17,8 @@ export type CvPreviewData = {
   links?: string[];
   /** Data URL. Shown in the preview only — the compiled PDF stays photo-free. */
   photoUrl?: string;
+  /** ISO code; picks the section headings. Defaults to English. */
+  language?: string;
   summary?: string;
   skills?: { category: string; items: string[] }[];
   experiences?: {
@@ -32,52 +35,7 @@ export type CvPreviewData = {
   languages?: { name: string; level: string }[];
 };
 
-/** Per-template classes. Structure never changes — only type and spacing. */
-const skins: Record<
-  CvTemplateId,
-  {
-    body: string;
-    padding: string;
-    header: string;
-    name: string;
-    headline: string;
-    sectionTitle: string;
-    sectionGap: string;
-    entryGap: string;
-  }
-> = {
-  modern: {
-    body: "font-sans text-[0.7rem] leading-relaxed",
-    padding: "px-8 py-8 sm:px-10 sm:py-9",
-    header: "text-left",
-    name: "text-[1.35rem] font-semibold tracking-tight",
-    headline: "text-[0.8rem] opacity-70",
-    sectionTitle: "border-b border-black/15 pb-1 text-[0.6rem] uppercase tracking-[0.14em]",
-    sectionGap: "mb-5",
-    entryGap: "space-y-3.5",
-  },
-  classic: {
-    body: "font-serif text-[0.72rem] leading-relaxed",
-    padding: "px-10 py-10 sm:px-12",
-    header: "text-center",
-    name: "text-[1.5rem] font-semibold tracking-tight",
-    headline: "text-[0.82rem] opacity-70",
-    sectionTitle:
-      "border-black/25 border-b pb-1 text-center text-[0.62rem] uppercase tracking-[0.2em]",
-    sectionGap: "mb-5",
-    entryGap: "space-y-4",
-  },
-  compact: {
-    body: "font-sans text-[0.64rem] leading-snug",
-    padding: "px-7 py-6 sm:px-8",
-    header: "text-left",
-    name: "text-[1.1rem] font-semibold tracking-tight",
-    headline: "text-[0.72rem] opacity-70",
-    sectionTitle: "text-[0.56rem] uppercase tracking-[0.16em] opacity-70",
-    sectionGap: "mb-3.5",
-    entryGap: "space-y-2.5",
-  },
-};
+const rem = (value: number) => `${value}rem`;
 
 function dateRange(start?: string, end?: string) {
   if (!start && !end) return null;
@@ -85,8 +43,10 @@ function dateRange(start?: string, end?: string) {
 }
 
 /**
- * A paper-white rendering of the CV. It stays light in dark mode on purpose:
- * this is a document preview, and the compiled PDF is printed on white.
+ * A paper-white rendering of the CV, and the screen half of a pair: every size
+ * here comes from the shared template layout that `agent/lib/pdf.ts` renders
+ * from, so the preview and the downloaded PDF are the same document. It stays
+ * light in dark mode on purpose — the PDF is printed on white.
  */
 export function CvPreview({
   cv,
@@ -104,28 +64,69 @@ export function CvPreview({
    */
   readonly showPhoto?: boolean;
 }) {
-  const skin = skins[resolveTemplate(template).id];
+  const l = resolveTemplate(template).layout;
+  const t = titlesFor(cv.language);
   const photo = showPhoto ?? Boolean(cv.photoUrl);
   const contact = [cv.email, cv.phone, cv.location, ...(cv.links ?? [])].filter(Boolean);
+  const skills = cv.skills ?? [];
+  const experiences = cv.experiences ?? [];
+  const projects = cv.projects ?? [];
+  const education = cv.education ?? [];
+  const languages = cv.languages ?? [];
   const hasBody =
-    (cv.summary?.length ?? 0) > 0 ||
-    (cv.skills?.length ?? 0) > 0 ||
-    (cv.experiences?.length ?? 0) > 0 ||
-    (cv.projects?.length ?? 0) > 0 ||
-    (cv.education?.length ?? 0) > 0;
+    Boolean(cv.summary) ||
+    skills.length + experiences.length + projects.length + education.length > 0;
 
-  const SectionTitle = ({ children }: { readonly children: React.ReactNode }) => (
-    <h3 className={cn("mb-2 font-semibold", skin.sectionTitle)}>{children}</h3>
+  // Templates that skip the rule lean on a lighter title instead, and the serif
+  // template draws its rule heavier. `stylesFor` in the PDF does the same.
+  const ruleAlpha = l.serif ? CV_ALPHA.ruleStrong : CV_ALPHA.rule;
+
+  /** `space-y-*` semantics: the gap goes on every item but the last. */
+  const gapAfter = (i: number, length: number, gap: number) =>
+    i < length - 1 ? rem(gap) : undefined;
+
+  const Section = ({
+    title,
+    children,
+  }: {
+    readonly title: string;
+    readonly children: React.ReactNode;
+  }) => (
+    <section style={{ marginBottom: rem(l.sectionGap) }}>
+      <h3
+        className="font-semibold uppercase"
+        style={{
+          fontSize: rem(l.sectionTitle),
+          letterSpacing: `${l.sectionTracking}em`,
+          lineHeight: 1.2,
+          textAlign: l.centered ? "center" : "left",
+          color: l.sectionRule ? undefined : ink(CV_ALPHA.muted),
+          borderBottom: l.sectionRule ? `0.75px solid ${shade(ruleAlpha)}` : undefined,
+          paddingBottom: l.sectionRule ? rem(0.25) : undefined,
+          marginBottom: rem(0.5),
+        }}
+      >
+        {title}
+      </h3>
+      {children}
+    </section>
   );
 
   const Bullets = ({ items }: { readonly items: string[] }) =>
     items.length === 0 ? null : (
-      <ul className="mt-1 space-y-0.5">
+      <ul>
         {items.map((item, i) => (
-          <li className="flex gap-1.5" key={i}>
+          <li className="flex" key={i} style={{ marginTop: rem(0.1) }}>
             <span
               aria-hidden="true"
-              className="mt-[0.45em] size-0.75 shrink-0 rounded-full bg-current opacity-60"
+              className="shrink-0 rounded-full"
+              style={{
+                width: rem(0.19),
+                height: rem(0.19),
+                marginTop: rem(l.base * 0.55),
+                marginRight: rem(0.375),
+                background: ink(CV_ALPHA.soft),
+              }}
             />
             <span>{item}</span>
           </li>
@@ -133,21 +134,57 @@ export function CvPreview({
       </ul>
     );
 
+  const Chip = ({ children }: { readonly children: React.ReactNode }) => (
+    <span
+      className="shrink-0 whitespace-nowrap rounded-full"
+      style={{
+        background: shade(CV_ALPHA.chip),
+        color: ink(CV_ALPHA.muted),
+        fontSize: rem(l.meta),
+        lineHeight: 1.2,
+        padding: `${rem(0.125)} ${rem(0.375)}`,
+      }}
+    >
+      {children}
+    </span>
+  );
+
+  const Stack = ({ items }: { readonly items?: string[] }) =>
+    items && items.length > 0 ? (
+      <p style={{ fontSize: rem(l.meta), color: ink(CV_ALPHA.soft), marginTop: rem(0.2) }}>
+        {items.join(CV_SEPARATOR)}
+      </p>
+    ) : null;
+
+  const EntryHeader = ({ children }: { readonly children: React.ReactNode }) => (
+    <div className="flex items-baseline justify-between" style={{ columnGap: rem(0.75) }}>
+      {children}
+    </div>
+  );
+
   return (
     <article
       className={cn(
-        "mx-auto w-full max-w-184 overflow-hidden rounded-lg bg-paper text-paper-foreground shadow-paper",
-        skin.body,
+        "mx-auto w-full overflow-hidden rounded-lg bg-paper text-paper-foreground shadow-paper",
+        l.serif ? "font-serif" : "font-sans",
         className,
       )}
+      style={{ maxWidth: "46rem", fontSize: rem(l.base), lineHeight: l.lineHeight }}
     >
-      {/* Contact strip above the identity block, as in the reference layout. */}
+      {/* Contact strip above the identity block, as in the compiled PDF. */}
       {contact.length > 0 ? (
         <div
-          className={cn(
-            "flex flex-wrap gap-x-4 gap-y-1 bg-black/4 px-8 py-2.5 text-[0.58rem] opacity-70 sm:px-10",
-            skin.header === "text-center" && "justify-center",
-          )}
+          className="flex flex-wrap"
+          style={{
+            background: shade(CV_ALPHA.strip),
+            color: ink(CV_ALPHA.muted),
+            fontSize: rem(l.meta),
+            lineHeight: 1.2,
+            padding: `${rem(0.3)} ${rem(l.padX)}`,
+            columnGap: rem(1),
+            rowGap: rem(0.15),
+            justifyContent: l.centered ? "center" : "flex-start",
+          }}
         >
           {/* Each item stays on one line so a narrow column wraps between
               entries instead of breaking an email or URL across rows. */}
@@ -159,16 +196,12 @@ export function CvPreview({
         </div>
       ) : null}
 
-      <div className={skin.padding}>
+      <div style={{ padding: `${rem(l.padY)} ${rem(l.padX)}` }}>
         <header
           className={cn(
-            "mb-5",
-            skin.header,
-            photo &&
-              (skin.header === "text-center"
-                ? "flex flex-col items-center gap-3"
-                : "flex items-center gap-5"),
+            photo && (l.centered ? "flex flex-col items-center gap-3" : "flex items-center gap-5"),
           )}
+          style={{ marginBottom: rem(l.sectionGap) }}
         >
           {photo && cv.photoUrl ? (
             // biome-ignore lint/performance/noImgElement: inline data URL, not a remote asset
@@ -186,120 +219,151 @@ export function CvPreview({
               <UserRoundIcon className="size-7" />
             </span>
           ) : null}
-          <div className="min-w-0">
-            <h2 className={skin.name}>{cv.fullName || "Your name"}</h2>
-            {cv.headline ? <p className={cn("mt-0.5 font-medium", skin.headline)}>{cv.headline}</p> : null}
+          <div className="min-w-0" style={{ textAlign: l.centered ? "center" : "left" }}>
+            <h2
+              className="font-semibold"
+              style={{ fontSize: rem(l.name), letterSpacing: "-0.02em", lineHeight: 1.15 }}
+            >
+              {cv.fullName || "Your name"}
+            </h2>
+            {cv.headline ? (
+              <p
+                style={{
+                  fontSize: rem(l.headline),
+                  color: ink(CV_ALPHA.muted),
+                  marginTop: rem(0.1),
+                }}
+              >
+                {cv.headline}
+              </p>
+            ) : null}
           </div>
         </header>
 
         {!hasBody ? (
-          <p className="py-10 text-center text-[0.7rem] opacity-50">
+          <p className="py-10 text-center opacity-50" style={{ fontSize: rem(l.base) }}>
             Fill in your profile to see the CV take shape here.
           </p>
         ) : null}
 
         {cv.summary ? (
-          <section className={skin.sectionGap}>
-            <SectionTitle>Summary</SectionTitle>
+          <Section title={t.summary}>
             <p>{cv.summary}</p>
-          </section>
+          </Section>
         ) : null}
 
-        {cv.skills && cv.skills.length > 0 ? (
-          <section className={skin.sectionGap}>
-            <SectionTitle>Skills</SectionTitle>
-            <div className="space-y-2">
-              {cv.skills.map((group) => (
-                <div key={group.category}>
-                  <p className="mb-1 font-semibold text-[0.6rem] opacity-60">{group.category}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {group.items.map((item) => (
-                      <span className="rounded-full bg-black/6 px-2 py-0.5 text-[0.6rem]" key={item}>
-                        {item}
-                      </span>
-                    ))}
-                  </div>
+        {skills.length > 0 ? (
+          <Section title={t.skills}>
+            {skills.map((group, i) => (
+              <div key={group.category} style={{ marginBottom: gapAfter(i, skills.length, 0.5) }}>
+                <p
+                  className="font-semibold"
+                  style={{
+                    fontSize: rem(l.label),
+                    color: ink(CV_ALPHA.soft),
+                    marginBottom: rem(0.2),
+                  }}
+                >
+                  {group.category}
+                </p>
+                <div
+                  className="flex flex-wrap"
+                  style={{ columnGap: rem(0.25), rowGap: rem(0.2) }}
+                >
+                  {group.items.map((item) => (
+                    <span
+                      className="rounded-full"
+                      key={item}
+                      style={{
+                        background: shade(CV_ALPHA.pill),
+                        fontSize: rem(l.label),
+                        lineHeight: 1.2,
+                        padding: `${rem(0.125)} ${rem(0.375)}`,
+                      }}
+                    >
+                      {item}
+                    </span>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              </div>
+            ))}
+          </Section>
         ) : null}
 
-        {cv.experiences && cv.experiences.length > 0 ? (
-          <section className={skin.sectionGap}>
-            <SectionTitle>Experience</SectionTitle>
-            <div className={skin.entryGap}>
-              {cv.experiences.map((experience, i) => (
-                <div key={`${experience.company}-${i}`}>
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                    <p className="font-semibold">
-                      {experience.role}
-                      <span className="font-normal opacity-70"> · {experience.company}</span>
-                    </p>
-                    <p className="rounded-full bg-black/5 px-2 py-0.5 text-[0.58rem] opacity-70">
+        {experiences.length > 0 ? (
+          <Section title={t.experience}>
+            {experiences.map((experience, i) => (
+              <div
+                key={`${experience.company}-${i}`}
+                style={{ marginBottom: gapAfter(i, experiences.length, l.entryGap) }}
+              >
+                <EntryHeader>
+                  <p className="min-w-0">
+                    <span className="font-semibold">{experience.role}</span>
+                    <span style={{ color: ink(CV_ALPHA.muted) }}>{`${CV_SEPARATOR}${experience.company}`}</span>
+                  </p>
+                  {[dateRange(experience.start, experience.end), experience.location].some(
+                    Boolean,
+                  ) ? (
+                    <Chip>
                       {[dateRange(experience.start, experience.end), experience.location]
                         .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <Bullets items={experience.bullets} />
-                  {experience.stack && experience.stack.length > 0 ? (
-                    <p className="mt-1 text-[0.58rem] opacity-60">{experience.stack.join(" · ")}</p>
+                        .join(CV_SEPARATOR)}
+                    </Chip>
                   ) : null}
-                </div>
-              ))}
-            </div>
-          </section>
+                </EntryHeader>
+                <Bullets items={experience.bullets} />
+                <Stack items={experience.stack} />
+              </div>
+            ))}
+          </Section>
         ) : null}
 
-        {cv.projects && cv.projects.length > 0 ? (
-          <section className={skin.sectionGap}>
-            <SectionTitle>Projects</SectionTitle>
-            <div className={skin.entryGap}>
-              {cv.projects.map((project, i) => (
-                <div key={`${project.title}-${i}`}>
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                    <p className="font-semibold">{project.title}</p>
-                    {project.link ? (
-                      <span className="text-[0.58rem] opacity-60">{project.link}</span>
-                    ) : null}
-                  </div>
-                  <Bullets items={project.bullets} />
-                  {project.stack && project.stack.length > 0 ? (
-                    <p className="mt-1 text-[0.58rem] opacity-60">{project.stack.join(" · ")}</p>
+        {projects.length > 0 ? (
+          <Section title={t.projects}>
+            {projects.map((project, i) => (
+              <div
+                key={`${project.title}-${i}`}
+                style={{ marginBottom: gapAfter(i, projects.length, l.entryGap) }}
+              >
+                <EntryHeader>
+                  <p className="min-w-0 font-semibold">{project.title}</p>
+                  {project.link ? (
+                    <span
+                      className="shrink-0 whitespace-nowrap"
+                      style={{ fontSize: rem(l.meta), color: ink(CV_ALPHA.soft) }}
+                    >
+                      {project.link}
+                    </span>
                   ) : null}
-                </div>
-              ))}
-            </div>
-          </section>
+                </EntryHeader>
+                <Bullets items={project.bullets} />
+                <Stack items={project.stack} />
+              </div>
+            ))}
+          </Section>
         ) : null}
 
-        {cv.education && cv.education.length > 0 ? (
-          <section className={skin.sectionGap}>
-            <SectionTitle>Education</SectionTitle>
-            <div className="space-y-1.5">
-              {cv.education.map((entry, i) => (
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3" key={i}>
-                  <p>
+        {education.length > 0 ? (
+          <Section title={t.education}>
+            {education.map((entry, i) => (
+              <div key={i} style={{ marginBottom: gapAfter(i, education.length, 0.375) }}>
+                <EntryHeader>
+                  <p className="min-w-0">
                     <span className="font-semibold">{entry.degree}</span>
-                    <span className="opacity-70"> · {entry.institution}</span>
+                    <span style={{ color: ink(CV_ALPHA.muted) }}>{`${CV_SEPARATOR}${entry.institution}`}</span>
                   </p>
-                  {entry.dates ? (
-                    <p className="rounded-full bg-black/5 px-2 py-0.5 text-[0.58rem] opacity-70">
-                      {entry.dates}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </section>
+                  {entry.dates ? <Chip>{entry.dates}</Chip> : null}
+                </EntryHeader>
+              </div>
+            ))}
+          </Section>
         ) : null}
 
-        {cv.languages && cv.languages.length > 0 ? (
-          <section>
-            <SectionTitle>Languages</SectionTitle>
-            <p>{cv.languages.map((l) => `${l.name} (${l.level})`).join(" · ")}</p>
-          </section>
+        {languages.length > 0 ? (
+          <Section title={t.languages}>
+            <p>{languages.map((entry) => `${entry.name} (${entry.level})`).join(CV_SEPARATOR)}</p>
+          </Section>
         ) : null}
       </div>
     </article>

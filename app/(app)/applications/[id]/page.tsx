@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ClientSessionState, MessageStreamEvent } from "eve/client";
 import { ArrowLeftIcon, LightbulbIcon } from "lucide-react";
 
 import type { AtsReport } from "@/agent/lib/ats.ts";
@@ -16,6 +17,7 @@ import { StatusActions } from "./status-actions";
 export const dynamic = "force-dynamic";
 
 type StoredCv = {
+  language?: string;
   header?: {
     fullName?: string;
     headline?: string;
@@ -37,6 +39,7 @@ function toPreview(cv: StoredCv | null): CvPreviewData | null {
   return {
     fullName: cv.header.fullName,
     headline: cv.header.headline,
+    language: cv.language,
     email: cv.header.email,
     phone: cv.header.phone,
     location: cv.header.location,
@@ -96,6 +99,8 @@ export default async function ApplicationPage({
       jdText: true,
       atsReport: true,
       cvJson: true,
+      chatEvents: true,
+      chatSession: true,
     },
   });
   if (!application) notFound();
@@ -250,6 +255,8 @@ export default async function ApplicationPage({
         <div className="h-[75dvh] min-h-0 xl:sticky xl:top-4 xl:h-[calc(100dvh-14rem)]">
           <ReviewPanel
             applicationId={application.id}
+            chatEvents={(application.chatEvents as MessageStreamEvent[] | null) ?? undefined}
+            chatSession={(application.chatSession as ClientSessionState | null) ?? undefined}
             cv={cv}
             hasPdf={hasPdf}
             template={application.template}

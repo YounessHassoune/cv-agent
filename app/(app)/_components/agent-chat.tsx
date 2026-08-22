@@ -1,7 +1,7 @@
 "use client";
 
 import type { UserContent } from "ai";
-import { Client, type MessageStreamEvent } from "eve/client";
+import { Client, type ClientSessionState, type MessageStreamEvent } from "eve/client";
 import { useEveAgent } from "eve/react";
 import { AlertCircleIcon } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
@@ -40,6 +40,12 @@ export type AgentChatProps = {
   /** Prefixed to messages sent from a panel so the agent knows the context. */
   readonly contextPrefix?: string;
   readonly placeholder?: string;
+  /** Saved stream prefix for this thread, replayed to restore the transcript. */
+  readonly initialEvents?: readonly MessageStreamEvent[];
+  /** Saved `{ sessionId, streamIndex }` cursor, to continue the same session. */
+  readonly initialSession?: ClientSessionState;
+  /** Endpoint that stores the snapshot after every settled turn. */
+  readonly persistUrl?: string;
 };
 
 export function AgentChat({
@@ -49,6 +55,9 @@ export function AgentChat({
   suggestions = [],
   contextPrefix,
   placeholder = "Send a message…",
+  initialEvents,
+  initialSession,
+  persistUrl,
 }: AgentChatProps = {}) {
   const isPanel = variant === "panel";
   const [client] = useState(() => new Client({ host: "" }));
@@ -103,9 +112,25 @@ export function AgentChat({
   );
 
   const agent = useEveAgent({
+    // Replayed history. The store dedupes by `meta.id`, so an overlap between
+    // the saved prefix and the resumed stream renders only once.
+    initialEvents: initialEvents ?? [],
+    initialSession,
     onEvent: handleEvent,
     onSessionChange(session) {
       sessionIdRef.current = session?.sessionId;
+    },
+    onFinish(snapshot) {
+      if (!persistUrl) return;
+      void fetch(persistUrl, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ events: snapshot.events, session: snapshot.session }),
+        // Survives the user navigating away the moment a turn settles.
+        keepalive: true,
+      }).catch(() => {
+        // A dropped save only costs history, never the live conversation.
+      });
     },
   });
   const isBusy = agent.status === "submitted" || agent.status === "streaming";

@@ -39,6 +39,23 @@ function normalize(text: string): string {
   return text.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+/**
+ * Section headings are letter-spaced, so a PDF text layer hands them back as
+ * "S K I L L S". A line made of nothing but one- and two-character fragments
+ * is one of those — glue it back into a word so the header check can find it.
+ */
+function glueSpacedHeadings(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => {
+      const parts = line.trim().split(/\s+/);
+      return parts.length >= 3 && parts.every((part) => part.length <= 2)
+        ? parts.join("")
+        : line;
+    })
+    .join("\n");
+}
+
 function escapeRegExp(term: string): string {
   return term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -88,8 +105,13 @@ export function structureScore(
   const issues: string[] = [];
   let score = 0;
 
-  // Section headers present (40 pts)
-  const found = sectionTitles.filter((t) => text.includes(normalize(t)));
+  // Section headers present (40 pts). Only this check reads the de-spaced
+  // copy — it would corrupt the prose the other two metrics measure.
+  const headings = normalize(glueSpacedHeadings(cvText));
+  const found = sectionTitles.filter((t) => {
+    const title = normalize(t);
+    return text.includes(title) || headings.includes(title);
+  });
   const headerRatio = sectionTitles.length === 0 ? 1 : found.length / sectionTitles.length;
   score += Math.round(headerRatio * 40);
   if (headerRatio < 1) {

@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../agent/generated/prisma/client.ts";
+import { hashPassword } from "../agent/lib/password.ts";
 import { buildApplicationRows } from "./seed-applications.ts";
 
 try {
@@ -11,9 +12,17 @@ const db = new PrismaClient({
 });
 
 /**
+ * Sign-in credentials for the seeded account. The seed always (re)sets this
+ * password so a fresh clone — or a forgotten dev password — never blocks you
+ * out of the app. Override with SEED_EMAIL / SEED_PASSWORD.
+ */
+const SEED_EMAIL = process.env.SEED_EMAIL ?? "demo@applyflow.local";
+const SEED_PASSWORD = process.env.SEED_PASSWORD ?? "demo1234";
+
+/**
  * Seeds whichever account you actually sign in as: an explicit DEV_USER_ID
- * wins, otherwise the most recently registered user, and finally the
- * `local-dev` principal that `eve dev` falls back to.
+ * wins, otherwise the most recently registered user. With no accounts at all
+ * it creates the demo one above, so there is always something to sign in as.
  */
 async function resolveUserId(): Promise<string> {
   if (process.env.DEV_USER_ID) return process.env.DEV_USER_ID;
@@ -27,8 +36,16 @@ async function resolveUserId(): Promise<string> {
     return newest.id;
   }
 
-  console.log("No registered users found — seeding the `local-dev` principal.");
-  return "local-dev";
+  const created = await db.user.create({
+    data: {
+      email: SEED_EMAIL,
+      name: "Sample User",
+      passwordHash: await hashPassword(SEED_PASSWORD),
+    },
+    select: { id: true, email: true },
+  });
+  console.log(`No registered users found — created ${created.email}.`);
+  return created.id;
 }
 
 /**
@@ -44,77 +61,118 @@ async function main() {
   const profile = await db.profile.create({
     data: {
       userId,
-      fullName: "Sample User",
-      headline: "Full-Stack Engineer",
+      fullName: "Alex Moreau",
+      headline: "Full-Stack JavaScript & Mobile Engineer",
       summary:
-        "Full-stack engineer with 5 years shipping high-traffic commerce and analytics platforms in TypeScript, React and Node.js.",
+        "Full-stack JavaScript engineer with 6 years building product across web and mobile — React and Node.js services on the web, React Native apps shipped to both stores. Owns features end to end, from Postgres schema to App Store release, and has taken two codebases from ad-hoc scripts to typed, tested and continuously deployed.",
+      template: "modern",
       contact: {
-        email: "sample.user@example.com",
-        phone: "+1 555 0100",
-        location: "Remote",
-        links: ["github.com/sample-user", "linkedin.com/in/sample-user"],
+        email: "alex.moreau@example.com",
+        phone: "+33 6 12 34 56 78",
+        location: "Lyon, France · Open to remote",
+        links: ["github.com/alex-moreau", "linkedin.com/in/alex-moreau", "alexmoreau.dev"],
       },
       languages: [
-        { name: "English", level: "Fluent" },
         { name: "French", level: "Native" },
+        { name: "English", level: "Fluent (C1)" },
+        { name: "Spanish", level: "Conversational (B1)" },
       ],
       education: [
         {
-          institution: "State University",
+          institution: "Université Claude Bernard Lyon 1",
           degree: "BSc Computer Science",
-          start: "2016",
-          end: "2020",
+          start: "2015",
+          end: "2018",
         },
       ],
       skills: {
         create: [
           { name: "TypeScript", category: "Languages", level: "Advanced" },
           { name: "JavaScript", category: "Languages", level: "Advanced" },
-          { name: "Python", category: "Languages", level: "Intermediate" },
-          { name: "SQL", category: "Languages", level: "Advanced" },
-          { name: "React", category: "Frameworks" },
-          { name: "Next.js", category: "Frameworks" },
-          { name: "Node.js", category: "Frameworks" },
-          { name: "Express", category: "Frameworks" },
+          { name: "SQL", category: "Languages", level: "Intermediate" },
+          { name: "React", category: "Frontend" },
+          { name: "Next.js", category: "Frontend" },
+          { name: "Tailwind CSS", category: "Frontend" },
+          { name: "React Native", category: "Mobile" },
+          { name: "Expo", category: "Mobile" },
+          { name: "iOS / Android release", category: "Mobile" },
+          { name: "Node.js", category: "Backend" },
+          { name: "Express", category: "Backend" },
+          { name: "REST / GraphQL", category: "Backend" },
           { name: "PostgreSQL", category: "Data" },
           { name: "Redis", category: "Data" },
           { name: "Prisma", category: "Data" },
           { name: "Docker", category: "Cloud & DevOps" },
           { name: "AWS", category: "Cloud & DevOps" },
           { name: "CI/CD", category: "Cloud & DevOps" },
-          { name: "Terraform", category: "Cloud & DevOps" },
           { name: "Jest", category: "Testing" },
           { name: "Playwright", category: "Testing" },
+          { name: "Detox", category: "Testing" },
         ],
       },
       experiences: {
         create: [
           {
             company: "Northwind Commerce",
-            role: "Senior Software Engineer",
+            role: "Senior Full-Stack Engineer",
             location: "Remote",
             start: new Date("2022-03-01"),
             end: null,
             bullets: [
-              "Rebuilt the checkout service, cutting p95 latency from 820ms to 460ms by adding Redis-backed pricing caches",
-              "Led migration of 40+ REST endpoints to a typed Node.js/TypeScript service layer, reducing production type errors by 70%",
-              "Introduced Playwright end-to-end suite covering the top 12 revenue flows, catching 15 regressions before release in year one",
-              "Mentored 3 mid-level engineers through code review and pairing",
+              "Rebuilt the checkout service, cutting p95 latency from 820ms to 460ms with Redis-backed pricing caches",
+              "Migrated 40+ REST endpoints to a typed Node.js/TypeScript service layer, reducing production type errors by 70%",
+              "Shipped the React Native companion app to iOS and Android, reaching 45k installs in the first year",
+              "Cut mobile cold-start time from 4.1s to 1.6s by trimming the JS bundle and moving to Hermes",
+              "Introduced a Playwright end-to-end suite over the top 12 revenue flows, catching 15 regressions before release",
+              "Mentored 3 mid-level engineers through code review and weekly pairing",
             ],
-            stack: ["TypeScript", "Node.js", "React", "PostgreSQL", "Redis", "AWS", "Playwright"],
+            stack: [
+              "TypeScript",
+              "React",
+              "Next.js",
+              "Node.js",
+              "React Native",
+              "PostgreSQL",
+              "Redis",
+              "AWS",
+              "Playwright",
+            ],
           },
           {
             company: "Bluepeak Analytics",
-            role: "Software Engineer",
+            role: "Mobile Engineer (React Native)",
             location: "Lyon, France",
             start: new Date("2020-07-01"),
             end: new Date("2022-02-01"),
             bullets: [
-              "Built an internal reporting dashboard used daily by 200+ analysts, replacing a manual spreadsheet process",
-              "Cut nightly ETL runtime by 35% by rewriting the aggregation queries and adding partitioned indexes in PostgreSQL",
-              "Containerised 6 services with Docker and set up GitHub Actions CI/CD, taking deploys from weekly to daily",
+              "Built the company's first React Native app from scratch, replacing two separate native codebases",
+              "Set up over-the-air updates with CodePush, taking hotfix delivery from 5 days to under 1 hour",
+              "Implemented offline-first sync with SQLite and a background queue, so field analysts could work without signal",
+              "Raised crash-free sessions from 97.2% to 99.6% by adding Sentry and fixing the top 10 reported crashes",
+              "Automated iOS and Android builds with Fastlane and GitHub Actions, removing a manual release checklist",
             ],
-            stack: ["Python", "PostgreSQL", "Docker", "CI/CD", "React", "JavaScript"],
+            stack: [
+              "React Native",
+              "TypeScript",
+              "Redux Toolkit",
+              "SQLite",
+              "Fastlane",
+              "Sentry",
+              "GitHub Actions",
+            ],
+          },
+          {
+            company: "Atelier Digital",
+            role: "Frontend Developer",
+            location: "Lyon, France",
+            start: new Date("2018-09-01"),
+            end: new Date("2020-06-01"),
+            bullets: [
+              "Delivered 11 client sites in React and Next.js, all scoring 90+ on Lighthouse performance",
+              "Built a shared component library adopted by 4 project teams, cutting new-project setup from days to hours",
+              "Converted a legacy jQuery dashboard to React incrementally, with no feature freeze",
+            ],
+            stack: ["JavaScript", "React", "Next.js", "SCSS", "Storybook", "Jest"],
           },
         ],
       },
@@ -123,22 +181,22 @@ async function main() {
           {
             title: "Ledgerly",
             description: "Open-source double-entry bookkeeping API",
-            link: "github.com/sample-user/ledgerly",
+            link: "github.com/alex-moreau/ledgerly",
             bullets: [
-              "Designed a double-entry ledger API in TypeScript with Prisma and PostgreSQL, reaching 600+ GitHub stars",
-              "Achieved 94% test coverage with Jest across the transaction engine",
+              "Designed a double-entry ledger API in TypeScript with Prisma and PostgreSQL, now at 600+ GitHub stars",
+              "Reached 94% test coverage with Jest across the transaction engine",
             ],
             stack: ["TypeScript", "Prisma", "PostgreSQL", "Jest", "Docker"],
           },
           {
-            title: "Shiplog",
-            description: "Deployment timeline visualiser",
-            link: "github.com/sample-user/shiplog",
+            title: "Trailmark",
+            description: "Offline hiking tracker (iOS & Android)",
+            link: "github.com/alex-moreau/trailmark",
             bullets: [
-              "Built a Next.js dashboard that correlates deploys with error-rate spikes across 3 environments",
-              "Provisioned the AWS infrastructure with Terraform, keeping monthly hosting under $20",
+              "Built a React Native app that records GPS tracks offline and syncs when a connection returns",
+              "Published to both stores with Expo EAS; 4.6★ average across 300+ ratings",
             ],
-            stack: ["Next.js", "React", "TypeScript", "AWS", "Terraform"],
+            stack: ["React Native", "Expo", "TypeScript", "SQLite", "MapLibre"],
           },
         ],
       },
@@ -146,18 +204,29 @@ async function main() {
     include: { skills: true, experiences: true, projects: true },
   });
 
-  // Sample applications so /applications isn't empty on a fresh install.
-  // Replaced wholesale on every run, like the profile above.
+
   await db.application.deleteMany({ where: { userId } });
   const applications = await db.application.createMany({
     data: buildApplicationRows(userId),
   });
+
+
+  const account = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
+  if (account) {
+    await db.user.update({
+      where: { id: userId },
+      data: { passwordHash: await hashPassword(SEED_PASSWORD) },
+    });
+  }
 
   console.log(
     `Seeded profile for userId="${userId}": ${profile.skills.length} skills, ` +
       `${profile.experiences.length} experiences, ${profile.projects.length} projects, ` +
       `${applications.count} sample applications.`,
   );
+  if (account) {
+    console.log(`Sign in with  ${account.email}  /  ${SEED_PASSWORD}`);
+  }
   console.log("Replace this sample data with your real background before applying to jobs.");
 }
 
