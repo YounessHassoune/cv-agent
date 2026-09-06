@@ -36,6 +36,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CV_TEMPLATE_LIST, DEFAULT_TEMPLATE } from "@/lib/cv-templates";
 import { cn } from "@/lib/utils";
+import { CvImportCard } from "./cv-import-card";
 import { PhotoField } from "./photo-field";
 
 export type ProfileForm = {
@@ -263,6 +264,14 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
 
   const patch = (values: Partial<ProfileForm>) => {
     setForm((f) => ({ ...f, ...values }));
+    setStatus("dirty");
+  };
+
+  // A CV import rewrites whole sections at once, so it replaces the form
+  // rather than patching fields. Still only a draft: nothing reaches the
+  // database until Save.
+  const applyImport = (apply: (current: ProfileForm) => ProfileForm) => {
+    setForm(apply);
     setStatus("dirty");
   };
 
@@ -870,6 +879,8 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
               </Button>
             </div>
           </div>
+
+          <CvImportCard hasContent={sections.some((s) => filled[s.id])} onImport={applyImport} />
 
           {status === "dirty" ? (
             <p className="text-muted-foreground text-xs">Unsaved changes.</p>
