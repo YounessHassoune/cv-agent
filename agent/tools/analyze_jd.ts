@@ -1,32 +1,12 @@
-import { generateObject } from "ai";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import type { JdKeyword } from "../lib/ats";
 import { resolveUserId } from "../lib/auth";
 import { db } from "../lib/db";
+import { ExtractionSchema } from "../lib/extraction-schema";
 import { cvLoop } from "../lib/state";
 
-// Keyword extraction is plain structured parsing — route it to the cheap tier.
-// The premium model (agent.ts) is reserved for bullet rewriting/translation.
-const EXTRACTION_MODEL = process.env.EXTRACTION_MODEL ?? "anthropic/claude-haiku-4.5";
-
-const ExtractionSchema = z.object({
-  role: z.string().describe("The job title being hired for"),
-  seniority: z.string().describe("junior | mid | senior | lead | unspecified"),
-  language: z.string().describe("ISO code of the language the JD is written in"),
-  keywords: z
-    .array(
-      z.object({
-        term: z.string().describe("Short canonical term as it appears in the JD"),
-        weight: z.number().min(1).max(3).describe("3 = must-have, 1 = nice-to-have"),
-        category: z.enum(["hard", "tool", "domain", "soft"]),
-      }),
-    )
-    .min(5)
-    .max(30),
-});
-
-/** Fallback when no model/gateway key is available: frequency-based unigrams/bigrams. */
+/** Fallback when jd-analyst is unavailable: frequency-based unigrams. */
 function heuristicKeywords(jdText: string): JdKeyword[] {
   const stop = new Set(
     "the a an and or of to in for with on at by from as is are be we you our your will this that have has can plus etc & - •".split(" "),
@@ -42,53 +22,55 @@ function heuristicKeywords(jdText: string): JdKeyword[] {
 
 export default defineTool({
   description:
-    "Analyze a job description: extract weighted ATS keywords, role, and seniority, then create the Application draft row for this run. Call this once per job, before tailoring. Returns the applicationId used by compile_pdf / score_ats / stage_application.",
+    "Create the single Application draft row for this job. Call this exactly once per job — no matter how many target languages — after jd-analyst has analyzed the JD, passing its extraction through. Returns the applicationId used by compile_pdf / score_ats / stage_application for every language.",
   inputSchema: z.object({
     jdText: z.string().min(50).describe("The full job description text"),
-    targetLanguage: z
-      .string()
-      .default("en")
-      .describe("ISO code of the language the CV should be written in"),
+    targetLanguages: z
+      .array(z.string().min(2))
+      .min(1)
+      .default(["en"])
+      .describe("ISO codes of every language the CV should be written in, e.g. ['en','fr']"),
+    extraction: ExtractionSchema.optional().describe(
+      "The jd-analyst subagent's result. Omit only if jd-analyst failed — keywords then degrade to a frequency heuristic.",
+    ),
   }),
-  async execute({ jdText, targetLanguage }, ctx) {
+  async execute({ jdText, targetLanguages, extraction }, ctx) {
     const userId = resolveUserId(ctx);
 
-    let extraction: z.infer<typeof ExtractionSchema>;
-    try {
-      const { object } = await generateObject({
-        model: EXTRACTION_MODEL,
-        schema: ExtractionSchema,
-        prompt: `Extract ATS-relevant data from this job description. Focus keywords on concrete skills, technologies, methodologies, and domain terms an ATS would scan for — not generic filler.\n\n${jdText}`,
-      });
-      extraction = object;
-    } catch {
-      extraction = {
-        role: "unknown",
-        seniority: "unspecified",
-        language: "en",
-        keywords: heuristicKeywords(jdText),
-      };
-    }
+    const languages = [...new Set(targetLanguages.map((lang) => lang.toLowerCase()))];
+    const keywords: JdKeyword[] = extraction?.keywords ?? heuristicKeywords(jdText);
 
     const application = await db.application.create({
       data: {
         userId,
         jdText,
-        language: targetLanguage,
-        jdKeywords: extraction.keywords,
+        languages,
+        jdKeywords: keywords,
         status: "DRAFT",
+        // Link the eve session that is creating this application, so the
+        // review page resumes this very conversation (stream replays from 0).
+        chatSession: { sessionId: ctx.session.id, streamIndex: 0 },
       },
     });
 
-    cvLoop.update(() => ({ applicationId: application.id, iterations: 0, cap: 4 }));
+    cvLoop.update((s) => ({
+      ...s,
+      applicationId: application.id,
+      iterations: {},
+      rejections: {},
+    }));
 
     return {
       applicationId: application.id,
-      role: extraction.role,
-      seniority: extraction.seniority,
-      jdLanguage: extraction.language,
-      targetLanguage,
-      keywords: extraction.keywords,
+      role: extraction?.role ?? "unknown",
+      seniority: extraction?.seniority ?? "unspecified",
+      jdLanguage: extraction?.language ?? "unknown",
+      domain: extraction?.domain ?? "",
+      targetProfile: extraction?.targetProfile ?? "",
+      responsibilities: extraction?.responsibilities ?? [],
+      targetLanguages: languages,
+      keywords,
+      keywordSource: extraction ? "jd-analyst" : "heuristic",
     };
   },
 });

@@ -15,7 +15,10 @@ export type CvPreviewData = {
   phone?: string;
   location?: string;
   links?: string[];
-  /** Data URL. Shown in the preview only — the compiled PDF stays photo-free. */
+  /**
+   * Cloudinary delivery URL (older profiles may still hold a data URL). Shown
+   * in the preview only — the compiled PDF stays photo-free.
+   */
   photoUrl?: string;
   /** ISO code; picks the section headings. Defaults to English. */
   language?: string;
@@ -198,23 +201,25 @@ export function CvPreview({
 
       <div style={{ padding: `${rem(l.padY)} ${rem(l.padX)}` }}>
         <header
-          className={cn(
-            photo && (l.centered ? "flex flex-col items-center gap-3" : "flex items-center gap-5"),
-          )}
-          style={{ marginBottom: rem(l.sectionGap) }}
+          className={cn(photo && (l.centered ? "flex flex-col items-center" : "flex items-center"))}
+          style={{ marginBottom: rem(l.sectionGap), gap: photo ? rem(l.photoGap) : undefined }}
         >
           {photo && cv.photoUrl ? (
-            // biome-ignore lint/performance/noImgElement: inline data URL, not a remote asset
+            // biome-ignore lint/performance/noImgElement: Cloudinary already
+            // delivers this pre-sized and format-negotiated; next/image would
+            // only add a second optimizer in front of it.
             <img
               alt=""
-              className="size-16 shrink-0 rounded-full object-cover ring-1 ring-black/10"
+              className="shrink-0 rounded-full object-cover ring-1 ring-black/10"
               src={cv.photoUrl}
+              style={{ width: rem(l.photoSize), height: rem(l.photoSize) }}
             />
           ) : null}
           {photo && !cv.photoUrl ? (
             <span
               aria-hidden="true"
-              className="flex size-16 shrink-0 items-center justify-center rounded-full border border-black/15 border-dashed bg-black/3 text-black/25"
+              className="flex shrink-0 items-center justify-center rounded-full border border-black/15 border-dashed bg-black/3 text-black/25"
+              style={{ width: rem(l.photoSize), height: rem(l.photoSize) }}
             >
               <UserRoundIcon className="size-7" />
             </span>
@@ -231,7 +236,8 @@ export function CvPreview({
                 style={{
                   fontSize: rem(l.headline),
                   color: ink(CV_ALPHA.muted),
-                  marginTop: rem(0.1),
+                  marginTop: rem(l.headlineGap),
+                  lineHeight: 1.2,
                 }}
               >
                 {cv.headline}

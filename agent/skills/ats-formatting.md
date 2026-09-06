@@ -13,10 +13,10 @@ description: Load when structuring the CV JSON for compile_pdf or when improving
 
 ## Raising a low score
 
-Read the `score_ats` breakdown and target the weakest component:
+The score is an internal signal — relevance and truthful fit always outrank raw keyword overlap. Read the `score_ats` breakdown and target the weakest component:
 
-- **keyword** low → check `missing`: for each missing term the profile truthfully supports, add it to the matching skill group AND mention it in one bullet where it was genuinely used. Terms the profile does not support are listed in the staging summary, never added.
-- **semantic** low → the summary and top bullets don't speak the JD's language: rephrase them using the JD's own domain vocabulary (truthfully), especially in the summary and the first bullet of each role.
+- **keyword** low → check `missing`: for each missing term the profile truthfully supports, add it to the matching skill group AND mention it in one bullet where it was genuinely used. For terms the profile does not support, never add the term itself — instead cover the underlying capability with transferable framing in the summary/bullets (which lifts the semantic component), and list the term in the staging summary.
+- **semantic** low → the summary and top bullets don't speak the JD's language: rephrase them using the JD's own domain vocabulary and responsibility phrasing (truthfully), especially in the summary and the first bullet of each role. This is where transferable/adjacent experience earns its points.
 - **structure** low → follow the suggestions: usually too few quantified bullets (add profile-backed numbers, %, currency) or length outside the 300–1100 word band.
 
-Diminishing returns: if two consecutive iterations improve the total by < 3 points, stop looping and stage.
+Diminishing returns: if two consecutive iterations improve the total by < 3 points, stop looping and stage. Never degrade readable, role-relevant prose just to hit a keyword count.

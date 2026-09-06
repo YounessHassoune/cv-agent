@@ -42,6 +42,19 @@ export type CvLayout = {
   padY: number;
   name: number;
   headline: number;
+  /**
+   * Space between the name and the headline under it. An explicit token
+   * because the two renderers disagree about inherited leading: CSS puts
+   * half-leading above a first line and @react-pdf does not, so leaving this
+   * gap implicit rendered the PDF header visibly tighter than the preview.
+   * Both renderers also pin the headline's line-height, so this is the only
+   * thing that moves the two apart.
+   */
+  headlineGap: number;
+  /** Diameter of the optional header photo. */
+  photoSize: number;
+  /** Space between the photo and the identity block beside/below it. */
+  photoGap: number;
   /** Contact strip, date chips, stack lines. */
   meta: number;
   /** Skill category labels. */
@@ -77,6 +90,9 @@ export const CV_TEMPLATES: Record<CvTemplateId, CvTemplate> = {
       padY: 2.25,
       name: 1.35,
       headline: 0.8,
+      headlineGap: 0.45,
+      photoSize: 4,
+      photoGap: 1.25,
       meta: 0.58,
       label: 0.6,
       sectionTitle: 0.6,
@@ -99,6 +115,9 @@ export const CV_TEMPLATES: Record<CvTemplateId, CvTemplate> = {
       padY: 2.5,
       name: 1.5,
       headline: 0.82,
+      headlineGap: 0.45,
+      photoSize: 4,
+      photoGap: 0.75,
       meta: 0.6,
       label: 0.62,
       sectionTitle: 0.62,
@@ -121,6 +140,9 @@ export const CV_TEMPLATES: Record<CvTemplateId, CvTemplate> = {
       padY: 1.5,
       name: 1.1,
       headline: 0.72,
+      headlineGap: 0.34,
+      photoSize: 3.5,
+      photoGap: 1,
       meta: 0.56,
       label: 0.58,
       sectionTitle: 0.56,

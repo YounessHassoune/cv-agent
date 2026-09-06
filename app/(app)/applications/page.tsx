@@ -1,5 +1,6 @@
 import type { AtsReport } from "@/agent/lib/ats.ts";
 import { db } from "@/agent/lib/db.ts";
+import { readVariants } from "@/agent/lib/variants.ts";
 import { requireUser } from "@/app/lib/current-user";
 import { type ApplicationRow, ApplicationsView } from "./applications-view";
 
@@ -16,49 +17,51 @@ function titleOf(headline: string | undefined, jdText: string): string {
 export default async function ApplicationsPage() {
   const user = await requireUser();
 
-  const [applications, pdfRows] = await Promise.all([
-    db.application.findMany({
-      where: { userId: user.userId },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        language: true,
-        status: true,
-        createdAt: true,
-        atsReport: true,
-        cvJson: true,
-        jdText: true,
-      },
-    }),
-    // Selecting pdfBytes would pull every PDF into memory just for a badge.
-    db.application.findMany({
-      where: { userId: user.userId, NOT: { pdfBytes: null } },
-      select: { id: true },
-    }),
-  ]);
-
-  const withPdf = new Set(pdfRows.map((row) => row.id));
+  const applications = await db.application.findMany({
+    where: { userId: user.userId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      languages: true,
+      status: true,
+      createdAt: true,
+      variants: true,
+      jdText: true,
+      // Only the languages — never the bytes — for the PDF badge.
+      pdfs: { select: { language: true } },
+    },
+  });
 
   const rows: ApplicationRow[] = applications.map((application) => {
-    const report = application.atsReport as AtsReport | null;
-    const cv = application.cvJson as { header?: { headline?: string } } | null;
+    const variants = readVariants(application.variants);
+    const reports = Object.values(variants)
+      .map((variant) => variant.atsReport as AtsReport | null)
+      .filter((report): report is AtsReport => typeof report?.total === "number");
+    // The card shows the strongest variant; the detail page breaks it down.
+    const best = reports.reduce<AtsReport | null>(
+      (top, report) => (top === null || report.total > top.total ? report : top),
+      null,
+    );
+    const headline = Object.values(variants)
+      .map((variant) => (variant.cvJson as { header?: { headline?: string } } | null)?.header?.headline)
+      .find(Boolean);
     const jdText = application.jdText ?? "";
 
     return {
       id: application.id,
-      title: titleOf(cv?.header?.headline, jdText),
+      title: titleOf(headline, jdText),
       jdSnippet: jdText.replace(/\s+/g, " ").slice(0, 180),
-      language: application.language,
+      languages: application.languages,
       status: application.status,
       createdAt: application.createdAt.toLocaleDateString("en", {
         day: "numeric",
         month: "short",
         year: "numeric",
       }),
-      score: typeof report?.total === "number" ? report.total : null,
-      matched: report?.matched.length ?? 0,
-      missing: report?.missing.length ?? 0,
-      hasPdf: withPdf.has(application.id),
+      score: best?.total ?? null,
+      matched: best?.matched.length ?? 0,
+      missing: best?.missing.length ?? 0,
+      pdfCount: application.pdfs.length,
     };
   });
 

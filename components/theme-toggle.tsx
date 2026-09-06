@@ -14,7 +14,7 @@ export const THEME_STORAGE_KEY = "applyflow-theme";
 
 /**
  * Both controls render a placeholder until mounted: the stored theme is only
- * known in the browser, so rendering an icon during SSR would mismatch.
+ * known in the browser, so anything derived from it during SSR would mismatch.
  */
 function useMounted() {
   const [mounted, setMounted] = useState(false);
@@ -29,14 +29,17 @@ export function ThemeToggle({ className }: { readonly className?: string }) {
 
   const next: Record<string, Theme> = { light: "dark", dark: "system", system: "light" };
   const Icon = theme === "dark" ? MoonIcon : theme === "light" ? SunIcon : MonitorIcon;
+  // The label and tooltip name the stored theme, so they have to stay on the
+  // same placeholder as the icon until the browser value is known.
+  const label = mounted ? `Theme: ${theme}. Switch to ${next[theme] ?? "light"}.` : "Toggle theme";
 
   return (
     <Button
-      aria-label={`Theme: ${theme}. Switch to ${next[theme] ?? "light"}.`}
+      aria-label={label}
       className={cn("text-muted-foreground", className)}
       onClick={() => setTheme(next[theme] ?? "light")}
       size="icon-sm"
-      title={`Theme: ${theme}`}
+      title={label}
       type="button"
       variant="ghost"
     >

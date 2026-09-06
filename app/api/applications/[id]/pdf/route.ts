@@ -1,8 +1,61 @@
 import { db } from "@/agent/lib/db.ts";
+import { type CvPhoto, renderCvPdf } from "@/agent/lib/pdf.ts";
+import { readVariants } from "@/agent/lib/variants.ts";
+import { isCloudinaryUrl } from "@/app/lib/cloudinary";
 import { getCurrentUser } from "@/app/lib/current-user";
+import { CV_TEMPLATE_IDS, type CvTemplateId } from "@/lib/cv-templates";
+
+function requestedTemplate(url: URL): CvTemplateId | undefined {
+  const value = url.searchParams.get("template");
+  return CV_TEMPLATE_IDS.includes(value as CvTemplateId) ? (value as CvTemplateId) : undefined;
+}
+
+/** Photos are capped well under this by the upload transformation. */
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Loads the header photo as bytes. Fetched here rather than handed to
+ * @react-pdf as a URL so a slow or unreachable Cloudinary cannot stall PDF
+ * generation — on any failure the CV simply renders without the photo.
+ */
+async function loadPhoto(photoUrl: string | null | undefined): Promise<CvPhoto | undefined> {
+  if (!photoUrl) return undefined;
+
+  try {
+    // Legacy inline photo from before uploads moved to Cloudinary.
+    if (photoUrl.startsWith("data:image/")) {
+      const [meta, base64] = photoUrl.split(",", 2);
+      if (!base64) return undefined;
+      return {
+        data: Buffer.from(base64, "base64"),
+        format: meta.includes("png") ? "png" : "jpg",
+      };
+    }
+    if (!isCloudinaryUrl(photoUrl)) return undefined;
+
+    const response = await fetch(photoUrl, { signal: AbortSignal.timeout(5000) });
+    if (!response.ok) return undefined;
+
+    const buffer = await response.arrayBuffer();
+    if (buffer.byteLength > MAX_PHOTO_BYTES) return undefined;
+
+    const type = response.headers.get("content-type") ?? "";
+    if (!type.startsWith("image/")) return undefined;
+    // @react-pdf decodes only JPEG and PNG; Cloudinary may negotiate WebP/AVIF
+    // for browsers, so anything else is skipped rather than corrupting a page.
+    if (!/jpeg|jpg|png/.test(type)) return undefined;
+
+    return {
+      data: Buffer.from(buffer),
+      format: type.includes("png") ? "png" : "jpg",
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
@@ -11,18 +64,66 @@ export async function GET(
   const { id } = await params;
   const application = await db.application.findFirst({
     where: { id, userId: user.userId },
-    select: { pdfBytes: true, cvJson: true },
+    select: { languages: true, variants: true },
   });
-  if (!application?.pdfBytes) return new Response("Not found", { status: 404 });
+  if (!application) return new Response("Not found", { status: 404 });
 
-  const cv = application.cvJson as { header?: { fullName?: string } } | null;
-  const name = (cv?.header?.fullName ?? "cv").replace(/[^\w-]+/g, "_");
+  const url = new URL(request.url);
+  const requested = url.searchParams.get("lang")?.toLowerCase();
+  const template = requestedTemplate(url);
+  // The photo is opt-in per request, driven by the review panel's switch, and
+  // lives on the master profile rather than the tailored CV.
+  const wantsPhoto = url.searchParams.get("photo") === "1";
 
-  return new Response(new Uint8Array(application.pdfBytes), {
-    headers: {
-      "content-type": "application/pdf",
-      "content-disposition": `inline; filename="${name}_CV.pdf"`,
-      "cache-control": "no-store",
-    },
+  // Resolve the language first so only one PDF's bytes are ever loaded.
+  const available = await db.cvPdf.findMany({
+    where: { applicationId: id },
+    select: { language: true },
   });
+  const present = new Set(available.map((row) => row.language));
+  // Default: the first target language that actually has a compiled PDF.
+  const language = requested?.length
+    ? present.has(requested)
+      ? requested
+      : undefined
+    : (application.languages.find((lang) => present.has(lang)) ?? available[0]?.language);
+  if (!language) return new Response("Not found", { status: 404 });
+
+  const variant = readVariants(application.variants)[language];
+  const name = (variant?.cvJson?.header?.fullName ?? "cv").replace(/[^\w-]+/g, "_");
+  const headers = {
+    "content-type": "application/pdf",
+    "content-disposition": `inline; filename="${name}_CV_${language.toUpperCase()}.pdf"`,
+    "cache-control": "no-store",
+  };
+
+  // Always re-render from the stored CV JSON when it is available, rather than
+  // serving the bytes compiled earlier. Two reasons: it makes template
+  // switching a presentation choice instead of an agent round-trip, and it
+  // keeps the PDF honest against the current renderer — bytes compiled before
+  // a layout fix would otherwise keep serving the old layout forever, and only
+  // for whichever template the CV happened to be compiled with. Content is
+  // identical either way, so the recorded ATS text and score stay valid.
+  if (variant?.cvJson) {
+    const profile = wantsPhoto
+      ? await db.profile.findUnique({
+          where: { userId: user.userId },
+          select: { photoUrl: true },
+        })
+      : null;
+    const photo = await loadPhoto(profile?.photoUrl);
+
+    return new Response(await renderCvPdf(variant.cvJson, template ?? variant.template, photo), {
+      headers,
+    });
+  }
+
+  // No CV JSON (a legacy row): the compiled bytes are all there is.
+  const pdf = await db.cvPdf.findUnique({
+    where: { applicationId_language: { applicationId: id, language } },
+    select: { bytes: true },
+  });
+  if (!pdf) return new Response("Not found", { status: 404 });
+
+  return new Response(new Uint8Array(pdf.bytes), { headers });
 }

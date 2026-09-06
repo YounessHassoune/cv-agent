@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@/agent/generated/prisma/client.ts";
 import { db } from "@/agent/lib/db.ts";
 import { getCurrentUser } from "@/app/lib/current-user";
 
@@ -31,4 +32,31 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if (count === 0) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   return NextResponse.json({ saved: parsed.data.events.length });
+}
+
+/**
+ * Forgets this application's conversation so the next message opens a brand new
+ * eve session.
+ *
+ * A turn that dies mid-flight (a provider outage, a rate-limit rejection) can
+ * leave the durable history malformed — most often a tool result whose
+ * originating tool call never settled. Strict providers reject every later
+ * request against that history, which brands the thread permanently. Nothing
+ * here can repair a session's server-side history, so the escape hatch is to
+ * stop pointing at it. The CV, PDFs and ATS reports are untouched.
+ */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  // `undefined` would mean "leave unchanged"; DbNull is what actually clears a
+  // nullable Json column.
+  const { count } = await db.application.updateMany({
+    where: { id, userId: user.userId },
+    data: { chatEvents: Prisma.DbNull, chatSession: Prisma.DbNull },
+  });
+  if (count === 0) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
+  return NextResponse.json({ reset: id });
 }

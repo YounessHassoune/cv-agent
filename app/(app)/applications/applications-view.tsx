@@ -20,13 +20,16 @@ export type ApplicationRow = {
   id: string;
   title: string;
   jdSnippet: string;
-  language: string;
+  /** Target languages of this application (one card per job, not per language). */
+  languages: string[];
   status: string;
   createdAt: string;
+  /** Best score across the language variants. */
   score: number | null;
   matched: number;
   missing: number;
-  hasPdf: boolean;
+  /** How many language variants have a compiled PDF. */
+  pdfCount: number;
 };
 
 const statusFilters = ["All", "DRAFT", "PENDING_REVIEW", "APPROVED", "APPLIED", "REJECTED"];
@@ -222,7 +225,7 @@ export function ApplicationsView({
                       <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t pt-4 text-muted-foreground text-xs">
                         <span>{application.createdAt}</span>
                         <span aria-hidden="true">·</span>
-                        <span className="uppercase">{application.language}</span>
+                        <span className="uppercase">{application.languages.join(" / ")}</span>
                         <span aria-hidden="true">·</span>
                         {application.missing > 0 ? (
                           <span className="rounded-md border bg-field px-2 py-1">
@@ -233,7 +236,13 @@ export function ApplicationsView({
                             No keyword gaps
                           </span>
                         )}
-                        {application.hasPdf ? <Badge variant="secondary">PDF ready</Badge> : null}
+                        {application.pdfCount > 0 ? (
+                          <Badge variant="secondary">
+                            {application.pdfCount > 1
+                              ? `${application.pdfCount} PDFs ready`
+                              : "PDF ready"}
+                          </Badge>
+                        ) : null}
                       </div>
                     </Link>
                   </li>

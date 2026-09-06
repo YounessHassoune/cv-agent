@@ -270,12 +270,19 @@ export function buildApplicationRows(userId: string) {
       userId,
       jdText: application.jdText,
       jdKeywords: application.jdKeywords,
-      language: application.language,
+      languages: [application.language],
       template: application.template,
       status: application.status,
-      cvJson: cv,
-      cvText: `${cv.header.fullName}\n${cv.header.headline}\n${application.summary}`,
-      atsReport: application.atsReport,
+      // One variant per language — seeds are single-language snapshots.
+      variants: {
+        [application.language]: {
+          cvJson: cv,
+          cvText: `${cv.header.fullName}\n${cv.header.headline}\n${application.summary}`,
+          atsReport: application.atsReport,
+          template: application.template,
+          updatedAt: createdAt.toISOString(),
+        },
+      },
       createdAt,
       updatedAt: createdAt,
     };

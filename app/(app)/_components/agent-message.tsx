@@ -7,22 +7,19 @@ import type {
   EveMessagePart,
 } from "eve/react";
 import {
+  AlertCircleIcon,
   CheckCircleIcon,
+  CheckIcon,
   ExternalLinkIcon,
   FileIcon,
   ImageIcon,
   KeyRoundIcon,
+  Loader2Icon,
   XCircleIcon,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
-import {
-  Tool,
-  ToolContent,
-  ToolHeader,
-  ToolInput,
-  ToolOutput,
-} from "@/components/ai-elements/tool";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -92,7 +89,7 @@ function AgentMessagePart({
       );
     case "reasoning":
       return (
-        <Reasoning defaultOpen isStreaming={part.state === "streaming"}>
+        <Reasoning isStreaming={part.state === "streaming"}>
           <ReasoningTrigger />
           <ReasoningContent>{part.text}</ReasoningContent>
         </Reasoning>
@@ -103,27 +100,123 @@ function AgentMessagePart({
       return <AuthorizationPrompt part={part} />;
     case "dynamic-tool":
       return (
-        <Tool
-          defaultOpen={part.state === "approval-requested" || part.state === "approval-responded"}
-        >
-          <ToolHeader
-            state={part.state}
-            title={part.toolName}
-            toolName={part.toolName}
-            type="dynamic-tool"
-          />
-          <ToolContent>
-            <ToolInput input={part.input} />
-            <InputRequestActions
-              canRespond={canRespond}
-              part={part}
-              onInputResponses={onInputResponses}
-            />
-            <ToolOutput errorText={part.errorText} output={part.output} />
-          </ToolContent>
-        </Tool>
+        <ToolActivity canRespond={canRespond} onInputResponses={onInputResponses} part={part} />
       );
   }
+}
+
+/**
+ * End-user labels for the agent's internal steps. Tool calls never render
+ * their name, parameters, or output — only these plain-language status lines
+ * (nothing internal like ids or JSON ever reaches the user).
+ */
+const TOOL_ACTIVITY: Record<string, { running: string; done: string }> = {
+  getprofile: { running: "Reading your profile…", done: "Profile loaded" },
+  jdanalyst: { running: "Analyzing the job offer…", done: "Job offer analyzed" },
+  analyzejd: { running: "Setting up your application…", done: "Application created" },
+  cvwriter: { running: "Tailoring your CV…", done: "CV draft ready" },
+  compilepdf: { running: "Building the PDF…", done: "PDF ready" },
+  scoreats: { running: "Checking the match with the job…", done: "Match check done" },
+  stageapplication: {
+    running: "Preparing your application for review…",
+    done: "Ready for your review",
+  },
+  askquestion: { running: "Waiting for your answer…", done: "Answer received" },
+};
+
+function activityFor(toolName: string): { running: string; done: string } | undefined {
+  return TOOL_ACTIVITY[toolName.toLowerCase().replace(/[^a-z0-9]/g, "")];
+}
+
+/**
+ * Renders a tool call as a friendly one-line status instead of the raw
+ * name/input/output card. Input requests (questions, the staging approval)
+ * still surface their interactive prompt.
+ */
+function ToolActivity({
+  canRespond,
+  onInputResponses,
+  part,
+}: {
+  readonly canRespond: boolean;
+  readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
+  readonly part: EveDynamicToolPart;
+}) {
+  const activity = activityFor(part.toolMetadata?.eve?.name ?? part.toolName);
+  const hasInputRequest = part.toolMetadata?.eve?.inputRequest !== undefined;
+
+  let statusLine: ReactNode = null;
+  switch (part.state) {
+    case "input-streaming":
+    case "input-available":
+      statusLine = (
+        <ActivityLine
+          icon={<Loader2Icon className="size-3.5 animate-spin" />}
+          label={activity?.running ?? "Working…"}
+        />
+      );
+      break;
+    case "output-available":
+      statusLine = activity ? (
+        <ActivityLine icon={<CheckIcon className="size-3.5" />} label={activity.done} />
+      ) : null;
+      break;
+    case "output-error":
+      statusLine = (
+        <ActivityLine
+          className="text-destructive/80"
+          icon={<AlertCircleIcon className="size-3.5" />}
+          label="That step hit a snag — trying another way."
+        />
+      );
+      break;
+    case "output-denied":
+      // The user declined this step themselves — nothing to announce.
+      statusLine = null;
+      break;
+    default:
+      // approval-requested / approval-responded: the interactive prompt below
+      // is the whole story. Without one, at least say what we're waiting on.
+      statusLine = hasInputRequest ? null : (
+        <ActivityLine
+          icon={<Loader2Icon className="size-3.5 animate-spin" />}
+          label="Waiting for your confirmation…"
+        />
+      );
+      break;
+  }
+
+  if (statusLine === null && !hasInputRequest) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2">
+      {statusLine}
+      <InputRequestActions
+        canRespond={canRespond}
+        onInputResponses={onInputResponses}
+        part={part}
+      />
+    </div>
+  );
+}
+
+function ActivityLine({
+  className,
+  icon,
+  label,
+}: {
+  readonly className?: string;
+  readonly icon: ReactNode;
+  readonly label: string;
+}) {
+  return (
+    <div className={cn("flex items-center gap-2 text-muted-foreground text-sm", className)}>
+      {icon}
+      <span>{label}</span>
+    </div>
+  );
 }
 
 function AttachmentPart({ part }: { readonly part: EveFilePart }) {

@@ -18,7 +18,9 @@ export type AtsReport = {
   suggestions: string[];
 };
 
-const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL ?? "openai/text-embedding-3-small";
+// Env-only, no fallback: when EMBEDDING_MODEL is unset, semantic scoring is
+// skipped and the keyword/structure weights redistribute (see scoreAts).
+const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL;
 
 /** Terms that should count as the same keyword during matching. */
 const ALIASES: Record<string, string[]> = {
@@ -138,11 +140,18 @@ export function structureScore(
   return { score: Math.min(score, 100), issues };
 }
 
-export async function embedText(text: string): Promise<number[] | null> {
+export async function embedText(text: string, abortSignal?: AbortSignal): Promise<number[] | null> {
+  if (!EMBEDDING_MODEL) return null; // unset env — caller redistributes weights
   try {
-    const { embedding } = await embed({ model: EMBEDDING_MODEL, value: text.slice(0, 24_000) });
+    const { embedding } = await embed({
+      model: EMBEDDING_MODEL,
+      value: text.slice(0, 24_000),
+      abortSignal,
+    });
     return embedding;
-  } catch {
+  } catch (error) {
+    // A cancelled turn must stop, not degrade into a partial score.
+    if (abortSignal?.aborted) throw error;
     return null; // no gateway key / provider down — caller redistributes weights
   }
 }
@@ -172,12 +181,14 @@ export async function scoreAts(input: {
   keywords: JdKeyword[];
   sectionTitles: string[];
   cachedJdEmbedding?: number[] | null;
+  abortSignal?: AbortSignal;
 }): Promise<{ report: AtsReport; jdEmbedding: number[] | null }> {
   const kw = keywordScore(input.cvText, input.keywords);
   const structure = structureScore(input.cvText, input.sectionTitles);
 
-  const jdEmbedding = input.cachedJdEmbedding ?? (await embedText(input.jdText));
-  const cvEmbedding = jdEmbedding ? await embedText(input.cvText) : null;
+  const jdEmbedding =
+    input.cachedJdEmbedding ?? (await embedText(input.jdText, input.abortSignal));
+  const cvEmbedding = jdEmbedding ? await embedText(input.cvText, input.abortSignal) : null;
   const semantic =
     jdEmbedding && cvEmbedding ? semanticToScore(cosine(jdEmbedding, cvEmbedding)) : null;
 

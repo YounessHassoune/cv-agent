@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/agent/lib/db.ts";
+import { isCloudinaryUrl } from "@/app/lib/cloudinary";
 import { getCurrentUser } from "@/app/lib/current-user";
 import { CV_TEMPLATE_IDS, DEFAULT_TEMPLATE } from "@/lib/cv-templates";
 
-/** ~1.4MB of base64 ≈ a 1MB image; the editor downscales well below this. */
+/**
+ * Photos now live on Cloudinary and the profile stores only the delivery URL.
+ * Existing profiles may still hold an inline data URL from before that change,
+ * so both are accepted — a data URL is only ever replaced, never created.
+ */
 const MAX_PHOTO_CHARS = 1_400_000;
 
 const ProfileInput = z.object({
@@ -16,8 +21,8 @@ const ProfileInput = z.object({
     .string()
     .max(MAX_PHOTO_CHARS, "Photo is too large — use an image under 1MB.")
     .refine(
-      (value) => value.startsWith("data:image/"),
-      "Photo must be an inline image data URL.",
+      (value) => isCloudinaryUrl(value) || value.startsWith("data:image/"),
+      "Photo must be an uploaded image URL.",
     )
     .optional(),
   contact: z.object({

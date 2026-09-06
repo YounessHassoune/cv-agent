@@ -1,18 +1,19 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ImageUpIcon, Trash2Icon, UserRoundIcon } from "lucide-react";
+import { ImageUpIcon, Loader2Icon, Trash2Icon, UserRoundIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-const MAX_DIMENSION = 320;
+const MAX_DIMENSION = 640;
 const MAX_INPUT_BYTES = 8 * 1024 * 1024;
 
 /**
- * Downscales to a square JPEG data URL in the browser, so the photo stays a
- * few tens of KB in the database instead of a multi-megabyte camera file.
+ * Centre-crops to a square and downscales in the browser before upload, so a
+ * multi-megabyte camera file becomes a few tens of KB on the wire. Cloudinary
+ * does the final resize; this only keeps the request small.
  */
-async function toSquareDataUrl(file: File): Promise<string> {
+async function toSquareBlob(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const side = Math.min(bitmap.width, bitmap.height);
   const canvas = document.createElement("canvas");
@@ -22,7 +23,6 @@ async function toSquareDataUrl(file: File): Promise<string> {
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Canvas is unavailable in this browser.");
 
-  // Centre-crop to a square, then scale down.
   context.drawImage(
     bitmap,
     (bitmap.width - side) / 2,
@@ -35,7 +35,27 @@ async function toSquareDataUrl(file: File): Promise<string> {
     MAX_DIMENSION,
   );
   bitmap.close();
-  return canvas.toDataURL("image/jpeg", 0.85);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.85),
+  );
+  if (!blob) throw new Error("Could not encode that image.");
+  return blob;
+}
+
+async function uploadPhoto(file: File): Promise<string> {
+  const body = new FormData();
+  body.append("file", await toSquareBlob(file), "photo.jpg");
+
+  const response = await fetch("/api/profile/photo", { method: "POST", body });
+  const payload = (await response.json().catch(() => ({}))) as {
+    url?: string;
+    error?: string;
+  };
+  if (!response.ok || !payload.url) {
+    throw new Error(payload.error ?? "Upload failed.");
+  }
+  return payload.url;
 }
 
 export function PhotoField({
@@ -43,10 +63,11 @@ export function PhotoField({
   onChange,
 }: {
   readonly value: string;
-  readonly onChange: (dataUrl: string) => void;
+  readonly onChange: (url: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
 
   const pick = async (file: File | undefined) => {
     if (!file) return;
@@ -61,37 +82,65 @@ export function PhotoField({
       return;
     }
 
+    setBusy(true);
     try {
-      onChange(await toSquareDataUrl(file));
+      onChange(await uploadPhoto(file));
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Couldn't upload that image.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async () => {
+    setError(undefined);
+    setBusy(true);
+    try {
+      await fetch("/api/profile/photo", { method: "DELETE" });
+      onChange("");
     } catch {
-      setError("Couldn't read that image.");
+      setError("Couldn't remove that photo.");
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-5">
-        <div className="size-24 shrink-0 overflow-hidden rounded-full border bg-muted">
+        <div className="relative size-24 shrink-0 overflow-hidden rounded-full border bg-muted">
           {value ? (
-            // biome-ignore lint/performance/noImgElement: inline data URL, not a remote asset
+            // biome-ignore lint/performance/noImgElement: remote Cloudinary asset, already sized
             <img alt="Profile" className="size-full object-cover" src={value} />
           ) : (
             <div className="flex size-full items-center justify-center text-muted-foreground">
               <UserRoundIcon className="size-8" />
             </div>
           )}
+          {busy ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/70">
+              <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => inputRef.current?.click()} size="sm" type="button" variant="outline">
+            <Button
+              disabled={busy}
+              onClick={() => inputRef.current?.click()}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
               <ImageUpIcon className="size-3.5" />
               {value ? "Replace photo" : "Browse photos"}
             </Button>
             {value ? (
               <Button
                 className="text-muted-foreground hover:text-destructive"
-                onClick={() => onChange("")}
+                disabled={busy}
+                onClick={() => void remove()}
                 size="sm"
                 type="button"
                 variant="ghost"
@@ -102,8 +151,8 @@ export function PhotoField({
             ) : null}
           </div>
           <p className="text-muted-foreground text-xs">
-            Shown in the preview only. Compiled PDFs stay photo-free — ATS parsers ignore images
-            and some reject them outright.
+            Stored on Cloudinary and shown in the preview only. Compiled PDFs stay photo-free — ATS
+            parsers ignore images and some reject them outright.
           </p>
         </div>
       </div>

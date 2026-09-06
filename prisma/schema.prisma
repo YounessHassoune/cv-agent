@@ -81,19 +81,22 @@ model Skill {
   @@unique([profileId, name])
 }
 
+/// One application per job, regardless of how many languages the CV is
+/// tailored into. Per-language work lives in `variants` (JSON, keyed by ISO
+/// code) and the binary PDFs in `CvPdf` — JSON can't hold bytes, and base64
+/// would bloat every row read.
 model Application {
   id          String   @id @default(cuid())
   userId      String
   jdText      String
   jdKeywords  Json? // analyze_jd output, reused by score_ats and the review UI
   jdEmbedding Json? // cached JD embedding so loop iterations only re-embed the CV
-  language    String   @default("en")
-  /// Template this application's PDF was compiled with.
+  /// Requested target languages (ISO codes), e.g. ["en", "fr"].
+  languages   String[] @default(["en"])
+  /// Template this application's PDFs are compiled with.
   template    String   @default("modern")
-  cvJson      Json? // latest tailored CV snapshot (CvSchema)
-  cvText      String? // text extracted from the compiled PDF
-  atsReport   Json? // { total, breakdown, matched, missing, suggestions }
-  pdfBytes    Bytes?
+  /// Per-language variants: { [lang]: { cvJson, cvText, atsReport, template, updatedAt } }
+  variants    Json?
   /// Persisted eve chat for this application. `chatEvents` is the ordered
   /// stream prefix replayed into `useEveAgent({ initialEvents })`, and
   /// `chatSession` the `{ sessionId, streamIndex }` cursor that continues the
@@ -103,8 +106,21 @@ model Application {
   status      Status   @default(DRAFT)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  pdfs        CvPdf[]
 
   @@index([userId, status])
+}
+
+/// Compiled PDF bytes for one language variant of one application.
+model CvPdf {
+  id            String      @id @default(cuid())
+  applicationId String
+  language      String
+  bytes         Bytes
+  updatedAt     DateTime    @updatedAt
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, language])
 }
 
 enum Status {

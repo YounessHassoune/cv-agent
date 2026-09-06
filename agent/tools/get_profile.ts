@@ -2,6 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { resolveUserId } from "../lib/auth";
 import { db } from "../lib/db";
+import { allowedTerms } from "../lib/guard";
 
 export default defineTool({
   description:
@@ -25,6 +26,11 @@ export default defineTool({
       };
     }
     // JSON round-trip converts Dates to ISO strings (eve tool outputs must be JSON-serializable)
-    return { profile: JSON.parse(JSON.stringify(profile)) };
+    return {
+      profile: JSON.parse(JSON.stringify(profile)),
+      // The exact vocabulary compile_pdf will accept in skill groups and stack
+      // arrays. Pass this to cv-writer verbatim — anything else is rejected.
+      allowedTerms: allowedTerms(profile),
+    };
   },
 });

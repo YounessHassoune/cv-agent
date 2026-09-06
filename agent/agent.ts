@@ -1,5 +1,6 @@
 import { defineAgent } from "eve";
+import { requireModelEnv } from "./lib/model-env";
 
 export default defineAgent({
-  model: "openai/gpt-5-nano",
+  model: requireModelEnv("AGENT_MODEL"),
 });

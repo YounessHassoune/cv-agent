@@ -151,6 +151,7 @@ async function main() {
     keywords: KEYWORDS,
     sectionTitles: [t.skills, t.experience, t.education],
   });
+  // EMBEDDING_MODEL is optional; without it the semantic half is skipped.
 
   console.log("\nATS report");
   console.log(`  total      ${report.total}`);

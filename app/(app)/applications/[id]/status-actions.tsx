@@ -19,11 +19,12 @@ import {
 export function StatusActions({
   applicationId,
   status,
-  hasPdf,
+  pdfLanguages,
 }: {
   readonly applicationId: string;
   readonly status: string;
-  readonly hasPdf: boolean;
+  /** Languages that have a compiled PDF — one download button each. */
+  readonly pdfLanguages: string[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -60,14 +61,17 @@ export function StatusActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {hasPdf ? (
-        <Button asChild size="sm" variant="outline">
-          <a download href={`/api/applications/${applicationId}/pdf`}>
+      {pdfLanguages.map((language) => (
+        <Button asChild key={language} size="sm" variant="outline">
+          <a
+            download
+            href={`/api/applications/${applicationId}/pdf?lang=${encodeURIComponent(language)}`}
+          >
             <DownloadIcon className="size-3.5" />
-            Download PDF
+            {pdfLanguages.length > 1 ? `PDF · ${language.toUpperCase()}` : "Download PDF"}
           </a>
         </Button>
-      ) : null}
+      ))}
       {status !== "APPLIED" ? (
         <Button disabled={busy} onClick={() => setStatus("APPLIED")} size="sm">
           <CheckCircle2Icon className="size-3.5" />

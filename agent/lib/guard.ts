@@ -9,6 +9,19 @@ export type ProfileFacts = {
 const normalize = (term: string) => term.toLowerCase().trim();
 
 /**
+ * Every term the CV is allowed to put in a skill group or a stack array, in
+ * the profile's own spelling. `findFabrications` accepts exactly these, so
+ * handing the list to the writer up front is what keeps drafts compilable.
+ */
+export function allowedTerms(profile: ProfileFacts): string[] {
+  const terms = new Set<string>();
+  for (const skill of profile.skills) terms.add(skill.name);
+  for (const exp of profile.experiences) for (const t of exp.stack) terms.add(t);
+  for (const project of profile.projects) for (const t of project.stack) terms.add(t);
+  return [...terms].sort((a, b) => a.localeCompare(b));
+}
+
+/**
  * Returns every claim in the CV that the master profile does not support.
  * This is the hard anti-hallucination boundary: the model can phrase things
  * however it likes, but it cannot introduce a skill, employer, or project.

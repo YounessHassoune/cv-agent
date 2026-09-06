@@ -2,6 +2,7 @@ import React from "react";
 import {
   Document,
   type DocumentProps,
+  Image,
   Page,
   Text,
   View,
@@ -76,17 +77,49 @@ function stylesFor(template: CvTemplate) {
     stripItem: { fontSize: pt(l.meta), color: inkFlat(CV_ALPHA.muted), lineHeight: 1.2 },
 
     header: { marginBottom: pt(l.sectionGap) },
+    // Mirrors the preview's header: a row beside the identity block, or a
+    // centred column above it on centred templates.
+    headerWithPhoto: {
+      marginBottom: pt(l.sectionGap),
+      flexDirection: l.centered ? "column" : "row",
+      alignItems: "center",
+      gap: pt(l.photoGap),
+    },
+    photo: {
+      width: pt(l.photoSize),
+      height: pt(l.photoSize),
+      borderRadius: pt(l.photoSize) / 2,
+      objectFit: "cover",
+    },
+    /**
+     * Beside the photo (row templates) this has to shrink so a long headline
+     * wraps instead of pushing the block off the page. Stacked *under* the
+     * photo (centred templates) the main axis is vertical, where flexShrink
+     * would squash the block's height instead of its width and `alignItems:
+     * center` would size it to its own content — so it takes the full width
+     * and lets textAlign centre the text across the page, exactly as the
+     * photo-free header does.
+     */
+    identity: l.centered ? { width: "100%" } : { flexShrink: 1 },
     name: {
       fontSize: pt(l.name),
       fontFamily: bold,
       letterSpacing: -pt(l.name * 0.02),
       textAlign,
+      // Display leading, matching the preview's name. Without it the name
+      // inherits the tall body line-height, and its box grows enough to sit on
+      // the headline's — which glues the two together in the PDF text layer
+      // ("Youness HassouneSenior Engineer") and skews the ATS keyword scan.
+      lineHeight: 1.15,
     },
     headline: {
       fontSize: pt(l.headline),
       color: inkFlat(CV_ALPHA.muted),
-      marginTop: pt(0.1),
+      marginTop: pt(l.headlineGap),
       textAlign,
+      // Pinned, like every other paired element: inheriting the body leading
+      // here is what let the preview and the PDF drift apart.
+      lineHeight: 1.2,
     },
 
     section: { marginBottom: pt(l.sectionGap) },
@@ -193,7 +226,23 @@ function dateRange(start?: string, end?: string) {
   return `${start ?? ""} — ${end || "Present"}`;
 }
 
-function CvDocument({ cv, templateId }: { cv: Cv; templateId?: string }) {
+/**
+ * Raw bytes of the header photo, already cropped and sized by the caller.
+ * Bytes rather than a URL on purpose: @react-pdf would otherwise fetch the
+ * image mid-render, putting a network round trip (and its failure modes)
+ * inside PDF generation.
+ */
+export type CvPhoto = { data: Buffer; format: "jpg" | "png" };
+
+function CvDocument({
+  cv,
+  templateId,
+  photo,
+}: {
+  cv: Cv;
+  templateId?: string;
+  photo?: CvPhoto;
+}) {
   const styles = stylesFor(resolveTemplate(templateId));
   const t = titlesFor(cv.language);
   const contact = [cv.header.email, cv.header.phone, cv.header.location, ...cv.header.links].filter(
@@ -218,12 +267,25 @@ function CvDocument({ cv, templateId }: { cv: Cv; templateId?: string }) {
           ]
         : []),
 
-      // Identity
+      // Identity, with the optional header photo beside or above it
       h(
         View,
-        { style: styles.header },
-        h(Text, { style: styles.name }, cv.header.fullName),
-        ...(cv.header.headline ? [h(Text, { style: styles.headline }, cv.header.headline)] : []),
+        { style: photo ? styles.headerWithPhoto : styles.header },
+        ...(photo
+          ? [
+              h(Image, {
+                key: "photo",
+                src: { data: photo.data, format: photo.format },
+                style: styles.photo,
+              }),
+            ]
+          : []),
+        h(
+          View,
+          { style: styles.identity, key: "identity" },
+          h(Text, { style: styles.name }, cv.header.fullName),
+          ...(cv.header.headline ? [h(Text, { style: styles.headline }, cv.header.headline)] : []),
+        ),
       ),
 
       // Summary
@@ -359,9 +421,10 @@ function CvDocument({ cv, templateId }: { cv: Cv; templateId?: string }) {
 export async function renderCvPdf(
   cv: Cv,
   templateId?: string,
+  photo?: CvPhoto,
 ): Promise<Uint8Array<ArrayBuffer>> {
   const buffer = await renderToBuffer(
-    h(CvDocument, { cv, templateId }) as unknown as React.ReactElement<DocumentProps>,
+    h(CvDocument, { cv, templateId, photo }) as unknown as React.ReactElement<DocumentProps>,
   );
   return Uint8Array.from(buffer);
 }
