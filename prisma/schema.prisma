@@ -81,6 +81,19 @@ model Skill {
   @@unique([profileId, name])
 }
 
+/// The result of the most recent CV import, waiting for the editor to collect
+/// it. A refresh or a navigation mid-parse kills the POST response, but the
+/// parse itself already cost a model call, so it is stored here instead of
+/// thrown away. One row per user, deleted the moment the editor applies or
+/// discards it — nothing here reaches the profile on its own.
+model CvImport {
+  userId    String   @id
+  filename  String
+  profile   Json
+  photoUrl  String?
+  createdAt DateTime @default(now())
+}
+
 /// One application per job, regardless of how many languages the CV is
 /// tailored into. Per-language work lives in `variants` (JSON, keyed by ISO
 /// code) and the binary PDFs in `CvPdf` — JSON can't hold bytes, and base64
@@ -91,6 +104,10 @@ model Application {
   jdText      String
   jdKeywords  Json? // analyze_jd output, reused by score_ats and the review UI
   jdEmbedding Json? // cached JD embedding so loop iterations only re-embed the CV
+  /// Target job title from the JD analysis. score_ats matches the CV's own
+  /// titles against it — title alignment is a filter every ATS applies.
+  jdRole      String?
+  jdSeniority String?
   /// Requested target languages (ISO codes), e.g. ["en", "fr"].
   languages   String[] @default(["en"])
   /// Template this application's PDFs are compiled with.

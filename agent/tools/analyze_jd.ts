@@ -1,24 +1,9 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import type { JdKeyword } from "../lib/ats";
 import { resolveUserId } from "../lib/auth";
 import { db } from "../lib/db";
 import { ExtractionSchema } from "../lib/extraction-schema";
 import { cvLoop } from "../lib/state";
-
-/** Fallback when jd-analyst is unavailable: frequency-based unigrams. */
-function heuristicKeywords(jdText: string): JdKeyword[] {
-  const stop = new Set(
-    "the a an and or of to in for with on at by from as is are be we you our your will this that have has can plus etc & - •".split(" "),
-  );
-  const words = jdText.toLowerCase().replace(/[^a-z0-9+#./\s-]/g, " ").split(/\s+/).filter((w) => w.length > 1 && !stop.has(w));
-  const counts = new Map<string, number>();
-  for (const w of words) counts.set(w, (counts.get(w) ?? 0) + 1);
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 20)
-    .map(([term, count]) => ({ term, weight: count >= 3 ? 2 : 1, category: "hard" as const }));
-}
 
 export default defineTool({
   description:
@@ -30,22 +15,51 @@ export default defineTool({
       .min(1)
       .default(["en"])
       .describe("ISO codes of every language the CV should be written in, e.g. ['en','fr']"),
-    extraction: ExtractionSchema.optional().describe(
-      "The jd-analyst subagent's result. Omit only if jd-analyst failed — keywords then degrade to a frequency heuristic.",
+    extraction: ExtractionSchema.describe(
+      "The jd-analyst subagent's result, passed through unchanged. Required: without it there is no role, no seniority and no weighted keywords, so the CV cannot be tailored and the score would be meaningless. If jd-analyst fails, retry it — never call this tool without its result.",
     ),
   }),
   async execute({ jdText, targetLanguages, extraction }, ctx) {
     const userId = resolveUserId(ctx);
 
     const languages = [...new Set(targetLanguages.map((lang) => lang.toLowerCase()))];
-    const keywords: JdKeyword[] = extraction?.keywords ?? heuristicKeywords(jdText);
+
+    /*
+     * Idempotence. "Exactly once per job" is an instruction, and instructions
+     * get double-dispatched. A second call for the same JD in the same session
+     * would fork the work into an orphan application the user never sees, so
+     * hand back the one that already exists.
+     */
+    const openApplicationId = cvLoop.get().applicationId;
+    if (openApplicationId !== null) {
+      const open = await db.application.findFirst({
+        where: { id: openApplicationId, userId, jdText },
+      });
+      if (open !== null) {
+        return {
+          applicationId: open.id,
+          role: extraction.role,
+          seniority: extraction.seniority,
+          jdLanguage: extraction.language,
+          domain: extraction.domain,
+          targetProfile: extraction.targetProfile,
+          responsibilities: extraction.responsibilities,
+          targetLanguages: open.languages,
+          keywords: extraction.keywords,
+          unchanged: true,
+          note: "This job already has an application — reusing it. Do not create another.",
+        };
+      }
+    }
 
     const application = await db.application.create({
       data: {
         userId,
         jdText,
         languages,
-        jdKeywords: keywords,
+        jdKeywords: extraction.keywords,
+        jdRole: extraction.role,
+        jdSeniority: extraction.seniority,
         status: "DRAFT",
         // Link the eve session that is creating this application, so the
         // review page resumes this very conversation (stream replays from 0).
@@ -58,19 +72,19 @@ export default defineTool({
       applicationId: application.id,
       iterations: {},
       rejections: {},
+      scores: {},
     }));
 
     return {
       applicationId: application.id,
-      role: extraction?.role ?? "unknown",
-      seniority: extraction?.seniority ?? "unspecified",
-      jdLanguage: extraction?.language ?? "unknown",
-      domain: extraction?.domain ?? "",
-      targetProfile: extraction?.targetProfile ?? "",
-      responsibilities: extraction?.responsibilities ?? [],
+      role: extraction.role,
+      seniority: extraction.seniority,
+      jdLanguage: extraction.language,
+      domain: extraction.domain,
+      targetProfile: extraction.targetProfile,
+      responsibilities: extraction.responsibilities,
       targetLanguages: languages,
-      keywords,
-      keywordSource: extraction ? "jd-analyst" : "heuristic",
+      keywords: extraction.keywords,
     };
   },
 });

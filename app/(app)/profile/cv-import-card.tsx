@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileUpIcon, Loader2Icon, SparklesIcon } from "lucide-react";
 
 import type { ImportedProfile } from "@/agent/lib/cv-import-schema.ts";
@@ -113,6 +113,13 @@ function summarize(imported: ImportedProfile): string {
   return `Found ${counted.length > 0 ? `${counted.join(", ")} and ${last}` : last}.`;
 }
 
+/** A finished import the browser never collected — see `GET /api/profile/import`. */
+type Waiting = {
+  readonly filename: string;
+  readonly profile: ImportedProfile;
+  readonly photoUrl: string | null;
+};
+
 export function CvImportCard({
   hasContent,
   onImport,
@@ -127,6 +134,35 @@ export function CvImportCard({
   const [error, setError] = useState<string>();
   const [done, setDone] = useState<string>();
   const [pending, setPending] = useState<File>();
+  const [waiting, setWaiting] = useState<Waiting>();
+
+  // A refresh or a navigation mid-parse loses the response, never the parse:
+  // the route parks what it extracted and this collects it.
+  useEffect(() => {
+    let live = true;
+    fetch("/api/profile/import")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { pending?: Waiting | null } | null) => {
+        if (live && payload?.pending) setWaiting(payload.pending);
+      })
+      .catch(() => {
+        // Nothing waiting is the normal case; a failed check is not worth a message.
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  /** The stored copy has served its purpose the moment the form has it. */
+  const clearWaiting = () => {
+    setWaiting(undefined);
+    void fetch("/api/profile/import", { method: "DELETE" }).catch(() => {});
+  };
+
+  const apply = (imported: ImportedProfile, photoUrl: string) => {
+    onImport((current) => ({ ...merge(current, imported), photoUrl: photoUrl || current.photoUrl }));
+    setDone(`${summarize(imported)}${photoUrl ? " Your photo came across too." : ""}`);
+  };
 
   const send = async (file: File) => {
     setError(undefined);
@@ -146,10 +182,8 @@ export function CvImportCard({
         throw new Error(payload.error ?? `Import failed (${response.status})`);
       }
 
-      const imported = payload.profile;
-      const photoUrl = payload.photoUrl ?? "";
-      onImport((current) => ({ ...merge(current, imported), photoUrl: photoUrl || current.photoUrl }));
-      setDone(`${summarize(imported)}${photoUrl ? " Your photo came across too." : ""}`);
+      apply(payload.profile, payload.photoUrl ?? "");
+      clearWaiting();
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : "Couldn't read that CV.");
     } finally {
@@ -175,6 +209,32 @@ export function CvImportCard({
 
   return (
     <>
+      {waiting && !busy ? (
+        <div className="surface-card space-y-3 rounded-xl border-primary/30 bg-primary/5 p-5 sm:p-6">
+          <div className="space-y-1">
+            <p className="font-semibold text-[0.95rem]">Your last import finished without you</p>
+            <p className="text-muted-foreground text-sm">
+              We read <span className="font-medium">{waiting.filename}</span> after you left the
+              page. {summarize(waiting.profile)} Fill the form with it, or throw it away.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                apply(waiting.profile, waiting.photoUrl ?? "");
+                clearWaiting();
+              }}
+              type="button"
+            >
+              Fill the form
+            </Button>
+            <Button onClick={clearWaiting} type="button" variant="ghost">
+              Discard
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <section
         className={cn(
           "surface-card rounded-xl border-dashed p-5 transition-colors sm:p-6",
