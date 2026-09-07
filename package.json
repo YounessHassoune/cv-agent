@@ -61,6 +61,7 @@
     "@types/node": "~26.2.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "19.2.3",
+    "just-bash": "^3.4.2",
     "prisma": "^7.9.1",
     "typescript": "6.0.3"
   },

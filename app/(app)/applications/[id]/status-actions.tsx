@@ -2,7 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CheckCircle2Icon, DownloadIcon, Trash2Icon, XCircleIcon } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  DownloadIcon,
+  EllipsisVertical,
+  Trash2Icon,
+  XCircleIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +19,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function StatusActions({
   applicationId,
@@ -30,6 +42,7 @@ export function StatusActions({
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const setStatus = async (next: "APPLIED" | "REJECTED") => {
     setBusy(true);
@@ -60,56 +73,58 @@ export function StatusActions({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {pdfLanguages.map((language) => (
-        <Button
-          key={language}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
           render={
-            <a
-              download
-              href={`/api/applications/${applicationId}/pdf?lang=${encodeURIComponent(language)}`}
-            />
-          }
-          size="sm"
-          variant="outline"
-        >
-          <DownloadIcon className="size-3.5" />
-          {pdfLanguages.length > 1 ? `PDF ${language.toUpperCase()}` : "Download PDF"}
-        </Button>
-      ))}
-      {status !== "APPLIED" ? (
-        <Button disabled={busy} onClick={() => setStatus("APPLIED")} size="sm">
-          <CheckCircle2Icon className="size-3.5" />
-          Mark as applied
-        </Button>
-      ) : null}
-      {status !== "REJECTED" ? (
-        <Button
-          className="text-muted-foreground"
-          disabled={busy}
-          onClick={() => setStatus("REJECTED")}
-          size="sm"
-          variant="ghost"
-        >
-          <XCircleIcon className="size-3.5" />
-          Discard
-        </Button>
-      ) : null}
-
-      <Dialog>
-        <DialogTrigger
-          render={
-            <Button
-              aria-label="Delete application"
-              className="text-muted-foreground hover:text-destructive"
-              size="sm"
-              variant="ghost"
-            >
-              <Trash2Icon className="size-3.5" />
-              Delete
+            <Button className="shrink-0 text-muted-foreground" size="sm" variant="ghost">
+              <EllipsisVertical className="size-4" />
             </Button>
           }
         />
+
+        <DropdownMenuContent align="end" className="w-56">
+          {pdfLanguages.map((language) => (
+            <DropdownMenuItem
+              key={language}
+              render={
+                <a
+                  download
+                  href={`/api/applications/${applicationId}/pdf?lang=${encodeURIComponent(language)}`}
+                />
+              }
+            >
+              <DownloadIcon className="size-4" />
+              {pdfLanguages.length > 1 ? `Download PDF (${language.toUpperCase()})` : "Download PDF"}
+            </DropdownMenuItem>
+          ))}
+          {pdfLanguages.length > 0 ? <DropdownMenuSeparator /> : null}
+
+          {status !== "APPLIED" ? (
+            <DropdownMenuItem disabled={busy} onClick={() => void setStatus("APPLIED")}>
+              <CheckCircle2Icon className="size-4" />
+              Mark as applied
+            </DropdownMenuItem>
+          ) : null}
+          {status !== "REJECTED" ? (
+            <DropdownMenuItem disabled={busy} onClick={() => void setStatus("REJECTED")}>
+              <XCircleIcon className="size-4" />
+              Discard
+            </DropdownMenuItem>
+          ) : null}
+
+          <DropdownMenuSeparator />
+          {/* Opens the dialog below rather than wrapping it: selecting an item
+              closes the menu and unmounts its portal, which would take a dialog
+              mounted inside with it. */}
+          <DropdownMenuItem onClick={() => setConfirmOpen(true)} variant="destructive">
+            <Trash2Icon className="size-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog onOpenChange={setConfirmOpen} open={confirmOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete this application?</DialogTitle>
@@ -141,6 +156,6 @@ export function StatusActions({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

@@ -5,7 +5,7 @@ import { BriefcaseIcon, GaugeIcon, MessageSquareIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import type { AtsReport } from "@/agent/lib/ats.ts";
-import { ResumableAgentChat } from "@/app/(app)/_components/agent-chat";
+import { ResumableAgentChat } from "@/features/chat";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { gapSuggestions, InsightsPanel } from "./insights-panel";
 

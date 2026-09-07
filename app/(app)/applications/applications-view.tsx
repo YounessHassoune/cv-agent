@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -129,10 +129,10 @@ export function ApplicationsView({
             Every CV the agent has tailored, newest first.
           </p>
         </div>
-        <Button render={<Link href="/" />}>
+        <Link className={buttonVariants()} href="/">
           <SparklesIcon className="size-4" />
           New optimization
-        </Button>
+        </Link>
       </div>
 
       <StatStrip stats={stats} />
@@ -149,9 +149,9 @@ export function ApplicationsView({
               master profile.
             </p>
           </div>
-          <Button render={<Link href="/" />} variant="outline">
+          <Link className={buttonVariants({ variant: "outline" })} href="/">
             Start tailoring
-          </Button>
+          </Link>
         </div>
       ) : (
         <>

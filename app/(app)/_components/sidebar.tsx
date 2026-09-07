@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { MenuIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -115,14 +115,18 @@ function SidebarBody({
   onNavigate,
 }: SidebarProps & { readonly collapsed?: boolean; readonly onNavigate?: () => void }) {
   const newOptimization = (
-    <Button
-      className={cn("w-full", collapsed ? "px-0" : "justify-center")}
-      render={<Link href="/" onClick={onNavigate} />}
-      size={collapsed ? "icon" : "default"}
+    <Link
+      className={cn(
+        buttonVariants({ size: collapsed ? "icon" : "default" }),
+        "w-full",
+        collapsed ? "px-0" : "justify-center",
+      )}
+      href="/"
+      onClick={onNavigate}
     >
       <PlusIcon className="size-4" />
       {collapsed ? <span className="sr-only">New optimization</span> : "New optimization"}
-    </Button>
+    </Link>
   );
 
   return (

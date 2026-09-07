@@ -10,7 +10,7 @@ import {
   RotateCcwIcon,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -73,22 +73,19 @@ function ToolbarButton({
   readonly children: React.ReactNode;
 }) {
   const trigger = href ? (
-    <Button
-      className="size-7 text-muted-foreground"
-      render={
-        <a
-          aria-label={label}
-          download={download}
-          href={href}
-          rel={download ? undefined : "noreferrer"}
-          target={download ? undefined : "_blank"}
-        />
-      }
-      size="icon"
-      variant="ghost"
+    <a
+      aria-label={label}
+      className={cn(
+        buttonVariants({ size: "icon", variant: "ghost" }),
+        "size-7 text-muted-foreground",
+      )}
+      download={download}
+      href={href}
+      rel={download ? undefined : "noreferrer"}
+      target={download ? undefined : "_blank"}
     >
       {children}
-    </Button>
+    </a>
   ) : (
     <Button
       aria-label={label}

@@ -28,7 +28,7 @@ import {
 } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type AgentInputResponse = {
@@ -469,13 +469,15 @@ function AuthorizationPrompt({ part }: { readonly part: EveAuthorizationPart }) 
             </div>
           ) : null}
           {part.state === "required" && part.authorization?.url ? (
-            <Button
-              render={<a href={part.authorization.url} rel="noreferrer" target="_blank" />}
-              size="sm"
+            <a
+              className={buttonVariants({ size: "sm" })}
+              href={part.authorization.url}
+              rel="noreferrer"
+              target="_blank"
             >
               <ExternalLinkIcon className="size-4" />
               Sign in with {part.displayName}
-            </Button>
+            </a>
           ) : null}
         </div>
       </div>

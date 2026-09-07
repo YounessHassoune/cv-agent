@@ -8,7 +8,7 @@ import { db } from "@/agent/lib/db.ts";
 import { readVariants } from "@/agent/lib/variants.ts";
 import { requireUser } from "@/app/lib/current-user";
 import type { CvPreviewData } from "@/components/cv-preview";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { type VariantView, ApplicationWorkspace } from "./application-workspace";
 import { StatusActions } from "./status-actions";
@@ -132,15 +132,16 @@ export default async function ApplicationPage({
        score report ever scrolls out from under the other. */
     <div className="container flex h-full min-h-0 flex-col gap-3 px-4 py-4 sm:px-6 lg:px-8">
       <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
-        <Button
+        <Link
           aria-label="All applications"
-          className="-ml-1 shrink-0 text-muted-foreground"
-          render={<Link href="/applications" />}
-          size="icon-sm"
-          variant="ghost"
+          className={cn(
+            buttonVariants({ size: "icon-sm", variant: "ghost" }),
+            "-ml-1 shrink-0 text-muted-foreground",
+          )}
+          href="/applications"
         >
           <ArrowLeftIcon className="size-4" />
-        </Button>
+        </Link>
 
         <h1 className="min-w-0 flex-1 truncate font-semibold text-lg tracking-tight">{title}</h1>
 

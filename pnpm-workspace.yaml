@@ -12,7 +12,9 @@ minimumReleaseAgeExclude:
 allowBuilds:
   # Prisma downloads/builds its query engine in a postinstall script — without
   # this, `prisma generate` and every db command fail.
+  '@mongodb-js/zstd': false
   '@prisma/engines': true
+  node-liblzma: false
   prisma: true
   sharp: false
 # Compatibility for eve releases with an incomplete runtime manifest.
