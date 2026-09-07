@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FileUpIcon, Loader2Icon, SparklesIcon } from "lucide-react";
+import { FileUpIcon, Loader2Icon, UploadIcon } from "lucide-react";
 
 import type { ImportedProfile } from "@/agent/lib/cv-import-schema.ts";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { ProfileForm } from "./profile-editor";
@@ -120,7 +121,12 @@ type Waiting = {
   readonly photoUrl: string | null;
 };
 
-export function CvImportCard({
+/**
+ * Import lives behind a button next to Save rather than as a card wedged above
+ * the form. It is a one-off action, and a permanent panel for it pushed the
+ * actual form down the page every single time the builder was opened.
+ */
+export function CvImportDialog({
   hasContent,
   onImport,
 }: {
@@ -129,6 +135,7 @@ export function CvImportCard({
   readonly onImport: (apply: (current: ProfileForm) => ProfileForm) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string>();
@@ -143,7 +150,12 @@ export function CvImportCard({
     fetch("/api/profile/import")
       .then((response) => (response.ok ? response.json() : null))
       .then((payload: { pending?: Waiting | null } | null) => {
-        if (live && payload?.pending) setWaiting(payload.pending);
+        if (live && payload?.pending) {
+          setWaiting(payload.pending);
+          // Opened for them: a parse they already paid for has finished and is
+          // waiting, and they have no reason to go looking for it.
+          setOpen(true);
+        }
       })
       .catch(() => {
         // Nothing waiting is the normal case; a failed check is not worth a message.
@@ -207,39 +219,78 @@ export function CvImportCard({
     void send(file);
   };
 
-  return (
+  /*
+   * One modal with three states rather than a dialog stacked on a dialog:
+   * collect a parse that finished without you, confirm an overwrite, or take a
+   * file.
+   */
+  const body = waiting ? (
     <>
-      {waiting && !busy ? (
-        <div className="surface-card space-y-3 rounded-xl border-primary/30 bg-primary/5 p-5 sm:p-6">
-          <div className="space-y-1">
-            <p className="font-semibold text-[0.95rem]">Your last import finished without you</p>
-            <p className="text-muted-foreground text-sm">
-              We read <span className="font-medium">{waiting.filename}</span> after you left the
-              page. {summarize(waiting.profile)} Fill the form with it, or throw it away.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => {
-                apply(waiting.profile, waiting.photoUrl ?? "");
-                clearWaiting();
-              }}
-              type="button"
-            >
-              Fill the form
-            </Button>
-            <Button onClick={clearWaiting} type="button" variant="ghost">
-              Discard
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      <DialogHeader>
+        <DialogTitle>Your last import finished without you</DialogTitle>
+        <DialogDescription>
+          We read <span className="font-medium text-foreground">{waiting.filename}</span> after you
+          left the page. {summarize(waiting.profile)} Fill the form with it, or throw it away.
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button onClick={clearWaiting} type="button" variant="ghost">
+          Discard
+        </Button>
+        <Button
+          onClick={() => {
+            apply(waiting.profile, waiting.photoUrl ?? "");
+            clearWaiting();
+          }}
+          type="button"
+        >
+          Fill the form
+        </Button>
+      </DialogFooter>
+    </>
+  ) : pending ? (
+    <>
+      <DialogHeader>
+        <DialogTitle>Replace what you have filled in?</DialogTitle>
+        <DialogDescription>
+          Every section the CV covers gets overwritten with what it says. Your saved profile stays
+          untouched until you press Save.
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button onClick={() => setPending(undefined)} type="button" variant="ghost">
+          Cancel
+        </Button>
+        <Button
+          onClick={() => {
+            const file = pending;
+            setPending(undefined);
+            if (file) void send(file);
+          }}
+          type="button"
+        >
+          Import and replace
+        </Button>
+      </DialogFooter>
+    </>
+  ) : (
+    <>
+      <DialogHeader>
+        <DialogTitle>Upload your CV</DialogTitle>
+        <DialogDescription>
+          The fields fill themselves in from the file. Check them before saving: parsing is good,
+          not perfect.
+        </DialogDescription>
+      </DialogHeader>
 
-      <section
+      <button
         className={cn(
-          "surface-card rounded-xl border-dashed p-5 transition-colors sm:p-6",
-          dragging && "border-primary/60 bg-primary/5",
+          "flex w-full flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center transition-colors",
+          busy ? "cursor-default" : "hover:border-foreground/25 hover:bg-secondary/60",
+          dragging && "border-foreground/40 border-solid bg-secondary",
         )}
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
         onDragLeave={() => setDragging(false)}
         onDragOver={(event) => {
           event.preventDefault();
@@ -250,49 +301,61 @@ export function CvImportCard({
           setDragging(false);
           pick(event.dataTransfer.files?.[0]);
         }}
+        type="button"
       >
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              {busy ? (
-                <Loader2Icon className="size-4.5 animate-spin" />
-              ) : (
-                <SparklesIcon className="size-4.5" />
-              )}
-            </span>
-            <div className="space-y-1">
-              <p className="font-semibold text-[0.95rem]">
-                {busy ? "Reading your CV…" : "Already have a CV?"}
-              </p>
-              <p className="max-w-md text-muted-foreground text-sm">
-                {busy
-                  ? "This takes a few seconds. Nothing is saved until you press Save."
-                  : "Drop a PDF or Word file here and the fields below fill themselves in. Check them before saving — parsing is good, not perfect."}
-              </p>
-            </div>
-          </div>
+        <span className="flex size-11 items-center justify-center rounded-xl bg-secondary text-foreground">
+          {busy ? <Loader2Icon className="size-5 animate-spin" /> : <FileUpIcon className="size-5" />}
+        </span>
+        <span className="space-y-1">
+          <span className="block font-medium text-sm">
+            {busy ? "Reading your CV…" : "Drop your CV here, or click to choose"}
+          </span>
+          <span className="block text-muted-foreground text-sm">
+            {busy ? "This takes a few seconds." : "PDF or Word, up to 10MB."}
+          </span>
+        </span>
+      </button>
 
-          <Button
-            disabled={busy}
-            onClick={() => inputRef.current?.click()}
-            type="button"
-            variant="outline"
-          >
-            <FileUpIcon className="size-3.5" />
-            Choose file
+      {done ? (
+        <p className="rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-sm">
+          {done} Review every section, dates especially, then press Save.
+        </p>
+      ) : null}
+      {error ? (
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-sm">
+          {error}
+        </p>
+      ) : null}
+
+      {done ? (
+        <DialogFooter>
+          <Button onClick={() => setOpen(false)} type="button">
+            Done
           </Button>
-        </div>
+        </DialogFooter>
+      ) : null}
+    </>
+  );
 
-        {done ? (
-          <p className="mt-4 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-sm">
-            {done} Review every section — dates especially — then press Save.
-          </p>
-        ) : null}
-        {error ? (
-          <p className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-sm">
-            {error}
-          </p>
-        ) : null}
+  return (
+    <Dialog
+      onOpenChange={(next) => {
+        setOpen(next);
+        // Closing abandons an overwrite prompt rather than remembering it.
+        if (!next) setPending(undefined);
+      }}
+      open={open}
+    >
+      <DialogTrigger
+        render={
+          <Button size="sm" type="button" variant="outline">
+            <UploadIcon className="size-4" />
+            Upload CV
+          </Button>
+        }
+      />
+      <DialogContent className="gap-5">
+        {body}
 
         <input
           accept={ACCEPT}
@@ -305,34 +368,7 @@ export function CvImportCard({
           ref={inputRef}
           type="file"
         />
-      </section>
-
-      <Dialog onOpenChange={(open) => !open && setPending(undefined)} open={Boolean(pending)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Replace what you have filled in?</DialogTitle>
-            <DialogDescription>
-              Every section the CV covers gets overwritten with what it says. Your saved profile
-              stays untouched until you press Save.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setPending(undefined)} type="button" variant="ghost">
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                const file = pending;
-                setPending(undefined);
-                if (file) void send(file);
-              }}
-              type="button"
-            >
-              Import and replace
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

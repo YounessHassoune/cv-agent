@@ -62,14 +62,19 @@ export function StatusActions({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {pdfLanguages.map((language) => (
-        <Button asChild key={language} size="sm" variant="outline">
-          <a
-            download
-            href={`/api/applications/${applicationId}/pdf?lang=${encodeURIComponent(language)}`}
-          >
-            <DownloadIcon className="size-3.5" />
-            {pdfLanguages.length > 1 ? `PDF · ${language.toUpperCase()}` : "Download PDF"}
-          </a>
+        <Button
+          key={language}
+          render={
+            <a
+              download
+              href={`/api/applications/${applicationId}/pdf?lang=${encodeURIComponent(language)}`}
+            />
+          }
+          size="sm"
+          variant="outline"
+        >
+          <DownloadIcon className="size-3.5" />
+          {pdfLanguages.length > 1 ? `PDF ${language.toUpperCase()}` : "Download PDF"}
         </Button>
       ))}
       {status !== "APPLIED" ? (
@@ -92,17 +97,19 @@ export function StatusActions({
       ) : null}
 
       <Dialog>
-        <DialogTrigger asChild>
-          <Button
-            aria-label="Delete application"
-            className="text-muted-foreground hover:text-destructive"
-            size="sm"
-            variant="ghost"
-          >
-            <Trash2Icon className="size-3.5" />
-            Delete
-          </Button>
-        </DialogTrigger>
+        <DialogTrigger
+          render={
+            <Button
+              aria-label="Delete application"
+              className="text-muted-foreground hover:text-destructive"
+              size="sm"
+              variant="ghost"
+            >
+              <Trash2Icon className="size-3.5" />
+              Delete
+            </Button>
+          }
+        />
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete this application?</DialogTitle>
@@ -115,11 +122,13 @@ export function StatusActions({
           {deleteError ? <p className="text-destructive text-sm">{deleteError}</p> : null}
 
           <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </DialogClose>
+            <DialogClose
+              render={
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
+              }
+            />
             <Button
               className="bg-destructive text-white hover:bg-destructive/90"
               disabled={deleting}

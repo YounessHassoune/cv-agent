@@ -25,13 +25,13 @@ const highlights = [
 export default function AuthLayout({ children }: { readonly children: ReactNode }) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
-      {/* Brand panel — hidden on small screens where the form is the whole page. */}
+      {/* Brand panel, hidden on small screens where the form is the whole page. */}
       <aside className="brand-glow relative hidden overflow-hidden border-r bg-card lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div className="grid-texture pointer-events-none absolute inset-0 opacity-40" />
 
         <Link className="relative flex items-center gap-2.5" href="/">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <FileTextIcon className="size-4.5" />
+          <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <FileTextIcon className="size-4" />
           </span>
           <span className="font-medium text-[0.95rem] tracking-tight">ApplyFlow</span>
         </Link>

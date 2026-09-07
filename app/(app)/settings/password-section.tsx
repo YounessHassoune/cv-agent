@@ -6,6 +6,7 @@ import { CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SettingsSection } from "./settings-section";
 
 /**
  * Sets a first password (Google-only accounts) or rotates an existing one.
@@ -44,18 +45,14 @@ export function PasswordSection({ hasPassword }: { readonly hasPassword: boolean
   };
 
   return (
-    <section className="surface-card space-y-6 rounded-xl p-6 md:p-8">
-      <div className="space-y-1">
-        <h2 className="font-semibold text-lg tracking-tight">
-          {hasPassword ? "Change password" : "Set a password"}
-        </h2>
-        <p className="text-muted-foreground text-sm">
-          {hasPassword
-            ? "You'll stay signed in on this device."
-            : "Add a password so you can sign in without Google."}
-        </p>
-      </div>
-
+    <SettingsSection
+      description={
+        hasPassword
+          ? "You'll stay signed in on this device."
+          : "Add a password so you can sign in without Google."
+      }
+      title={hasPassword ? "Change password" : "Set a password"}
+    >
       <form className="grid gap-4 md:grid-cols-2" onSubmit={submit}>
         {hasPassword ? (
           <div className="space-y-1.5">
@@ -95,6 +92,6 @@ export function PasswordSection({ hasPassword }: { readonly hasPassword: boolean
           ) : null}
         </div>
       </form>
-    </section>
+    </SettingsSection>
   );
 }

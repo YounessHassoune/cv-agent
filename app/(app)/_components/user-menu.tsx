@@ -35,18 +35,20 @@ export function UserMenu({
       <form action="/api/auth/signout" className="hidden" method="post" ref={signOutForm} />
 
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            aria-label="Account menu"
-            className="rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            type="button"
-          >
-            <Avatar className="size-8 border">
-              {image ? <AvatarImage alt="" src={image} /> : null}
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-          </button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <button
+              aria-label="Account menu"
+              className="rounded-full outline-none transition-shadow focus-visible:ring-[3px] focus-visible:ring-ring/45"
+              type="button"
+            >
+              <Avatar className="size-8 border">
+                {image ? <AvatarImage alt="" src={image} /> : null}
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+            </button>
+          }
+        />
 
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="flex flex-col gap-0.5">
@@ -54,25 +56,21 @@ export function UserMenu({
             <span className="truncate font-normal text-muted-foreground text-xs">{email}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link href="/profile">
-              <UserRoundIcon className="size-4" />
-              CV Builder
-            </Link>
+          <DropdownMenuItem render={<Link href="/profile" />}>
+            <UserRoundIcon className="size-4" />
+            CV Builder
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/settings">
-              <SettingsIcon className="size-4" />
-              Settings
-            </Link>
+          <DropdownMenuItem render={<Link href="/settings" />}>
+            <SettingsIcon className="size-4" />
+            Settings
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onSelect={(event) => {
-              // Keep the menu mounted until the navigation is under way.
-              event.preventDefault();
-              signOutForm.current?.requestSubmit();
-            }}
+            // Base UI items take `onClick` rather than Radix's `onSelect`, and
+            // `closeOnClick={false}` is how the menu is kept mounted until the
+            // navigation is under way (Radix needed `event.preventDefault()`).
+            closeOnClick={false}
+            onClick={() => signOutForm.current?.requestSubmit()}
             variant="destructive"
           >
             <LogOutIcon className="size-4" />

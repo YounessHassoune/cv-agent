@@ -42,7 +42,7 @@ const rem = (value: number) => `${value}rem`;
 
 function dateRange(start?: string, end?: string) {
   if (!start && !end) return null;
-  return `${start ?? ""} — ${end || "Present"}`;
+  return `${start ?? ""} - ${end || "Present"}`;
 }
 
 /**

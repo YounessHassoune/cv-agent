@@ -33,7 +33,7 @@ export function GoogleButton({ label }: { readonly label: string }) {
   return (
     <>
       <a
-        className="inline-flex h-10 w-full items-center justify-center gap-2.5 rounded-md border bg-background font-medium text-sm shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+        className="inline-flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border bg-card font-medium text-sm shadow-soft transition-colors hover:bg-secondary active:translate-y-px dark:border-input dark:bg-input/25 dark:hover:bg-input/40"
         href="/api/auth/google"
       >
         <GoogleMark />

@@ -22,9 +22,9 @@
     "verify": "node scripts/verify-pipeline.ts"
   },
   "dependencies": {
+    "@base-ui/react": "^1.8.0",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
-    "@radix-ui/react-use-controllable-state": "1.2.2",
     "@react-pdf/renderer": "^4.5.1",
     "@shikijs/core": "4.1.0",
     "@shikijs/engine-javascript": "4.1.0",
@@ -47,7 +47,6 @@
     "nanoid": "5.1.11",
     "next": "16.3.0-preview.6",
     "next-themes": "^0.4.6",
-    "radix-ui": "1.4.3",
     "react": "^19.2.6",
     "react-dom": "19.2.6",
     "shiki": "4.1.0",

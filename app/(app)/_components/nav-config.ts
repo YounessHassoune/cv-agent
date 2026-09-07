@@ -14,24 +14,25 @@ export type NavItem = {
   description: string;
 };
 
+/** `description` is the subtitle the topbar shows under the section name. */
 export const primaryNav: NavItem[] = [
   {
     href: "/",
     label: "Chat",
     icon: MessagesSquare,
-    description: "",
+    description: "Paste a job description and get a tailored CV back.",
   },
   {
     href: "/applications",
     label: "Applications",
     icon: LayoutGridIcon,
-    description: "",
+    description: "Every CV you have tailored, with its ATS score.",
   },
   {
     href: "/profile",
     label: "CV Builder",
     icon: UserRoundIcon,
-    description: "",
+    description: "Your master profile. Every tailored CV draws only from here.",
   },
 ];
 
@@ -40,7 +41,7 @@ export const secondaryNav: NavItem[] = [
     href: "/settings",
     label: "Settings",
     icon: SettingsIcon,
-    description: "",
+    description: "Account, sign-in methods and theme.",
   },
 ];
 

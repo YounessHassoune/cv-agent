@@ -33,7 +33,10 @@ function CommandDialog({
   className,
   showCloseButton = true,
   ...props
-}: React.ComponentProps<typeof Dialog> & {
+  // Base UI's Dialog root accepts a payload render function as children; this
+  // wrapper only ever renders nodes into `<Command>`, so it narrows that back.
+}: Omit<React.ComponentProps<typeof Dialog>, "children"> & {
+  children?: React.ReactNode;
   title?: string;
   description?: string;
   className?: string;

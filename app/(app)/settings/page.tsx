@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PasswordSection } from "./password-section";
+import { SettingsSection } from "./settings-section";
 
 export const metadata: Metadata = { title: "Settings · ApplyFlow" };
 export const dynamic = "force-dynamic";
@@ -28,36 +29,48 @@ export default async function SettingsPage() {
     db.application.count({ where: { userId: user.userId } }),
   ]);
 
+  const counts = [
+    { label: "Applications", value: applicationCount },
+    { label: "Roles on file", value: profile?._count.experiences ?? 0 },
+    { label: "Skills on file", value: profile?._count.skills ?? 0 },
+  ];
+
   return (
-    <div className="mx-auto w-full max-w-200 space-y-8 px-4 py-8 md:px-10 md:py-12">
-      <div className="space-y-2">
-        <h1 className="font-bold text-3xl tracking-tight sm:text-4xl">Settings</h1>
-        <p className="text-muted-foreground">Your account, sign-in methods and theme.</p>
+    /*
+     * Settings used to be four stacked cards, which gave every group the same
+     * visual weight and left the reader scanning boxes for the one control they
+     * came for. This is the two-column form the pattern is usually written as:
+     * what the group is on the left, what you can change on the right, separated
+     * by hairlines rather than boxed in.
+     */
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 md:px-8 md:py-10">
+      <div className="space-y-1 pb-8">
+        <h1 className="font-semibold text-2xl tracking-tight">Settings</h1>
+        <p className="text-muted-foreground text-sm">Your account, sign-in methods and theme.</p>
       </div>
 
-      <section className="surface-card space-y-6 rounded-xl p-6 md:p-8">
-        <h2 className="border-b pb-4 font-semibold text-lg tracking-tight">Account</h2>
-
+      <SettingsSection
+        description="How you sign in, and what is on file for the agent to draw on."
+        title="Account"
+      >
         <div className="flex items-center gap-4">
           <Avatar className="size-12 border">
             {user.image ? <AvatarImage alt="" src={user.image} /> : null}
-            <AvatarFallback className="font-semibold">{initialsOf(user)}</AvatarFallback>
+            <AvatarFallback className="text-sm">{initialsOf(user)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="truncate font-semibold text-lg tracking-tight">
-              {user.name ?? "Your account"}
-            </p>
+            <p className="truncate font-semibold tracking-tight">{user.name ?? "Your account"}</p>
             <p className="truncate text-muted-foreground text-sm">{user.email}</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Badge className="border bg-field px-3 py-1.5" variant="outline">
+        <div className="flex flex-wrap gap-2">
+          <Badge className="gap-1.5 border bg-field px-3 py-1.5" variant="outline">
             <MailIcon className="size-3.5 text-muted-foreground" />
             {account?.passwordHash ? "Password enabled" : "No password set"}
           </Badge>
           {account?.googleId ? (
-            <Badge className="border bg-field px-3 py-1.5" variant="outline">
+            <Badge className="gap-1.5 border bg-field px-3 py-1.5" variant="outline">
               <KeyRoundIcon className="size-3.5 text-muted-foreground" />
               Google linked
             </Badge>
@@ -69,57 +82,39 @@ export default async function SettingsPage() {
           ) : null}
         </div>
 
-        <dl className="grid grid-cols-3 gap-4 border-t pt-6">
-          <div className="space-y-1">
-            <dt className="text-muted-foreground text-xs">Applications</dt>
-            <dd className="font-semibold text-2xl tabular-nums tracking-tight">
-              {applicationCount}
-            </dd>
-          </div>
-          <div className="space-y-1">
-            <dt className="text-muted-foreground text-xs">Roles on file</dt>
-            <dd className="font-semibold text-2xl tabular-nums tracking-tight">
-              {profile?._count.experiences ?? 0}
-            </dd>
-          </div>
-          <div className="space-y-1">
-            <dt className="text-muted-foreground text-xs">Skills on file</dt>
-            <dd className="font-semibold text-2xl tabular-nums tracking-tight">
-              {profile?._count.skills ?? 0}
-            </dd>
-          </div>
+        {/* The same divided strip the applications page uses for its counts, so
+            a set of numbers looks the same wherever it appears. */}
+        <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-xl border bg-border">
+          {counts.map((count) => (
+            <div className="bg-card p-4" key={count.label}>
+              <dt className="text-muted-foreground text-xs">{count.label}</dt>
+              <dd className="mt-1 font-semibold text-xl tabular-nums tracking-tight">
+                {count.value}
+              </dd>
+            </div>
+          ))}
         </dl>
-      </section>
+      </SettingsSection>
 
-      <section className="surface-card space-y-4 rounded-xl p-6 md:p-8">
-        <div className="space-y-1">
-          <h2 className="font-semibold text-lg tracking-tight">Appearance</h2>
-          <p className="text-muted-foreground text-sm">
-            Dark mode follows your system by default.
-          </p>
-        </div>
+      <SettingsSection
+        description="Dark mode follows your system unless you pick one."
+        title="Appearance"
+      >
         <ThemePicker />
-      </section>
+      </SettingsSection>
 
       <PasswordSection hasPassword={Boolean(account?.passwordHash)} />
 
-      <section className="space-y-4 rounded-xl border border-destructive/25 bg-destructive/5 p-6 md:p-8">
-        <div className="space-y-1">
-          <h2 className="font-semibold text-destructive text-lg tracking-tight">Sign out</h2>
-          <p className="text-muted-foreground text-sm">
-            End this session on this device. Your profile and applications stay put.
-          </p>
-        </div>
+      <SettingsSection
+        description="End this session on this device. Your profile and applications stay put."
+        title="Sign out"
+      >
         <form action="/api/auth/signout" method="post">
-          <Button
-            className="border-destructive/30 bg-card text-destructive hover:bg-destructive/10 hover:text-destructive"
-            type="submit"
-            variant="outline"
-          >
+          <Button type="submit" variant="outline">
             Sign out
           </Button>
         </form>
-      </section>
+      </SettingsSection>
     </div>
   );
 }

@@ -72,33 +72,38 @@ function ToolbarButton({
   readonly download?: boolean;
   readonly children: React.ReactNode;
 }) {
+  const trigger = href ? (
+    <Button
+      className="size-7 text-muted-foreground"
+      render={
+        <a
+          aria-label={label}
+          download={download}
+          href={href}
+          rel={download ? undefined : "noreferrer"}
+          target={download ? undefined : "_blank"}
+        />
+      }
+      size="icon"
+      variant="ghost"
+    >
+      {children}
+    </Button>
+  ) : (
+    <Button
+      aria-label={label}
+      className="size-7 text-muted-foreground"
+      onClick={onClick}
+      size="icon"
+      variant="ghost"
+    >
+      {children}
+    </Button>
+  );
+
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        {href ? (
-          <Button asChild className="size-7 text-muted-foreground" size="icon" variant="ghost">
-            <a
-              aria-label={label}
-              download={download}
-              href={href}
-              rel={download ? undefined : "noreferrer"}
-              target={download ? undefined : "_blank"}
-            >
-              {children}
-            </a>
-          </Button>
-        ) : (
-          <Button
-            aria-label={label}
-            className="size-7 text-muted-foreground"
-            onClick={onClick}
-            size="icon"
-            variant="ghost"
-          >
-            {children}
-          </Button>
-        )}
-      </TooltipTrigger>
+      <TooltipTrigger render={trigger} />
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
@@ -170,18 +175,22 @@ export function PdfViewer({
         {expandable ? (
           <Dialog>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <DialogTrigger asChild>
-                  <Button
-                    aria-label="View full size"
-                    className="size-7 text-muted-foreground"
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <Maximize2Icon className="size-3.5" />
-                  </Button>
-                </DialogTrigger>
-              </TooltipTrigger>
+              <TooltipTrigger
+                render={
+                  <DialogTrigger
+                    render={
+                      <Button
+                        aria-label="View full size"
+                        className="size-7 text-muted-foreground"
+                        size="icon"
+                        variant="ghost"
+                      >
+                        <Maximize2Icon className="size-3.5" />
+                      </Button>
+                    }
+                  />
+                }
+              />
               <TooltipContent>View full size</TooltipContent>
             </Tooltip>
 

@@ -34,54 +34,67 @@ export type ApplicationRow = {
 
 const statusFilters = ["All", "DRAFT", "PENDING_REVIEW", "APPROVED", "APPLIED", "REJECTED"];
 
+/**
+ * Colour here means outcome, not decoration: amber is waiting on you, green is
+ * cleared, red is dead. The two neutral states are separated by weight rather
+ * than hue, so the coloured ones stay the things that catch the eye.
+ */
 const statusTone: Record<string, string> = {
   DRAFT: "bg-secondary text-muted-foreground",
   PENDING_REVIEW: "bg-warning/15 text-warning",
   APPROVED: "bg-success/15 text-success",
-  APPLIED: "bg-primary/12 text-primary",
+  APPLIED: "bg-foreground text-background",
   REJECTED: "bg-destructive/12 text-destructive",
 };
 
 const pretty = (status: string) =>
   status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
 
-/** Green ≥ 85, amber ≥ 70, red below — matches how the review page reads. */
+/** Green at 85 and up, amber at 70 and up, red below. Matches the review page. */
 function scoreTone(score: number) {
   if (score >= 85) return { text: "text-success", bar: "bg-success" };
   if (score >= 70) return { text: "text-warning", bar: "bg-warning" };
   return { text: "text-destructive", bar: "bg-destructive" };
 }
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  accent,
+/**
+ * One bordered strip with divided cells rather than four floating cards: these
+ * are four readings of the same thing, so they belong in one object. Cards here
+ * would claim four separate pieces of hierarchy that do not exist.
+ */
+function StatStrip({
+  stats,
 }: {
-  readonly label: string;
-  readonly value: string;
-  readonly icon: typeof SparklesIcon;
-  readonly accent?: boolean;
+  readonly stats: { total: number; averageScore: number | null; applied: number; active: number };
 }) {
+  const cells = [
+    { label: "Optimizations", value: String(stats.total), icon: FileCheck2Icon, tone: "" },
+    {
+      label: "Average ATS",
+      value: stats.averageScore === null ? "-" : String(stats.averageScore),
+      icon: SparklesIcon,
+      // The one coloured number in the strip, and it is coloured by what it
+      // means rather than by brand.
+      tone: stats.averageScore === null ? "" : scoreTone(stats.averageScore).text,
+    },
+    { label: "Applied", value: String(stats.applied), icon: ArrowUpRightIcon, tone: "" },
+    { label: "Active drafts", value: String(stats.active), icon: BuildingIcon, tone: "" },
+  ];
+
   return (
-    <div
-      className={cn(
-        "surface-card flex flex-col justify-between gap-3 rounded-xl p-5",
-        accent && "border-l-4 border-l-primary",
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <span className="font-semibold text-[0.7rem] text-muted-foreground uppercase tracking-wide">
-          {label}
-        </span>
-        <Icon className={cn("size-4 shrink-0", accent ? "text-primary" : "text-muted-foreground")} />
-      </div>
-      <span
-        className={cn("font-bold text-3xl tabular-nums tracking-tight", accent && "text-primary")}
-      >
-        {value}
-      </span>
-    </div>
+    <dl className="surface-card grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-border sm:grid-cols-4">
+      {cells.map((cell) => (
+        <div className="flex flex-col gap-2 bg-card p-5" key={cell.label}>
+          <dt className="flex items-center gap-2 text-muted-foreground text-xs">
+            <cell.icon className="size-3.5 shrink-0" />
+            {cell.label}
+          </dt>
+          <dd className={cn("font-semibold text-2xl tabular-nums tracking-tight", cell.tone)}>
+            {cell.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -108,30 +121,21 @@ export function ApplicationsView({
   }, [applications, query, status]);
 
   return (
-    <div className="container space-y-6 px-4 py-6 sm:px-6 lg:px-10">
+    <div className="container space-y-6 px-4 py-8 sm:px-6 lg:px-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="font-bold text-3xl tracking-tight sm:text-4xl">Applications</h1>
-          <p className="text-muted-foreground">Every CV the agent has tailored, newest first.</p>
+          <h1 className="font-semibold text-2xl tracking-tight">Applications</h1>
+          <p className="text-muted-foreground text-sm">
+            Every CV the agent has tailored, newest first.
+          </p>
         </div>
-        <Button asChild>
-          <Link href="/">
-            <SparklesIcon className="size-4" />
-            New optimization
-          </Link>
+        <Button render={<Link href="/" />}>
+          <SparklesIcon className="size-4" />
+          New optimization
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={FileCheck2Icon} label="Total optimizations" value={String(stats.total)} />
-        <StatCard
-          icon={SparklesIcon}
-          label="Average ATS score"
-          value={stats.averageScore === null ? "—" : `${stats.averageScore}`}
-        />
-        <StatCard icon={ArrowUpRightIcon} label="Applied" value={String(stats.applied)} />
-        <StatCard accent icon={BuildingIcon} label="Active drafts" value={String(stats.active)} />
-      </div>
+      <StatStrip stats={stats} />
 
       {applications.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-16 text-center">
@@ -140,34 +144,37 @@ export function ApplicationsView({
           </span>
           <div className="space-y-1">
             <p className="font-medium">No applications yet</p>
-            <p className="text-muted-foreground text-sm">
-              Paste a job description in Tailor Chat to generate your first CV.
+            <p className="max-w-sm text-muted-foreground text-sm leading-relaxed">
+              Paste a job description in the chat and the agent tailors your first CV from your
+              master profile.
             </p>
           </div>
-          <Button asChild variant="outline">
-            <Link href="/">Start tailoring</Link>
+          <Button render={<Link href="/" />} variant="outline">
+            Start tailoring
           </Button>
         </div>
       ) : (
         <>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="relative w-full lg:max-w-96">
-              <SearchIcon className="-translate-y-1/2 absolute top-1/2 left-3.5 size-4 text-muted-foreground" />
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full lg:max-w-80">
+              <SearchIcon className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 size-4 text-muted-foreground" />
               <Input
+                aria-label="Search applications"
                 className="pl-10"
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search roles or job descriptions…"
+                placeholder="Search roles or job descriptions"
                 value={query}
               />
             </div>
-            <div className="flex flex-wrap gap-2 lg:justify-end">
+            <div className="scrollbar-slim flex gap-1.5 overflow-x-auto pb-1 lg:justify-end lg:pb-0">
               {statusFilters.map((option) => (
                 <button
+                  aria-pressed={option === status}
                   className={cn(
-                    "shrink-0 rounded-full border px-4 py-1.5 font-medium text-sm transition-colors",
+                    "shrink-0 rounded-full border px-3.5 py-1.5 font-medium text-sm transition-colors",
                     option === status
-                      ? "border-border bg-secondary text-foreground"
-                      : "bg-card text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                      ? "border-transparent bg-accent text-foreground"
+                      : "border-transparent bg-secondary text-muted-foreground hover:text-foreground",
                   )}
                   key={option}
                   onClick={() => setStatus(option)}
@@ -190,12 +197,12 @@ export function ApplicationsView({
                 return (
                   <li key={application.id}>
                     <Link
-                      className="group surface-card flex h-full flex-col gap-4 rounded-xl p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lift"
+                      className="surface-card flex h-full flex-col gap-4 rounded-xl p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-lift"
                       href={`/applications/${application.id}`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 space-y-1.5">
-                          <p className="truncate font-semibold text-lg tracking-tight transition-colors group-hover:text-primary">
+                          <p className="truncate font-semibold tracking-tight">
                             {application.title}
                           </p>
                           <p className="line-clamp-2 text-muted-foreground text-sm leading-relaxed">
@@ -204,7 +211,7 @@ export function ApplicationsView({
                         </div>
                         <span
                           className={cn(
-                            "shrink-0 rounded-md px-2 py-1 font-bold text-[0.65rem] uppercase tracking-wider",
+                            "shrink-0 rounded-full px-2.5 py-1 font-medium text-xs",
                             statusTone[application.status] ?? "bg-secondary text-muted-foreground",
                           )}
                         >
@@ -215,34 +222,35 @@ export function ApplicationsView({
                       <div className="space-y-2">
                         <div className="flex items-baseline justify-between text-sm">
                           <span className="text-muted-foreground">ATS score</span>
-                          <span className={cn("font-bold tabular-nums", tone?.text)}>
+                          <span className={cn("font-semibold tabular-nums", tone?.text)}>
                             {application.score === null ? "Not scored" : `${application.score}/100`}
                           </span>
                         </div>
                         <Progress indicatorClassName={tone?.bar} value={application.score ?? 0} />
                       </div>
 
-                      <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t pt-4 text-muted-foreground text-xs">
-                        <span>{application.createdAt}</span>
-                        <span aria-hidden="true">·</span>
-                        <span className="uppercase">{application.languages.join(" / ")}</span>
-                        <span aria-hidden="true">·</span>
-                        {application.missing > 0 ? (
-                          <span className="rounded-md border bg-field px-2 py-1">
-                            {application.missing} keywords missing
-                          </span>
-                        ) : (
-                          <span className="rounded-md border bg-field px-2 py-1">
-                            No keyword gaps
-                          </span>
-                        )}
-                        {application.pdfCount > 0 ? (
-                          <Badge variant="secondary">
-                            {application.pdfCount > 1
-                              ? `${application.pdfCount} PDFs ready`
-                              : "PDF ready"}
-                          </Badge>
-                        ) : null}
+                      {/* Two aligned columns rather than a run of dot-separated
+                          fragments: the date and language belong together, the
+                          keyword state and PDF state are the actionable half. */}
+                      <div className="mt-auto grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-4 text-muted-foreground text-xs">
+                        <span className="truncate">{application.createdAt}</span>
+                        <span className="truncate text-right uppercase">
+                          {application.languages.join(" / ")}
+                        </span>
+                        <span className="truncate">
+                          {application.missing > 0
+                            ? `${application.missing} keywords missing`
+                            : "No keyword gaps"}
+                        </span>
+                        <span className="flex justify-end">
+                          {application.pdfCount > 0 ? (
+                            <Badge variant="secondary">
+                              {application.pdfCount > 1
+                                ? `${application.pdfCount} PDFs ready`
+                                : "PDF ready"}
+                            </Badge>
+                          ) : null}
+                        </span>
                       </div>
                     </Link>
                   </li>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BriefcaseIcon,
   CheckIcon,
@@ -10,7 +10,6 @@ import {
   LayoutTemplateIcon,
   LinkIcon,
   type LucideIcon,
-  MinusIcon,
   PanelRightOpenIcon,
   PlusIcon,
   SaveIcon,
@@ -36,7 +35,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CV_TEMPLATE_LIST, DEFAULT_TEMPLATE } from "@/lib/cv-templates";
 import { cn } from "@/lib/utils";
-import { CvImportCard } from "./cv-import-card";
+import { CvImportDialog } from "./cv-import-dialog";
 import { PhotoField } from "./photo-field";
 
 export type ProfileForm = {
@@ -123,11 +122,11 @@ function toPreview(form: ProfileForm): CvPreviewData {
       .map((e) => ({
         institution: e.institution,
         degree: e.degree,
-        dates: [e.start, e.end].filter(Boolean).join(" — "),
+        dates: [e.start, e.end].filter(Boolean).join(" - "),
       })),
     languages: form.languages
       .filter((l) => l.name.trim())
-      .map((l) => ({ name: l.name, level: l.level || "—" })),
+      .map((l) => ({ name: l.name, level: l.level || "-" })),
   };
 }
 
@@ -142,7 +141,7 @@ const sections: { id: SectionId; label: string; icon: LucideIcon; hint: string }
     id: "summary",
     label: "Professional summary",
     icon: TextIcon,
-    hint: "2–3 sentences. The agent rewrites this per job, but keeps to the facts here.",
+    hint: "2-3 sentences. The agent rewrites this per job, but keeps to the facts here.",
   },
   {
     id: "experience",
@@ -155,7 +154,7 @@ const sections: { id: SectionId; label: string; icon: LucideIcon; hint: string }
     id: "skills",
     label: "Skills",
     icon: WrenchIcon,
-    hint: "Only list what you have actually used — these gate what a CV may claim.",
+    hint: "Only list what you have actually used. These gate what a CV may claim.",
   },
   {
     id: "projects",
@@ -167,7 +166,7 @@ const sections: { id: SectionId; label: string; icon: LucideIcon; hint: string }
     id: "links",
     label: "Profile or portfolio URL",
     icon: LinkIcon,
-    hint: "GitHub, LinkedIn, a portfolio — whatever you want on the CV header.",
+    hint: "GitHub, LinkedIn, a portfolio: whatever you want on the CV header.",
   },
   { id: "languages", label: "Languages", icon: LanguagesIcon, hint: "Spoken languages and level." },
 ];
@@ -218,9 +217,21 @@ function EntryCard({
   );
 }
 
-/** Donut gauge for profile completeness — the header's at-a-glance signal. */
+/**
+ * Donut gauge for profile completeness, the header's at-a-glance signal. It is
+ * banded like an ATS score rather than tinted with the brand, because a thin
+ * profile is the single biggest cause of a weak CV and should read as a warning
+ * rather than as decoration.
+ */
+function completionTone(value: number): string {
+  if (value >= 85) return "text-success";
+  if (value >= 50) return "text-warning";
+  return "text-destructive";
+}
+
 function CompletionRing({ value }: { readonly value: number }) {
   const circumference = 2 * Math.PI * 16;
+  const tone = completionTone(value);
 
   return (
     <div className="relative flex size-11 shrink-0 items-center justify-center" title={`${value}% complete`}>
@@ -235,7 +246,7 @@ function CompletionRing({ value }: { readonly value: number }) {
           strokeWidth="3"
         />
         <circle
-          className="text-primary transition-[stroke-dashoffset] duration-500"
+          className={cn(tone, "transition-[stroke-dashoffset] duration-500")}
           cx="18"
           cy="18"
           fill="transparent"
@@ -247,7 +258,7 @@ function CompletionRing({ value }: { readonly value: number }) {
           strokeWidth="3"
         />
       </svg>
-      <span className="relative font-semibold text-[0.6rem] text-primary tabular-nums">
+      <span className={cn("relative font-semibold text-[0.6rem] tabular-nums", tone)}>
         {value}%
       </span>
     </div>
@@ -256,7 +267,12 @@ function CompletionRing({ value }: { readonly value: number }) {
 
 export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
   const [form, setForm] = useState<ProfileForm>(initial);
-  const [section, setSection] = useState<SectionId | null>("identity");
+  // Every section is on the page at once, so what has to be tracked is where
+  // each one sits (for the rail's jump links) and which one you are currently
+  // looking at (so the rail can say so).
+  const sectionRefs = useRef<Partial<Record<SectionId, HTMLElement | null>>>({});
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState<SectionId>("identity");
   // Preview-only: the photo slot is always drawn so the header keeps its shape.
   const [showPhoto, setShowPhoto] = useState(true);
   const [status, setStatus] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
@@ -347,7 +363,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
     setMessage(body?.error ?? `Save failed (${response.status})`);
   };
 
-  /** Body of one accordion panel. Only the open section is ever rendered. */
+  /** Body of one section. */
   function sectionBody(id: SectionId) {
     if (id === "identity") {
       return (
@@ -463,7 +479,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
                     </FieldRow>
                   </div>
                 </div>
-                <FieldRow label="Achievements — one per line">
+                <FieldRow label="Achievements, one per line">
                   <Textarea
                     onChange={(e) => update({ bullets: e.target.value })}
                     placeholder={"Cut checkout latency by 40% by…\nLed a team of 4 to ship…"}
@@ -648,7 +664,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
                     value={project.description}
                   />
                 </FieldRow>
-                <FieldRow label="Highlights — one per line">
+                <FieldRow label="Highlights, one per line">
                   <Textarea
                     onChange={(e) => update({ bullets: e.target.value })}
                     rows={3}
@@ -784,11 +800,15 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
   /** Rendered twice — as a column on xl and inside a sheet below it — so the
       switch needs an id unique to each copy. */
   const previewPanel = (instance: string) => (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 className="font-semibold text-[0.95rem] tracking-tight">Live preview</h2>
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      {/* One compact toolbar rather than a heading row plus a controls row: the
+          two choices here both restyle the document below, so they sit on it. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+        <h2 className="mr-auto font-medium text-muted-foreground text-xs uppercase tracking-wide">
+          Live preview
+        </h2>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Switch
               checked={showPhoto}
@@ -802,7 +822,15 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
 
           {/* The template picker sits over the sheet it restyles, so the choice
               is made against the result instead of blind in a form section. */}
-          <Select onValueChange={(template) => patch({ template })} value={form.template}>
+          {/* Base UI reports the value as `string | null` because a select can be
+              cleared in general. This one has no null item, so the guard just
+              satisfies the type. */}
+          <Select
+            onValueChange={(template) => {
+              if (template) patch({ template });
+            }}
+            value={form.template}
+          >
             <SelectTrigger
               aria-label="CV template"
               className="gap-1.5 rounded-full bg-card pr-2.5 pl-3.5 font-medium"
@@ -831,131 +859,198 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
         </div>
       </div>
 
-      <div className="scrollbar-slim min-h-0 flex-1 overflow-y-auto pb-8">
+      <div className="scrollbar-slim min-h-0 flex-1 overflow-y-auto pb-6">
         <CvPreview cv={preview} showPhoto={showPhoto} template={form.template} />
       </div>
 
+      {/* The one thing worth saying here, kept to one line. The template's own
+          description is already in the picker beside it. */}
       <p className="shrink-0 text-muted-foreground text-xs leading-relaxed">
-        <span className="font-medium text-foreground">{activeTemplate.label}</span> —{" "}
-        {activeTemplate.description} The photo is a preview device only: every compiled PDF stays
-        single-column and photo-free, which is what ATS parsers read best.
+        The photo is a preview device only. Every compiled PDF stays single-column and photo-free,
+        which is what ATS parsers read best.
       </p>
     </div>
   );
 
+  const jumpTo = (id: SectionId) => {
+    sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  /*
+   * Scroll spy for the rail. A long form with a static nav tells you where you
+   * can go but not where you are, which is the thing you actually lose while
+   * scrolling. The bottom margin keeps the "current" section the one near the
+   * top of the viewport rather than whichever one happens to be tallest.
+   */
+  useEffect(() => {
+    const root = scrollerRef.current;
+    if (!root) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const topMost = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        const id = topMost?.target.getAttribute("data-section");
+        if (id) setActiveSection(id as SectionId);
+      },
+      { root, rootMargin: "-8px 0px -62% 0px", threshold: 0 },
+    );
+
+    for (const node of Object.values(sectionRefs.current)) {
+      if (node) observer.observe(node);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  const saveButton = (
+    <Button
+      disabled={status === "saving" || status === "idle"}
+      onClick={save}
+      size="sm"
+      type="button"
+    >
+      <SaveIcon className="size-4" />
+      {status === "saving" ? "Saving…" : "Save"}
+    </Button>
+  );
+
+  const statusLine =
+    status === "saving"
+      ? "Saving…"
+      : status === "dirty"
+        ? "Unsaved changes"
+        : status === "saved"
+          ? "All changes saved"
+          : `${completion}% complete`;
+
+  const previewSheet = (
+    <Sheet>
+      <SheetTrigger
+        render={
+          <Button className="xl:hidden" size="sm" type="button" variant="outline">
+            <PanelRightOpenIcon className="size-3.5" />
+            Preview
+          </Button>
+        }
+      />
+      <SheetContent className="w-full bg-secondary/50 p-4 sm:max-w-2xl" side="right">
+        <SheetTitle className="sr-only">CV preview</SheetTitle>
+        {previewPanel("sheet")}
+      </SheetContent>
+    </Sheet>
+  );
+
   return (
-    <div className="container flex h-full min-h-0 border-x">
-      {/* Editor column — scrolls independently of the preview beside it. */}
-      <div className="scrollbar-slim flex-1 overflow-y-auto border-r xl:w-1/2 xl:flex-none">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6 sm:px-6 lg:px-10">
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
-            <div className="space-y-1.5">
-              <h1 className="font-semibold text-2xl tracking-tight">CV Builder</h1>
-              <p className="max-w-sm text-muted-foreground text-sm">
-                Your master profile. Everything a tailored CV can claim lives here.
-              </p>
-            </div>
+    /*
+     * Two panels on a padded canvas, the same shape as the application review
+     * workspace: the thing you work in, and the thing it produces, each with its
+     * own edge and its own scroll.
+     *
+     * This started as three flush full-bleed columns divided by hairlines, which
+     * made every pane too narrow to breathe and read as one dense wall. The
+     * section nav moved into the form panel's own header, which buys the form
+     * back the width that the rail was taking and leaves two panels instead of
+     * three.
+     */
+    <div className="container flex h-full min-h-0 flex-col gap-3 px-4 py-4 sm:px-6 lg:px-8">
+      <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
+        <CompletionRing value={completion} />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-semibold text-lg tracking-tight">CV Builder</h1>
+          <p className="truncate text-muted-foreground text-xs">{statusLine}</p>
+        </div>
+        {previewSheet}
+        <CvImportDialog
+          hasContent={sections.some((item) => filled[item.id])}
+          onImport={applyImport}
+        />
+        {saveButton}
+      </header>
 
-            <div className="flex items-center gap-3">
-              <CompletionRing value={completion} />
-
-              {/* Below xl the preview lives in a sheet instead of a second column. */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button className="xl:hidden" type="button" variant="outline">
-                    <PanelRightOpenIcon className="size-3.5" />
-                    Preview
-                  </Button>
-                </SheetTrigger>
-                <SheetContent className="w-full bg-secondary/60 p-4 sm:max-w-lg" side="right">
-                  <SheetTitle className="sr-only">CV preview</SheetTitle>
-                  {previewPanel("sheet")}
-                </SheetContent>
-              </Sheet>
-
-              <Button disabled={status === "saving"} onClick={save} type="button">
-                <SaveIcon className="size-4" />
-                {status === "saving" ? "Saving…" : "Save"}
-              </Button>
-            </div>
-          </div>
-
-          <CvImportCard hasContent={sections.some((s) => filled[s.id])} onImport={applyImport} />
-
-          {status === "dirty" ? (
-            <p className="text-muted-foreground text-xs">Unsaved changes.</p>
-          ) : null}
-          {status === "saved" ? (
-            <p className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-sm">
-              <CheckIcon className="size-4 text-success" /> Profile saved.
-            </p>
-          ) : null}
-          {status === "error" ? (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-sm">
-              {message}
-            </p>
-          ) : null}
-
-          {sections.map((item) => {
-            const open = item.id === section;
-            const done = filled[item.id];
-            return (
-              <section
+      <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <section className="flex min-h-0 overflow-hidden rounded-xl border bg-card">
+          {/* A column inside the panel rather than a strip across the top of it:
+              eight sections do not fit on one line, and a nav you have to scroll
+              sideways to read is not a nav. It sits inside the panel's own border
+              so the page is still two panels, not three, and the scroll spy keeps
+              it pointed at wherever you currently are in the form. */}
+          <nav className="scrollbar-slim hidden w-44 shrink-0 flex-col gap-0.5 overflow-y-auto border-r p-2.5 md:flex">
+            {sections.map((item) => (
+              <button
+                aria-current={activeSection === item.id ? "true" : undefined}
                 className={cn(
-                  "surface-card overflow-hidden rounded-xl transition-colors",
-                  open && "border-primary/25",
+                  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
+                  activeSection === item.id
+                    ? "bg-accent font-medium text-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                 )}
                 key={item.id}
+                onClick={() => jumpTo(item.id)}
+                type="button"
               >
-                <button
-                  aria-expanded={open}
+                <item.icon className="size-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {/* A hollow dot is a section with nothing in it yet. */}
+                <span
                   className={cn(
-                    "flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors sm:px-6",
-                    open ? "border-b" : "hover:bg-secondary/60",
+                    "size-1.5 shrink-0 rounded-full",
+                    filled[item.id] ? "bg-success" : "border border-muted-foreground/40",
                   )}
-                  onClick={() => setSection(open ? null : item.id)}
-                  type="button"
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <item.icon
-                      className={cn(
-                        "size-4.5 shrink-0",
-                        open ? "text-primary" : "text-muted-foreground",
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        "truncate font-semibold text-[0.95rem]",
-                        open ? "text-foreground" : "text-muted-foreground",
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    {done ? <CheckIcon className="size-4 text-success" /> : null}
-                    {open ? (
-                      <MinusIcon className="size-4 text-primary" />
+                />
+              </button>
+            ))}
+          </nav>
+
+          <div
+            className="scrollbar-slim min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-7"
+            ref={scrollerRef}
+          >
+            {status === "error" ? (
+              <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-sm">
+                {message}
+              </p>
+            ) : null}
+
+            {/* Sections are separated by a hairline and their own heading rather
+                than boxed into cards. The entries inside them are already boxed,
+                and a box inside a box inside a panel was three borders deep. */}
+            {sections.map((item) => (
+              <section
+                className="scroll-mt-6 border-t pt-9 pb-3 first:border-t-0"
+                data-section={item.id}
+                key={item.id}
+                ref={(node) => {
+                  sectionRefs.current[item.id] = node;
+                }}
+              >
+                <div className="mb-6 space-y-1.5">
+                  {/* No icon here: the nav column beside it already carries one
+                      per section, and repeating it is just noise. */}
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="min-w-0 font-semibold tracking-tight">{item.label}</h2>
+                    {filled[item.id] ? (
+                      <CheckIcon className="size-4 shrink-0 text-success" />
                     ) : (
-                      <PlusIcon className="size-4 text-muted-foreground" />
+                      <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-muted-foreground text-xs">
+                        Empty
+                      </span>
                     )}
-                  </span>
-                </button>
-
-                {open ? (
-                  <div className="space-y-6 px-5 py-5 sm:px-6 sm:py-6">
-                    <p className="text-muted-foreground text-sm">{item.hint}</p>
-                    {sectionBody(item.id)}
                   </div>
-                ) : null}
-              </section>
-            );
-          })}
-        </div>
-      </div>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{item.hint}</p>
+                </div>
 
-      {/* Preview column — fixed half of the workspace on wide screens. */}
-      <div className="hidden bg-secondary/60 p-6 xl:block xl:w-1/2">{previewPanel("panel")}</div>
+                <div className="space-y-6">{sectionBody(item.id)}</div>
+              </section>
+            ))}
+          </div>
+        </section>
+
+        {/* The document, on its own canvas so the paper reads as paper. */}
+        <section className="hidden min-h-0 flex-col overflow-hidden rounded-xl border bg-secondary/40 p-5 xl:flex">
+          {previewPanel("panel")}
+        </section>
+      </div>
     </div>
   );
 }

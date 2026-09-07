@@ -33,85 +33,104 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-paper: var(--paper);
   --color-paper-foreground: var(--paper-foreground);
+
+  /* SHAPE SYSTEM (one documented rule, applied everywhere):
+       - interactive controls (button, input, select, tab, menu item) -> rounded-lg
+       - containers (card, panel, dialog, popover, sheet)             -> rounded-xl
+       - pills and avatars (badge, filter chip, keyword tag)          -> rounded-full
+     Nothing outside these three tiers. */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
-  --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
-  --shadow-soft: 0 1px 2px oklch(0 0 0 / 4%), 0 8px 24px -12px oklch(0 0 0 / 12%);
-  --shadow-lift: 0 1px 2px oklch(0 0 0 / 5%), 0 16px 40px -16px oklch(0 0 0 / 18%);
-  --shadow-paper: 0 1px 3px oklch(0 0 0 / 8%), 0 24px 48px -24px oklch(0 0 0 / 22%);
+
+  /* Shadows are tinted to the canvas hue rather than pure black, so elevated
+     surfaces read as lit paper instead of stamped-on rectangles. They are also
+     rationed: a card at rest gets its structure from a border, and lifts only
+     on hover or when it is genuinely floating above the page. */
+  --shadow-soft: 0 1px 2px oklch(0.2 0.01 265 / 4%);
+  --shadow-lift: 0 1px 2px oklch(0.2 0.01 265 / 5%), 0 16px 40px -20px oklch(0.2 0.01 265 / 22%);
+  --shadow-paper: 0 1px 3px oklch(0.2 0.01 265 / 7%), 0 28px 56px -28px oklch(0.2 0.01 265 / 26%);
 }
 
+/* PALETTE: monochrome ink.
+   The product's whole job is to tell you how well a CV scores, and it already
+   spends green / amber / red on exactly that. A coloured brand accent competes
+   with that reading: when the buttons, the links, the active nav item and the
+   score are all blue, the one blue that carries meaning stops standing out.
+   So the accent is ink, the neutrals are a true cool grey, and green, amber and
+   red are the only chromatic colours on the screen. If something is coloured
+   here, it is telling you about a score. */
 :root {
   color-scheme: light;
-  /* Cool blue-grey canvas, white elevated surfaces, saturated blue brand accent.
-     `--field` is the filled input/well tone the forms sit on. */
-  --background: oklch(0.977 0.005 250);
-  --foreground: oklch(0.235 0.01 255);
+  --background: oklch(0.981 0.001 260);
+  --foreground: oklch(0.19 0.008 265);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.01 255);
+  --card-foreground: oklch(0.19 0.008 265);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.01 255);
-  --primary: oklch(0.48 0.2 264);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.955 0.008 262);
-  --secondary-foreground: oklch(0.32 0.02 262);
-  --muted: oklch(0.962 0.006 258);
-  --muted-foreground: oklch(0.47 0.028 268);
-  --accent: oklch(0.925 0.035 268);
-  --accent-foreground: oklch(0.36 0.05 266);
-  --destructive: oklch(0.55 0.21 27);
-  --success: oklch(0.6 0.14 155);
-  --warning: oklch(0.72 0.15 75);
-  --border: oklch(0.905 0.012 265);
-  --input: oklch(0.9 0.014 265);
-  --field: oklch(0.964 0.005 258);
-  --ring: oklch(0.48 0.2 264);
+  --popover-foreground: oklch(0.19 0.008 265);
+  --primary: oklch(0.235 0.012 265);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.955 0.002 260);
+  --secondary-foreground: oklch(0.28 0.01 265);
+  --muted: oklch(0.965 0.002 260);
+  --muted-foreground: oklch(0.455 0.01 265);
+  --accent: oklch(0.938 0.003 260);
+  --accent-foreground: oklch(0.22 0.01 265);
+  --destructive: oklch(0.54 0.2 27);
+  --success: oklch(0.55 0.14 155);
+  --warning: oklch(0.66 0.14 70);
+  --border: oklch(0.914 0.003 260);
+  --input: oklch(0.888 0.004 260);
+  --field: oklch(0.971 0.002 260);
+  --ring: oklch(0.42 0.015 265);
   --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.235 0.01 255);
-  --sidebar-accent: oklch(0.925 0.035 268);
-  --sidebar-border: oklch(0.905 0.012 265);
+  --sidebar-foreground: oklch(0.19 0.008 265);
+  --sidebar-accent: oklch(0.945 0.003 260);
+  --sidebar-border: oklch(0.914 0.003 260);
   /* The CV sheet stays paper-white in both themes so previews match the PDF. */
   --paper: oklch(1 0 0);
   --paper-foreground: oklch(0.18 0 0);
-  --radius: 0.75rem;
+  --radius: 0.625rem;
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.168 0.012 262);
-  --foreground: oklch(0.97 0.004 265);
-  --card: oklch(0.214 0.014 262);
-  --card-foreground: oklch(0.97 0.004 265);
-  --popover: oklch(0.214 0.014 262);
-  --popover-foreground: oklch(0.97 0.004 265);
-  --primary: oklch(0.72 0.15 264);
-  --primary-foreground: oklch(0.17 0.04 264);
-  --secondary: oklch(0.27 0.018 262);
-  --secondary-foreground: oklch(0.97 0.004 265);
-  --muted: oklch(0.27 0.018 262);
-  --muted-foreground: oklch(0.72 0.018 265);
-  --accent: oklch(0.31 0.045 265);
-  --accent-foreground: oklch(0.95 0.02 265);
+  --background: oklch(0.163 0.004 265);
+  --foreground: oklch(0.968 0.002 265);
+  --card: oklch(0.206 0.005 265);
+  --card-foreground: oklch(0.968 0.002 265);
+  --popover: oklch(0.226 0.006 265);
+  --popover-foreground: oklch(0.968 0.002 265);
+  /* Ink inverts rather than shifting hue: near-white fills, dark text on them. */
+  --primary: oklch(0.955 0.002 265);
+  --primary-foreground: oklch(0.19 0.006 265);
+  --secondary: oklch(0.262 0.006 265);
+  --secondary-foreground: oklch(0.968 0.002 265);
+  --muted: oklch(0.262 0.006 265);
+  --muted-foreground: oklch(0.708 0.008 265);
+  --accent: oklch(0.288 0.007 265);
+  --accent-foreground: oklch(0.968 0.002 265);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.72 0.15 155);
-  --warning: oklch(0.78 0.14 75);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --field: oklch(1 0 0 / 6%);
-  --ring: oklch(0.62 0.15 264);
-  --sidebar: oklch(0.192 0.013 262);
-  --sidebar-foreground: oklch(0.97 0.004 265);
-  --sidebar-accent: oklch(0.29 0.04 265);
+  --warning: oklch(0.78 0.14 70);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 15%);
+  --field: oklch(1 0 0 / 5%);
+  --ring: oklch(0.72 0.008 265);
+  --sidebar: oklch(0.186 0.004 265);
+  --sidebar-foreground: oklch(0.968 0.002 265);
+  --sidebar-accent: oklch(0.278 0.007 265);
   --sidebar-border: oklch(1 0 0 / 8%);
   --paper: oklch(0.98 0 0);
   --paper-foreground: oklch(0.18 0 0);
-  --shadow-soft: 0 1px 2px oklch(0 0 0 / 30%), 0 8px 24px -12px oklch(0 0 0 / 50%);
-  --shadow-lift: 0 1px 2px oklch(0 0 0 / 35%), 0 16px 40px -16px oklch(0 0 0 / 60%);
-  --shadow-paper: 0 1px 3px oklch(0 0 0 / 40%), 0 24px 48px -24px oklch(0 0 0 / 70%);
+  --shadow-soft: 0 1px 2px oklch(0 0 0 / 32%), 0 8px 24px -14px oklch(0 0 0 / 52%);
+  --shadow-lift: 0 1px 2px oklch(0 0 0 / 35%), 0 18px 44px -20px oklch(0 0 0 / 62%);
+  --shadow-paper: 0 1px 3px oklch(0 0 0 / 40%), 0 28px 56px -28px oklch(0 0 0 / 70%);
 }
 
 /* The design's 1440px canvas. Past that, wide screens get margin rather than
@@ -146,72 +165,85 @@ select {
   font: inherit;
 }
 
-/* No animation plugin is installed, so the `animate-in` utilities that shadcn
-   components carry are inert. These keyframes drive overlay motion directly off
-   the Radix `data-state` attributes instead. */
-@keyframes overlay-fade-in {
-  from {
-    opacity: 0;
-  }
+/* Base UI drives enter/exit off `data-starting-style` / `data-ending-style`
+   rather than keyframes, so overlay motion is expressed as a transition to and
+   from those two states. No animation plugin is needed for any of it. */
+[data-slot="dialog-backdrop"],
+[data-slot="sheet-backdrop"] {
+  transition: opacity 200ms ease;
 }
 
-@keyframes overlay-fade-out {
-  to {
-    opacity: 0;
-  }
+[data-slot="dialog-backdrop"][data-starting-style],
+[data-slot="dialog-backdrop"][data-ending-style],
+[data-slot="sheet-backdrop"][data-starting-style],
+[data-slot="sheet-backdrop"][data-ending-style] {
+  opacity: 0;
 }
 
-@keyframes sheet-in-left {
-  from {
-    transform: translateX(-100%);
-  }
+[data-slot="dialog-content"] {
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-@keyframes sheet-out-left {
-  to {
-    transform: translateX(-100%);
-  }
+[data-slot="dialog-content"][data-starting-style],
+[data-slot="dialog-content"][data-ending-style] {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.97);
 }
 
-@keyframes content-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px) scale(0.98);
-  }
+[data-slot="sheet-content"] {
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-[data-slot="sheet-overlay"][data-state="open"],
-[data-slot="dialog-overlay"][data-state="open"] {
-  animation: overlay-fade-in 200ms ease-out;
+[data-slot="sheet-content"][data-starting-style],
+[data-slot="sheet-content"][data-ending-style] {
+  transform: translateX(-100%);
 }
 
-[data-slot="sheet-overlay"][data-state="closed"],
-[data-slot="dialog-overlay"][data-state="closed"] {
-  animation: overlay-fade-out 180ms ease-in forwards;
+[data-slot="sheet-content"][data-side="right"][data-starting-style],
+[data-slot="sheet-content"][data-side="right"][data-ending-style] {
+  transform: translateX(100%);
 }
 
-[data-slot="sheet-content"][data-state="open"] {
-  animation: sheet-in-left 260ms cubic-bezier(0.32, 0.72, 0, 1);
+/* Popovers, menus and the select list share one short rise-and-fade. */
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="select-content"],
+[data-slot="hover-card-content"],
+[data-slot="tooltip-content"] {
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
 }
 
-[data-slot="sheet-content"][data-state="closed"] {
-  animation: sheet-out-left 200ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
-}
-
-[data-slot="dialog-content"][data-state="open"],
-[data-slot="popover-content"][data-state="open"],
-[data-slot="dropdown-menu-content"][data-state="open"] {
-  animation: content-in 160ms ease-out;
+[data-slot="dropdown-menu-content"][data-starting-style],
+[data-slot="dropdown-menu-content"][data-ending-style],
+[data-slot="dropdown-menu-sub-content"][data-starting-style],
+[data-slot="dropdown-menu-sub-content"][data-ending-style],
+[data-slot="select-content"][data-starting-style],
+[data-slot="select-content"][data-ending-style],
+[data-slot="hover-card-content"][data-starting-style],
+[data-slot="hover-card-content"][data-ending-style],
+[data-slot="tooltip-content"][data-starting-style],
+[data-slot="tooltip-content"][data-ending-style] {
+  opacity: 0;
+  transform: scale(0.97);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-state] {
-    animation: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
 @layer utilities {
-  /* Elevated panel used for cards, the composer and every stat tile. */
+  /* Panel used for cards, the composer and every stat tile. Border-first: the
+     1px edge is what separates it from the canvas, not a drop shadow. */
   .surface-card {
     background-color: var(--card);
     border: 1px solid var(--border);
@@ -222,11 +254,12 @@ select {
     box-shadow: var(--shadow-lift);
   }
 
-  /* Faint brand wash behind hero/auth areas. */
+  /* Faint wash behind the auth panel. Now that the accent is ink this reads as
+     a soft vignette rather than a coloured glow, which is the intent. */
   .brand-glow {
     background-image:
-      radial-gradient(60% 55% at 15% 0%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 70%),
-      radial-gradient(50% 50% at 100% 15%, color-mix(in oklab, var(--primary) 12%, transparent), transparent 70%);
+      radial-gradient(65% 55% at 12% 0%, color-mix(in oklab, var(--foreground) 7%, transparent), transparent 70%),
+      radial-gradient(55% 50% at 100% 12%, color-mix(in oklab, var(--foreground) 5%, transparent), transparent 70%);
   }
 
   .grid-texture {

@@ -7,6 +7,7 @@ import { MenuIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon } from "lucid
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { brandIcon as BrandIcon, isActive, primaryNav, secondaryNav } from "./nav-config";
 
@@ -39,14 +40,15 @@ export function SidebarProvider({ children }: { readonly children: ReactNode }) 
 export function SidebarToggle() {
   const { collapsed, toggle } = useContext(SidebarContext);
   const Icon = collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon;
+  const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
 
   return (
     <Button
-      aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
+      aria-label={label}
       className="hidden text-muted-foreground md:inline-flex"
       onClick={toggle}
       size="icon-sm"
-      title={collapsed ? "Show sidebar" : "Hide sidebar"}
+      title={label}
       type="button"
       variant="ghost"
     >
@@ -55,34 +57,51 @@ export function SidebarToggle() {
   );
 }
 
-const navLink = (active: boolean) =>
-  cn(
-    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors active:scale-[0.99]",
-    active
-      ? "bg-sidebar-accent font-semibold text-primary"
-      : "font-medium text-muted-foreground hover:bg-secondary hover:text-foreground",
-  );
-
-function NavLinks({ onNavigate }: { readonly onNavigate?: () => void }) {
+/**
+ * Collapsed, the sidebar becomes an icon rail rather than disappearing: the
+ * point of collapsing is to give the workspace its width back, not to give up
+ * navigation and have to expand again for every move.
+ */
+function NavLinks({
+  collapsed,
+  onNavigate,
+}: {
+  readonly collapsed: boolean;
+  readonly onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
-    <nav className="min-h-0 flex-1 space-y-1">
+    <nav className="min-h-0 flex-1 space-y-0.5">
       {[...primaryNav, ...secondaryNav].map((item) => {
         const active = isActive(pathname, item.href);
-        return (
+        const link = (
           <Link
             aria-current={active ? "page" : undefined}
-            className={navLink(active)}
+            className={cn(
+              "flex items-center rounded-lg font-medium text-sm transition-colors active:translate-y-px",
+              collapsed ? "size-10 justify-center" : "gap-3 px-3 py-2",
+              active
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+            )}
             href={item.href}
-            key={item.href}
             onClick={onNavigate}
           >
-            <item.icon
-              className={cn("size-4.5 shrink-0", active ? "text-primary" : "text-muted-foreground")}
-            />
-            {item.label}
+            <item.icon className="size-4.5 shrink-0" />
+            {collapsed ? <span className="sr-only">{item.label}</span> : item.label}
           </Link>
+        );
+
+        // Collapsed, the label is gone from the screen, so it has to be reachable
+        // some other way or the rail is a row of guesses.
+        return collapsed ? (
+          <Tooltip key={item.href}>
+            <TooltipTrigger render={link} />
+            <TooltipContent side="right">{item.label}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <div key={item.href}>{link}</div>
         );
       })}
     </nav>
@@ -90,38 +109,62 @@ function NavLinks({ onNavigate }: { readonly onNavigate?: () => void }) {
 }
 
 function SidebarBody({
+  collapsed = false,
   initials,
   name,
   onNavigate,
-}: SidebarProps & { readonly onNavigate?: () => void }) {
+}: SidebarProps & { readonly collapsed?: boolean; readonly onNavigate?: () => void }) {
+  const newOptimization = (
+    <Button
+      className={cn("w-full", collapsed ? "px-0" : "justify-center")}
+      render={<Link href="/" onClick={onNavigate} />}
+      size={collapsed ? "icon" : "default"}
+    >
+      <PlusIcon className="size-4" />
+      {collapsed ? <span className="sr-only">New optimization</span> : "New optimization"}
+    </Button>
+  );
+
   return (
-    <div className="flex h-full flex-col gap-6 px-4 py-6">
-      <Link className="flex items-center gap-3 px-1" href="/" onClick={onNavigate}>
-        <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-soft">
-          <BrandIcon className="size-4.5" />
+    <div className={cn("flex h-full flex-col gap-5 py-5", collapsed ? "px-3" : "px-4")}>
+      <Link
+        className={cn("flex items-center", collapsed ? "justify-center" : "gap-2.5 px-1")}
+        href="/"
+        onClick={onNavigate}
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <BrandIcon className="size-4" />
         </span>
-        <span className="flex flex-col leading-tight">
+        {collapsed ? (
+          <span className="sr-only">ApplyFlow</span>
+        ) : (
           <span className="font-semibold text-[0.95rem] tracking-tight">ApplyFlow</span>
-          <span className="text-[0.7rem] text-muted-foreground">SaaS suite</span>
-        </span>
+        )}
       </Link>
 
-      <Button asChild className="w-full justify-center" size="lg">
-        <Link href="/" onClick={onNavigate}>
-          <PlusIcon className="size-4" />
-          New optimization
-        </Link>
-      </Button>
+      {collapsed ? (
+        <Tooltip>
+          <TooltipTrigger render={newOptimization} />
+          <TooltipContent side="right">New optimization</TooltipContent>
+        </Tooltip>
+      ) : (
+        newOptimization
+      )}
 
-      <NavLinks onNavigate={onNavigate} />
+      <NavLinks collapsed={collapsed} onNavigate={onNavigate} />
 
-      {/* Identity block — Settings itself now lives in the nav above. */}
+      {/* Identity block. Settings itself lives in the nav above. */}
       {initials ? (
-        <div className="mt-auto flex items-center gap-3 border-t px-1 pt-4">
+        <div
+          className={cn(
+            "mt-auto flex items-center border-t pt-4",
+            collapsed ? "justify-center" : "gap-2.5 px-1",
+          )}
+        >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary font-semibold text-muted-foreground text-xs">
             {initials}
           </span>
-          <span className="min-w-0 truncate font-semibold text-sm">{name}</span>
+          {collapsed ? null : <span className="min-w-0 truncate font-medium text-sm">{name}</span>}
         </div>
       ) : null}
     </div>
@@ -136,15 +179,11 @@ export function Sidebar({ initials, name }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "hidden shrink-0 overflow-hidden border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:block",
-        collapsed ? "md:w-0 md:border-r-0" : "md:w-70",
+        "hidden shrink-0 border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out md:block",
+        collapsed ? "md:w-16" : "md:w-64",
       )}
-      inert={collapsed}
     >
-      {/* Fixed inner width so the contents slide out rather than reflow. */}
-      <div className="h-full w-70">
-        <SidebarBody initials={initials} name={name} />
-      </div>
+      <SidebarBody collapsed={collapsed} initials={initials} name={name} />
     </aside>
   );
 }
@@ -154,11 +193,13 @@ export function MobileNav({ initials, name }: SidebarProps) {
 
   return (
     <Sheet onOpenChange={setOpen} open={open}>
-      <SheetTrigger asChild>
-        <Button aria-label="Open navigation" className="md:hidden" size="icon-sm" variant="ghost">
-          <MenuIcon className="size-4" />
-        </Button>
-      </SheetTrigger>
+      <SheetTrigger
+        render={
+          <Button aria-label="Open navigation" className="md:hidden" size="icon-sm" variant="ghost">
+            <MenuIcon className="size-4" />
+          </Button>
+        }
+      />
       <SheetContent className="p-0" side="left">
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <SidebarBody initials={initials} name={name} onNavigate={() => setOpen(false)} />

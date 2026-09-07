@@ -7,7 +7,7 @@ import { defaultMessageReducer, useEveAgent } from "eve/react";
 import { AlertCircleIcon, ArrowUpRightIcon, SquareIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -63,10 +63,17 @@ export type AgentChatProps = {
    * not a thing the user meant to start.
    */
   readonly liveMessages?: readonly EveMessage[];
+  /**
+   * Rendered under the composer while the thread is still empty. The landing
+   * page uses it to show recent work, so an empty chat is a starting point with
+   * context rather than a blank prompt.
+   */
+  readonly footer?: ReactNode;
 };
 
 export function AgentChat({
   variant = "page",
+  footer,
   heading = AGENT_NAME,
   subheading = "Paste a job description and say which language you want the CV in. Your master profile is the only source of facts.",
   suggestions = [],
@@ -321,7 +328,7 @@ export function AgentChat({
   const applicationLink =
     applicationId !== undefined && !isPanel ? (
       <Link
-        className="flex items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 text-sm transition-colors hover:border-primary/45"
+        className="flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5 text-sm transition-colors hover:border-foreground/25 hover:bg-secondary"
         href={`/applications/${applicationId}`}
       >
         <span className="min-w-0">
@@ -342,9 +349,9 @@ export function AgentChat({
   const activityNote =
     cancellationState !== "idle"
       ? cancelSlow
-        ? "Still finishing the step it had already started — it will stop right after."
+        ? "Still finishing the step it had already started. It will stop right after."
         : queued !== undefined
-          ? "Stopping the current run — your message goes as soon as it does."
+          ? "Stopping the current run. Your message goes as soon as it does."
           : "Stopping…"
       : queued !== undefined
         ? "Your message is queued and will send in a moment."
@@ -371,7 +378,7 @@ export function AgentChat({
       <div className={cn("flex flex-wrap gap-2", isPanel ? "justify-start" : "justify-center")}>
         {suggestions.map((suggestion) => (
           <button
-            className="rounded-full border bg-card px-3 py-1.5 text-left text-muted-foreground text-xs transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+            className="rounded-full border bg-card px-3.5 py-2 text-left text-muted-foreground text-xs transition-colors hover:border-foreground/25 hover:bg-secondary hover:text-foreground active:translate-y-px disabled:opacity-50"
             disabled={isBusy}
             key={suggestion}
             onClick={() => void sendSuggestion(suggestion)}
@@ -490,13 +497,13 @@ export function AgentChat({
           className={cn(
             "mx-auto w-full px-4 sm:px-6",
             isEmpty
-              ? "flex max-w-2xl flex-1 flex-col items-center justify-center gap-8 pb-[10vh]"
+              ? "scrollbar-slim flex min-h-0 max-w-2xl flex-1 flex-col items-center justify-center gap-7 overflow-y-auto py-8"
               : "max-w-3xl shrink-0 pb-6",
           )}
         >
           {isEmpty ? (
             <div className="flex flex-col items-center gap-3 text-center">
-              <h1 className="font-medium text-4xl tracking-tighter sm:text-5xl">{heading}</h1>
+              <h1 className="font-semibold text-3xl tracking-tight">{heading}</h1>
               <p className="max-w-md text-muted-foreground text-sm leading-relaxed">
                 {subheading}
               </p>
@@ -506,6 +513,7 @@ export function AgentChat({
             {composer}
             {suggestionChips}
           </div>
+          {isEmpty && footer ? <div className="w-full">{footer}</div> : null}
         </div>
       )}
     </main>

@@ -223,7 +223,7 @@ function Stack(styles: Styles, stack: string[] | undefined) {
 
 function dateRange(start?: string, end?: string) {
   if (!start && !end) return null;
-  return `${start ?? ""} — ${end || "Present"}`;
+  return `${start ?? ""} - ${end || "Present"}`;
 }
 
 /**

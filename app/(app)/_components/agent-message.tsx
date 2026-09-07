@@ -242,7 +242,7 @@ const TOOL_ACTIVITY: Record<
     done: "PDF ready",
     failed: "Building the PDF",
     // A rejected draft is the fact check doing its job, not something going wrong.
-    retry: "Draft claimed something your profile doesn't back — asking for a corrected draft.",
+    retry: "Draft claimed something your profile doesn't back, so it is asking for a corrected draft.",
   },
   scoreats: { running: "Checking the match with the job…", done: "Match check done", failed: "Checking the match" },
   stageapplication: {
@@ -333,8 +333,8 @@ function ToolActivity({
           icon={<AlertCircleIcon className="size-3.5" />}
           label={
             failureCount >= REPEATED_FAILURE && !hadSiblingSuccess
-              ? `${activity?.failed ?? "That step"} keeps failing. This run can't finish — try again, and if it repeats the step is broken rather than unlucky.`
-              : (activity?.retry ?? "That step hit a snag — trying another way.")
+              ? `${activity?.failed ?? "That step"} keeps failing. This run can't finish. Try again, and if it repeats the step is broken rather than unlucky.`
+              : (activity?.retry ?? "That step hit a snag, trying another way.")
           }
         />
       );
@@ -469,11 +469,12 @@ function AuthorizationPrompt({ part }: { readonly part: EveAuthorizationPart }) 
             </div>
           ) : null}
           {part.state === "required" && part.authorization?.url ? (
-            <Button asChild size="sm">
-              <a href={part.authorization.url} rel="noreferrer" target="_blank">
-                <ExternalLinkIcon className="size-4" />
-                Sign in with {part.displayName}
-              </a>
+            <Button
+              render={<a href={part.authorization.url} rel="noreferrer" target="_blank" />}
+              size="sm"
+            >
+              <ExternalLinkIcon className="size-4" />
+              Sign in with {part.displayName}
             </Button>
           ) : null}
         </div>

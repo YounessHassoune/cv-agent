@@ -27,18 +27,20 @@ export function Topbar({
   const section = useSection();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b bg-card/85 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md sm:px-4">
       <MobileNav initials={initials} name={name ?? email} />
       <SidebarToggle />
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-[0.95rem] tracking-tight">{section.label}</p>
-        <p className="hidden truncate text-muted-foreground text-xs sm:block">
+      {/* The section name sits on the baseline with its description beside it on
+          wide screens, so the bar stays one line tall instead of stacking two. */}
+      <div className="flex min-w-0 flex-1 items-baseline gap-2.5">
+        <h2 className="shrink-0 font-semibold text-sm tracking-tight">{section.label}</h2>
+        <p className="hidden min-w-0 truncate text-muted-foreground text-xs lg:block">
           {section.description}
         </p>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         <ThemeToggle />
         <UserMenu email={email} image={image} initials={initials} name={name} />
       </div>

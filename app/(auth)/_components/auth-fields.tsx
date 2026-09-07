@@ -69,7 +69,7 @@ export function PasswordInput({
  * The button must NOT disable itself from its own `onClick`: React applies that
  * DOM update before the browser runs the submit action, and a disabled button
  * has no activation behavior, so the form never posts. Flipping the flag in the
- * form's `onSubmit` is safe — submission is already under way by then.
+ * form's `onSubmit` is safe: submission is already under way by then.
  */
 export function AuthForm({
   action,
@@ -91,7 +91,7 @@ export function AuthForm({
     >
       {children}
       <button
-        className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-primary font-medium text-primary-foreground text-sm shadow-xs transition-all hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70"
+        className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary font-medium text-primary-foreground text-sm shadow-soft transition-all hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/45 focus-visible:outline-none active:translate-y-px disabled:opacity-70"
         disabled={pending}
         type="submit"
       >
