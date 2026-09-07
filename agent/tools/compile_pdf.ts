@@ -2,12 +2,14 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { CV_TEMPLATE_IDS } from "../../lib/cv-templates";
 import { resolveUserId } from "../lib/auth";
+import type { JdKeyword } from "../lib/ats";
+import { withDisplayDates } from "../lib/cv-dates";
 import { CvSchema } from "../lib/cv-schema";
 import { db } from "../lib/db";
-import { findFabrications } from "../lib/guard";
+import { findFabrications, unsupportedClaims } from "../lib/guard";
 import { extractPdfText, renderCvPdf } from "../lib/pdf";
 import { cvLoop } from "../lib/state";
-import { readVariants } from "../lib/variants";
+import { readVariants, sameCv } from "../lib/variants";
 
 export default defineTool({
   description:
@@ -26,9 +28,10 @@ export default defineTool({
         "Layout to render. Omit to use the template already chosen on this application or in the user's profile. All templates are ATS-safe.",
       ),
   }),
-  async *execute({ applicationId, language, cv, template }, ctx) {
+  async *execute({ applicationId, language, cv: draft, template }, ctx) {
     const userId = resolveUserId(ctx);
     const lang = language.toLowerCase();
+    const cv = withDisplayDates(draft, lang);
 
     const loop = cvLoop.get();
     const iteration = (loop.iterations[lang] ?? 0) + 1;
@@ -50,13 +53,49 @@ export default defineTool({
       );
     }
 
+    /*
+     * Idempotence. The orchestrator sometimes asks for the same language twice
+     * — two dispatches, one result — and re-rendering a byte-identical CV would
+     * spend one of the four compiles this language gets, plus a render, for a
+     * document that already exists. Answer from what is stored instead.
+     */
+    const existingVariants = readVariants(application.variants);
+    const previous = existingVariants[lang];
+    if (previous !== undefined && sameCv(previous.cvJson, cv)) {
+      const compiled = await db.cvPdf.findUnique({
+        where: { applicationId_language: { applicationId: application.id, language: lang } },
+        select: { id: true },
+      });
+      if (compiled !== null) {
+        yield {
+          phase: "complete",
+          applicationId: application.id,
+          language: lang,
+          iteration: iteration - 1,
+          iterationsRemaining: loop.cap - (iteration - 1),
+          pageCount: previous.pageCount ?? null,
+          textLength: previous.cvText.length,
+          unsupported: previous.unsupported ?? [],
+          unchanged: true,
+          note: "This exact CV was already compiled — reusing it. No revision was spent.",
+        };
+        return;
+      }
+    }
+
     const profile = await db.profile.findUnique({
       where: { userId },
       include: { skills: true, experiences: true, projects: true },
     });
     if (!profile) throw new Error("No master profile for this user — call get_profile first.");
 
-    const violations = findFabrications(cv, profile);
+    // The job's own vocabulary widens what the CV may say — see findFabrications.
+    const jdVocabulary = ((application.jdKeywords ?? []) as JdKeyword[]).flatMap((keyword) => [
+      keyword.term,
+      ...(keyword.aliases ?? []),
+    ]);
+    const violations = findFabrications(cv, profile, jdVocabulary);
+    const unsupported = unsupportedClaims(cv, profile);
     if (violations.length > 0) {
       const rejections = (loop.rejections[lang] ?? 0) + 1;
       cvLoop.update((s) => ({
@@ -72,8 +111,8 @@ export default defineTool({
       }
 
       throw new Error(
-        `CV rejected — fabricated content detected:\n- ${violations.join("\n- ")}\n` +
-          `Every entry in skills[].items, experiences[].stack and projects[].stack must be copied verbatim from the profile's allowedTerms. Remove these terms (do not substitute variants), then call compile_pdf again. ${loop.rejectionCap - rejections} attempt(s) left for this language.`,
+        `CV rejected — unsupported content detected:\n- ${violations.join("\n- ")}\n` +
+          `Entries in skills[].items, experiences[].stack and projects[].stack must come from the profile's allowedTerms or from this job's own keywords. These match neither, so nothing justifies them. Remove them, then call compile_pdf again. ${loop.rejectionCap - rejections} attempt(s) left for this language.`,
       );
     }
 
@@ -97,6 +136,8 @@ export default defineTool({
       cvText: text,
       atsReport: null, // stale after a recompile — score_ats refreshes it
       template: templateId,
+      pageCount,
+      unsupported,
       updatedAt: new Date().toISOString(),
     };
 
@@ -124,6 +165,11 @@ export default defineTool({
       iterationsRemaining: loop.cap - iteration,
       pageCount,
       textLength: text.length,
+      unsupported,
+      unsupportedNote:
+        unsupported.length > 0
+          ? "These come from the job description, not the profile. Name every one of them in the staging summary and tell the user to confirm or strike them before applying."
+          : undefined,
     };
   },
 });

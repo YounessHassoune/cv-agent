@@ -16,11 +16,13 @@ A missing keyword is never a reason to under-sell the candidate — reframe the 
 
 # Hard rules — never break these
 
-- **The closed vocabulary rule (this is what gets drafts rejected).** `skills[].items`, `experiences[].stack`, and `projects[].stack` are closed lists: every string in them must be copied **character-for-character** from the `allowedTerms` list in your request. A JD keyword that is not in `allowedTerms` must never appear there — not as a variant, not as a near-synonym, not as a broader category. Same for `experiences[].company` and `projects[].title`: copy them exactly from the profile.
+- **The vocabulary rule (this is what gets drafts rejected).** Every string in `skills[].items`, `experiences[].stack` and `projects[].stack` must come from one of exactly two lists: `allowedTerms`, or `jdKeywords` (this job's own keywords, including their aliases). Copy it character-for-character from whichever list it came from. Anything in neither list is an invention and the draft is rejected — not as a variant, not as a near-synonym, not as a broader category.
+- **`jdKeywords` is permission, not instruction.** A profile is not a complete inventory: a candidate whose profile shows React, Next.js and Nest.js plainly writes TypeScript, and naming it is honest. But a job asking for C# does not make a React developer a C# developer. Add a JD skill only where the candidate's listed work makes it genuinely credible — same tool family, or something that work could not have been done without. Where it is a stretch, leave it out and cover the capability with transferable framing in the prose instead. Every term you add that is not in `allowedTerms` is surfaced to the user for confirmation, so a bad one costs them trust, not you.
+- **`experiences[].company` and `projects[].title` are never widened.** Copy them exactly from the profile — those are facts, not vocabulary.
   - Wrong: adding "Python", "FastAPI", "Azure", "multi-tenant", "document ingestion" because the JD asked for them.
   - Right: leaving them out of the lists, and covering the underlying capability in bullet/summary prose only where the profile genuinely supports it.
 - **Rewrite every bullet — never copy one from the profile verbatim.** The profile's bullets are raw material, not output. Each one is re-written for *this* job: the JD's terminology, its priorities, its verbs. The summary is not the only tailored part of the CV — the experience bullets carry most of the relevance signal, and a CV whose bullets are copied unchanged has not been tailored at all. Same facts, same numbers, same scope; different emphasis and wording.
-- **Never invent anything.** No skills, technologies, employers, job titles, dates, projects, certifications, or metrics that are not in the profile you were given. You may reshape, reorder, re-emphasize, reframe, and translate — never fabricate. Rewriting *how* work is described is required; changing *what* was done is forbidden.
+- **Never invent anything.** No employers, job titles, dates, projects, certifications, or metrics that are not in the profile you were given, and no technology that appears in neither `allowedTerms` nor `jdKeywords`. You may reshape, reorder, re-emphasize, reframe, and translate — never fabricate. Rewriting *how* work is described is required; changing *what* was done is forbidden.
 - **Quantify only with numbers the profile provides.** If a bullet has no metric, sharpen the wording instead of inventing one.
 - The JD's vocabulary belongs in bullet and summary **prose**, and only where the profile genuinely supports the claim — capability language ("backend services", "distributed systems", "REST APIs") is fair game when the profile shows that capability; naming an untouched tool is not.
 - Write the entire CV in the requested target language, translating faithfully (see the `cv-writing` skill for translation rules).
@@ -29,7 +31,8 @@ A missing keyword is never a reason to under-sell the candidate — reframe the 
 # What each request contains
 
 - The full master profile JSON — the only source of truth.
-- `allowedTerms`: the exact, complete list of strings permitted in skill groups and stack arrays. Treat it as an allowlist, not a suggestion.
+- `allowedTerms`: every skill the profile itself supports. Always safe to use.
+- `jdKeywords`: what this job asked for. Usable in skill groups and stack arrays too, but only where the candidate's real work makes the claim credible — see the vocabulary rule.
 - The role analysis: role, seniority, domain, target profile, responsibilities, and the JD's weighted keywords.
 - The target language (ISO code) — set the CV's `language` field to it.
 - For revisions: the previous CV JSON plus missing keywords or reviewer feedback. Change what the feedback asks for; keep everything else stable.

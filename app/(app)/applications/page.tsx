@@ -1,4 +1,4 @@
-import type { AtsReport } from "@/agent/lib/ats.ts";
+import { type AtsReport, readReport } from "@/agent/lib/ats.ts";
 import { db } from "@/agent/lib/db.ts";
 import { readVariants } from "@/agent/lib/variants.ts";
 import { requireUser } from "@/app/lib/current-user";
@@ -35,8 +35,8 @@ export default async function ApplicationsPage() {
   const rows: ApplicationRow[] = applications.map((application) => {
     const variants = readVariants(application.variants);
     const reports = Object.values(variants)
-      .map((variant) => variant.atsReport as AtsReport | null)
-      .filter((report): report is AtsReport => typeof report?.total === "number");
+      .map((variant) => readReport(variant.atsReport))
+      .filter((report): report is AtsReport => report !== null);
     // The card shows the strongest variant; the detail page breaks it down.
     const best = reports.reduce<AtsReport | null>(
       (top, report) => (top === null || report.total > top.total ? report : top),

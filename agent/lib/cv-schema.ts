@@ -3,6 +3,13 @@ import { z } from "zod";
 /**
  * The tailored CV the model must produce. `compile_pdf` takes this as tool
  * input, so a malformed or fabricated CV is rejected before any PDF exists.
+ *
+ * **Every field is required — never add `.optional()` or `.default()` here.**
+ * Both make the property optional in the generated JSON Schema, and strict
+ * structured-output providers reject any object whose `required` list is not
+ * exhaustive, failing `cv-writer` on every single call. Use "" or [] as the
+ * empty value and say so in `.describe()`; the renderer already treats an
+ * empty string as absent.
  */
 export const CvSchema = z.object({
   language: z
@@ -13,15 +20,14 @@ export const CvSchema = z.object({
     fullName: z.string().min(1),
     headline: z.string().min(1).describe("Tailored to the target role"),
     email: z.string().min(3),
-    phone: z.string().optional(),
-    location: z.string().optional(),
-    links: z.array(z.string()).default([]),
+    phone: z.string().describe("Phone number, or \"\" when the profile has none"),
+    location: z.string().describe("City / country, or \"\""),
+    links: z.array(z.string()).describe("Profile URLs; empty array when there are none"),
   }),
   summary: z
     .string()
     .max(600)
-    .optional()
-    .describe("2-3 sentence professional summary tailored to the JD"),
+    .describe("2-3 sentence professional summary tailored to the JD, or \"\" for none"),
   skills: z
     .array(
       z.object({
@@ -35,11 +41,11 @@ export const CvSchema = z.object({
       z.object({
         company: z.string().min(1),
         role: z.string().min(1),
-        location: z.string().optional(),
+        location: z.string().describe("City / country / \"Remote\", or \"\""),
         start: z.string().describe("Display date, e.g. 'Jan 2022'"),
-        end: z.string().optional().describe("Display date; omit for current role"),
+        end: z.string().describe("Display date; \"\" for a role still held"),
         bullets: z.array(z.string().min(1)).min(1),
-        stack: z.array(z.string()).default([]),
+        stack: z.array(z.string()).describe("Tech used in this role; [] when none"),
       }),
     )
     .min(1),
@@ -47,24 +53,24 @@ export const CvSchema = z.object({
     .array(
       z.object({
         title: z.string().min(1),
-        link: z.string().optional(),
+        link: z.string().describe("Project URL, or \"\""),
         bullets: z.array(z.string().min(1)).min(1),
-        stack: z.array(z.string()).default([]),
+        stack: z.array(z.string()).describe("Tech used; [] when none"),
       }),
     )
-    .default([]),
+    .describe("Empty array when the profile has no projects worth showing"),
   education: z
     .array(
       z.object({
         institution: z.string().min(1),
         degree: z.string().min(1),
-        dates: z.string().optional(),
+        dates: z.string().describe("Display dates, or \"\""),
       }),
     )
-    .default([]),
+    .describe("Empty array when the profile lists no education"),
   languages: z
     .array(z.object({ name: z.string().min(1), level: z.string().min(1) }))
-    .default([]),
+    .describe("Spoken languages; empty array when none are listed"),
 });
 
 export type Cv = z.infer<typeof CvSchema>;

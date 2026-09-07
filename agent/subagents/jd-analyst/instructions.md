@@ -18,4 +18,5 @@ Read the JD **semantically**, not as a bag of keywords. Work out what the employ
 - `weight`: 3 for explicit must-haves, 2 for clearly expected skills, 1 for nice-to-haves.
 - `category`: `hard` for skills/methodologies, `tool` for named technologies and products, `domain` for industry/business terms, `soft` only for soft skills the JD explicitly weights.
 - Use each term's short canonical spelling as it appears in the JD (e.g. "PostgreSQL", not "postgres databases").
+- `aliases`: the other names the *same* skill goes by, so a CV that spells it differently still matches — "Golang" for "Go", "k8s" for "Kubernetes", "RN" for "Registered Nurse", "P&L" for "profit and loss". You know the vocabulary of this JD's field; the scorer does not. Never list a related or broader skill: "Postgres" is an alias of "PostgreSQL", "SQL" is not. Empty when the term has no common alternative spelling.
 - Return between 5 and 30 keywords. Do not pad with weak terms to reach a count.

@@ -10,6 +10,7 @@ import {
   AlertCircleIcon,
   CheckCircleIcon,
   CheckIcon,
+  CopyIcon,
   ExternalLinkIcon,
   FileIcon,
   ImageIcon,
@@ -17,8 +18,15 @@ import {
   Loader2Icon,
   XCircleIcon,
 } from "lucide-react";
-import type { ReactNode } from "react";
-import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import { type ReactNode, useState } from "react";
+import {
+  Message,
+  MessageAction,
+  MessageActions,
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -36,16 +44,70 @@ export function AgentMessage({
   isStreaming,
   message,
   onInputResponses,
+  turnActive,
 }: {
   readonly canRespond: boolean;
   readonly isStreaming: boolean;
   readonly message: EveMessage;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
+  /** Whether this part can still be making progress: the turn is running and
+   * the part belongs to the step currently executing. */
+  readonly turnActive: boolean;
 }) {
   const lastTextIndex = message.parts.reduce(
     (last, part, index) => (part.type === "text" ? index : last),
     -1,
   );
+
+  /*
+   * One failed step is a hiccup the agent routes around; the same step failing
+   * again and again is a dead end, and saying "trying another way" four times
+   * left the user watching a run that was never going to finish.
+   */
+  /*
+   * Anything before the last `step-start` belongs to a step the agent has
+   * already moved on from. A tool call still "running" back there was never
+   * answered — the model asked for it twice and one call came back — and
+   * spinning forever next to finished work is what made the feed look stuck.
+   * Parallel calls within one step are untouched: they share a step, so none
+   * of them sits before the boundary.
+   */
+  const liveFrom = message.parts.reduce(
+    (last, part, index) => (part.type === "step-start" ? index : last),
+    0,
+  );
+
+  const failuresByTool = new Map<string, number>();
+  /** Tools that got a real answer somewhere in this message. */
+  const succeeded = new Set<string>();
+  /*
+   * eve retries a model step that runs long (a subagent in flight) and the
+   * retry re-emits the same tool call under a new id. The runtime drops the
+   * duplicate, so it never gets a result — a second "Tailoring your CV…" that
+   * spins while the real one finishes. Show one spinner per tool.
+   */
+  const running = new Set<string>();
+  const phantoms = new Set<string>();
+  for (const part of message.parts) {
+    if (part.type !== "dynamic-tool") continue;
+    if (part.state === "output-error") {
+      const key = toolKey(part);
+      failuresByTool.set(key, (failuresByTool.get(key) ?? 0) + 1);
+    } else if (part.state === "output-available") {
+      succeeded.add(toolKey(part));
+    }
+    if (isToolRunning(part) && part.toolMetadata?.eve?.inputRequest === undefined) {
+      const key = toolKey(part);
+      if (running.has(key)) phantoms.add(part.toolCallId);
+      running.add(key);
+    }
+  }
+
+  const answer = message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n\n")
+    .trim();
 
   return (
     <Message
@@ -53,30 +115,67 @@ export function AgentMessage({
       from={message.role}
     >
       <MessageContent>
-        {message.parts.map((part, index) => (
+        {message.parts.map((part, index) => part.type === "dynamic-tool" && phantoms.has(part.toolCallId) ? null : (
           <AgentMessagePart
             canRespond={canRespond}
+            failureCount={failuresByTool.get(toolKey(part)) ?? 0}
+            hadSiblingSuccess={succeeded.has(toolKey(part))}
             key={partKey(part, index)}
             onInputResponses={onInputResponses}
             part={part}
             showCaret={isStreaming && message.role === "assistant" && index === lastTextIndex}
+            turnActive={turnActive && index >= liveFrom}
           />
         ))}
       </MessageContent>
+
+      {/* Revealed on hover, the way every chat app does it — present when
+          wanted, invisible while reading. */}
+      {message.role === "assistant" && !isStreaming && answer.length > 0 ? (
+        <MessageActions className="opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+          <CopyAction text={answer} />
+        </MessageActions>
+      ) : null}
     </Message>
+  );
+}
+
+function CopyAction({ text }: { readonly text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <MessageAction
+      onClick={() => {
+        void navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+      tooltip={copied ? "Copied" : "Copy"}
+    >
+      {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
+    </MessageAction>
   );
 }
 
 function AgentMessagePart({
   canRespond,
+  failureCount,
+  hadSiblingSuccess,
   onInputResponses,
   part,
   showCaret,
+  turnActive,
 }: {
   readonly canRespond: boolean;
+  /** How many times this same step has failed in this message. */
+  readonly failureCount: number;
+  /** Whether another call to this same tool already succeeded here. */
+  readonly hadSiblingSuccess: boolean;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
   readonly part: EveMessagePart;
   readonly showCaret: boolean;
+  readonly turnActive: boolean;
 }) {
   switch (part.type) {
     case "step-start":
@@ -100,7 +199,14 @@ function AgentMessagePart({
       return <AuthorizationPrompt part={part} />;
     case "dynamic-tool":
       return (
-        <ToolActivity canRespond={canRespond} onInputResponses={onInputResponses} part={part} />
+        <ToolActivity
+          canRespond={canRespond}
+          failureCount={failureCount}
+          hadSiblingSuccess={hadSiblingSuccess}
+          onInputResponses={onInputResponses}
+          part={part}
+          turnActive={turnActive}
+        />
       );
   }
 }
@@ -110,13 +216,35 @@ function AgentMessagePart({
  * their name, parameters, or output — only these plain-language status lines
  * (nothing internal like ids or JSON ever reaches the user).
  */
-const TOOL_ACTIVITY: Record<string, { running: string; done: string }> = {
+const REPEATED_FAILURE = 2;
+
+/**
+ * States a tool call never leaves. Anything else is still in flight — and if
+ * the turn has ended while a part is still in flight, it never got a result
+ * and never will.
+ */
+const TERMINAL_TOOL_STATES = new Set(["output-available", "output-error", "output-denied"]);
+
+export function isToolRunning(part: EveMessagePart): boolean {
+  return part.type === "dynamic-tool" && !TERMINAL_TOOL_STATES.has(part.state);
+}
+
+const TOOL_ACTIVITY: Record<
+  string,
+  { running: string; done: string; failed?: string; retry?: string }
+> = {
   getprofile: { running: "Reading your profile…", done: "Profile loaded" },
-  jdanalyst: { running: "Analyzing the job offer…", done: "Job offer analyzed" },
+  jdanalyst: { running: "Analyzing the job offer…", done: "Job offer analyzed", failed: "Analyzing the job offer" },
   analyzejd: { running: "Setting up your application…", done: "Application created" },
-  cvwriter: { running: "Tailoring your CV…", done: "CV draft ready" },
-  compilepdf: { running: "Building the PDF…", done: "PDF ready" },
-  scoreats: { running: "Checking the match with the job…", done: "Match check done" },
+  cvwriter: { running: "Tailoring your CV…", done: "CV draft ready", failed: "Writing your CV" },
+  compilepdf: {
+    running: "Building the PDF…",
+    done: "PDF ready",
+    failed: "Building the PDF",
+    // A rejected draft is the fact check doing its job, not something going wrong.
+    retry: "Draft claimed something your profile doesn't back — asking for a corrected draft.",
+  },
+  scoreats: { running: "Checking the match with the job…", done: "Match check done", failed: "Checking the match" },
   stageapplication: {
     running: "Preparing your application for review…",
     done: "Ready for your review",
@@ -124,8 +252,14 @@ const TOOL_ACTIVITY: Record<string, { running: string; done: string }> = {
   askquestion: { running: "Waiting for your answer…", done: "Answer received" },
 };
 
-function activityFor(toolName: string): { running: string; done: string } | undefined {
+function activityFor(toolName: string) {
   return TOOL_ACTIVITY[toolName.toLowerCase().replace(/[^a-z0-9]/g, "")];
+}
+
+/** Groups a tool's parts so repeated failures of the *same* step are counted. */
+function toolKey(part: EveMessagePart): string {
+  if (part.type !== "dynamic-tool") return part.type;
+  return part.toolMetadata?.eve?.name ?? part.toolName;
 }
 
 /**
@@ -135,15 +269,45 @@ function activityFor(toolName: string): { running: string; done: string } | unde
  */
 function ToolActivity({
   canRespond,
+  failureCount,
+  hadSiblingSuccess,
   onInputResponses,
   part,
+  turnActive,
 }: {
   readonly canRespond: boolean;
+  readonly failureCount: number;
+  readonly hadSiblingSuccess: boolean;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
   readonly part: EveDynamicToolPart;
+  readonly turnActive: boolean;
 }) {
   const activity = activityFor(part.toolMetadata?.eve?.name ?? part.toolName);
   const hasInputRequest = part.toolMetadata?.eve?.inputRequest !== undefined;
+
+  /*
+   * A step left mid-flight by a finished turn is abandoned, not running. The
+   * model sometimes asks for the same tool twice and only one call comes back;
+   * without this the leftover part spins forever, in the live view and in the
+   * replayed transcript after a refresh.
+   */
+  if (!turnActive && isToolRunning(part) && !hasInputRequest) {
+    /*
+     * The model sometimes asks for the same tool twice while the first call is
+     * still running, and the runtime drops the duplicate. Nothing was lost and
+     * nothing is wrong, so saying so between two successful steps only alarms
+     * the user. Stay quiet when the real call came back.
+     */
+    if (hadSiblingSuccess) return null;
+
+    return (
+      <ActivityLine
+        className="text-muted-foreground/70"
+        icon={<XCircleIcon className="size-3.5" />}
+        label={`${activity?.failed ?? "That step"} didn't finish. Ask again if the result is missing.`}
+      />
+    );
+  }
 
   let statusLine: ReactNode = null;
   switch (part.state) {
@@ -153,6 +317,7 @@ function ToolActivity({
         <ActivityLine
           icon={<Loader2Icon className="size-3.5 animate-spin" />}
           label={activity?.running ?? "Working…"}
+          running
         />
       );
       break;
@@ -166,7 +331,11 @@ function ToolActivity({
         <ActivityLine
           className="text-destructive/80"
           icon={<AlertCircleIcon className="size-3.5" />}
-          label="That step hit a snag — trying another way."
+          label={
+            failureCount >= REPEATED_FAILURE && !hadSiblingSuccess
+              ? `${activity?.failed ?? "That step"} keeps failing. This run can't finish — try again, and if it repeats the step is broken rather than unlucky.`
+              : (activity?.retry ?? "That step hit a snag — trying another way.")
+          }
         />
       );
       break;
@@ -181,6 +350,7 @@ function ToolActivity({
         <ActivityLine
           icon={<Loader2Icon className="size-3.5 animate-spin" />}
           label="Waiting for your confirmation…"
+          running
         />
       );
       break;
@@ -206,15 +376,18 @@ function ActivityLine({
   className,
   icon,
   label,
+  running = false,
 }: {
   readonly className?: string;
   readonly icon: ReactNode;
   readonly label: string;
+  /** A step still in flight shimmers, so waiting reads as progress. */
+  readonly running?: boolean;
 }) {
   return (
     <div className={cn("flex items-center gap-2 text-muted-foreground text-sm", className)}>
       {icon}
-      <span>{label}</span>
+      {running ? <Shimmer as="span">{label}</Shimmer> : <span>{label}</span>}
     </div>
   );
 }

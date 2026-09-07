@@ -11,7 +11,12 @@ import { requireModelEnv } from "../../lib/model-env";
 export default defineAgent({
   description:
     "Analyze a raw job description semantically: returns the role, seniority, language, domain, a 2-3 sentence target profile (what the employer is really looking for), core responsibilities, and 5-30 weighted ATS keywords as structured output. Send the full JD text in the message. Call this before analyze_jd and pass its result along.",
-  model: requireModelEnv("EXTRACTION_MODEL"),
+  // Its own tier, not the shared EXTRACTION_MODEL. This one call gates the
+  // whole pipeline — without it there is no role and no weighted keywords, so
+  // nothing downstream can run — and the smallest tier failed it
+  // intermittently. One short call per job: reliability is worth more than the
+  // fraction of a cent.
+  model: requireModelEnv("JD_ANALYST_MODEL"),
   // Extraction, not deliberation: the JD text is right there and the schema
   // says exactly what to pull out. Letting a reasoning model think its way
   // through this is what made "analyzing the job offer" the slowest step, and

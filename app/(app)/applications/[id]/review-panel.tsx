@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 export function ReviewPanel({
   applicationId,
   title,
+  compiledAt,
   cv,
   hasPdf,
   language,
@@ -45,6 +46,8 @@ export function ReviewPanel({
   readonly applicationId: string;
   readonly title: string;
   readonly cv: CvPreviewData | null;
+  /** Last compile time of this variant; busts the PDF cache after a rebuild. */
+  readonly compiledAt: string | null;
   readonly hasPdf: boolean;
   /** ISO code of the variant being shown; scopes the PDF tab. */
   readonly language?: string;
@@ -63,6 +66,9 @@ export function ReviewPanel({
   const withPhoto = showPhoto && Boolean(cv?.photoUrl);
   const pdfQuery = new URLSearchParams({ template, photo: withPhoto ? "1" : "0" });
   if (language) pdfQuery.set("lang", language);
+  // Same path after every recompile, so without this the browser serves the
+  // PDF it already has and the user has to reload to see their own new CV.
+  if (compiledAt) pdfQuery.set("v", compiledAt);
   const pdfSrc = `/api/applications/${applicationId}/pdf?${pdfQuery}`;
 
   const resetThread = async () => {

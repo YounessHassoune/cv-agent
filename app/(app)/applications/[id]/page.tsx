@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { ClientSessionState, MessageStreamEvent } from "eve/client";
 import { ArrowLeftIcon } from "lucide-react";
 
-import type { AtsReport } from "@/agent/lib/ats.ts";
+import { readReport } from "@/agent/lib/ats.ts";
 import { db } from "@/agent/lib/db.ts";
 import { readVariants } from "@/agent/lib/variants.ts";
 import { requireUser } from "@/app/lib/current-user";
@@ -116,9 +116,11 @@ export default async function ApplicationPage({
         (variant?.cvJson as StoredCv | undefined) ?? null,
         profile?.photoUrl ?? undefined,
       ),
-      report: (variant?.atsReport as AtsReport | null) ?? null,
+      report: readReport(variant?.atsReport),
       template: variant?.template ?? application.template,
       hasPdf: withPdf.has(language),
+      compiledAt: variant?.updatedAt ?? null,
+      unsupported: variant?.unsupported ?? [],
     };
   });
 

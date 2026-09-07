@@ -4,7 +4,7 @@ import type { ClientSessionState, MessageStreamEvent } from "eve/client";
 import { LightbulbIcon } from "lucide-react";
 import { useState } from "react";
 
-import type { AtsReport } from "@/agent/lib/ats.ts";
+import { type AtsReport, ATS_WEIGHTS } from "@/agent/lib/ats.ts";
 import type { CvPreviewData } from "@/components/cv-preview";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,15 @@ export type VariantView = {
   report: AtsReport | null;
   template: string;
   hasPdf: boolean;
+  /**
+   * When this variant was last compiled. Rides in the PDF URL as a cache
+   * buster: the path is otherwise identical after a recompile, so the browser
+   * would keep serving the old document and the iframe would never even
+   * remount.
+   */
+  compiledAt: string | null;
+  /** Skills the CV claims that the profile does not list — the user's call. */
+  unsupported: string[];
 };
 
 function ScoreBar({
@@ -43,6 +52,11 @@ function ScoreBar({
  * selection. The chat is application-scoped, so it stays mounted across
  * language switches.
  */
+/** "Keywords (35%)" — read off the weights so the labels can never drift. */
+function pct(label: string, key: keyof typeof ATS_WEIGHTS): string {
+  return `${label} (${Math.round(ATS_WEIGHTS[key] * 100)}%)`;
+}
+
 export function ApplicationWorkspace({
   applicationId,
   title,
@@ -128,15 +142,78 @@ export function ApplicationWorkspace({
                   </div>
                 </div>
 
+                {report.gate < 1 ? (
+                  <p className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-destructive text-xs leading-relaxed">
+                    <span className="font-semibold">
+                      {report.missingMustHaves.length} must-have{" "}
+                      {report.missingMustHaves.length === 1 ? "keyword is" : "keywords are"} missing
+                    </span>{" "}
+                    ({report.missingMustHaves.join(", ")}). A real screen filters on these, so the
+                    score above is capped to {Math.round(report.gate * 100)}% of what the rest of
+                    the CV earned.
+                  </p>
+                ) : null}
+
                 <div className="space-y-5">
-                  <ScoreBar label="Keywords (40%)" value={report.breakdown.keyword} />
-                  <ScoreBar label="Semantic relevance (40%)" value={report.breakdown.semantic} />
-                  <ScoreBar label="Structure & metrics (20%)" value={report.breakdown.structure} />
+                  <ScoreBar label={pct("Keywords", "keyword")} value={report.breakdown.keyword} />
+                  <ScoreBar
+                    label={pct("Semantic relevance", "semantic")}
+                    value={report.breakdown.semantic}
+                  />
+                  <ScoreBar
+                    label={pct("Title & years fit", "fit")}
+                    value={report.breakdown.fit}
+                  />
+                  <ScoreBar
+                    label={pct("Structure & metrics", "structure")}
+                    value={report.breakdown.structure}
+                  />
                 </div>
               </section>
 
-              {report.missing.length + report.matched.length + report.suggestions.length > 0 ? (
+              {(selected?.unsupported.length ?? 0) > 0 ? (
+                <section className="surface-card space-y-3 rounded-xl border-warning/40 p-6">
+                  <h2 className="font-semibold text-sm">Confirm before you apply</h2>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    This job asked for these and your CV now claims them, but your profile does not
+                    list them. Keep the ones that are true — an interviewer will assume every word
+                    here is yours.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selected?.unsupported.map((term) => (
+                      <span
+                        className="rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 font-medium text-warning text-xs"
+                        key={term}
+                      >
+                        {term}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              {report.missing.length + report.matched.length + report.listedOnly.length + report.suggestions.length > 0 ? (
                 <section className="surface-card space-y-6 rounded-xl p-6">
+                  {report.listedOnly.length > 0 ? (
+                    <div className="space-y-3">
+                      <h2 className="font-semibold text-sm">Listed but not evidenced</h2>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        These appear only in the skills list. A recruiter and a match model both
+                        weigh a term backed by a bullet higher, so they score partial credit.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {report.listedOnly.map((term) => (
+                          <span
+                            className="rounded-full border border-warning/30 bg-warning/8 px-3 py-1.5 font-medium text-warning text-xs"
+                            key={term}
+                          >
+                            {term}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
                   {report.missing.length > 0 ? (
                     <div className="space-y-3">
                       <h2 className="font-semibold text-sm">Missing keywords</h2>
@@ -211,6 +288,7 @@ export function ApplicationWorkspace({
             applicationId={applicationId}
             chatEvents={chatEvents}
             chatSession={chatSession}
+            compiledAt={selected?.compiledAt ?? null}
             cv={selected?.cv ?? null}
             hasPdf={selected?.hasPdf ?? false}
             language={selected?.language}

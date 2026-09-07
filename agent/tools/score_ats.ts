@@ -1,14 +1,87 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { titlesFor } from "../../lib/cv-sections";
-import { type JdKeyword, scoreAts } from "../lib/ats";
+import {
+  ATS_TARGET,
+  CEILING_SLACK,
+  type JdKeyword,
+  requiredYearsFromJd,
+  scoreAts,
+  totalYears,
+} from "../lib/ats";
 import { resolveUserId } from "../lib/auth";
 import { db } from "../lib/db";
+import { cvLoop } from "../lib/state";
 import { readVariants } from "../lib/variants";
+
+type LoopState = ReturnType<typeof cvLoop.get>;
+
+/*
+ * Stop policy, decided here rather than in the prompt: the model should not be
+ * doing arithmetic on its own score to work out whether to go again.
+ *
+ * `ATS_TARGET` is the ambition, but a profile missing a required skill can
+ * never reach it — `ceiling` is what this candidate can truthfully score for
+ * this job, and grinding past it only invites padding.
+ */
+function decide(
+  report: { total: number; ceiling: number | null; unclaimable: string[] },
+  history: number[],
+  loop: LoopState,
+  lang: string,
+) {
+  const target = Math.min(ATS_TARGET, (report.ceiling ?? ATS_TARGET) - CEILING_SLACK);
+  const iterationsRemaining = loop.cap - (loop.iterations[lang] ?? 0);
+  const gain =
+    history.length >= 2 ? report.total - (history[history.length - 2] as number) : Number.POSITIVE_INFINITY;
+
+  /*
+   * The ceiling only counts what the profile spells out, but the vocabulary
+   * rule lets the writer add a JD term the candidate's work plainly involves
+   * (TypeScript for a Next.js developer) and cover the rest in prose. So a low
+   * ceiling on the first draft is a hint, not a verdict: always allow one
+   * revision before stopping at it. The revised score resets the ceiling.
+   */
+  const atCeiling = report.ceiling !== null && target < ATS_TARGET;
+  if (report.total >= target && (!atCeiling || history.length >= 2 || iterationsRemaining <= 0)) {
+    return atCeiling
+      ? {
+          target,
+          iterationsRemaining,
+          action: "stop" as const,
+          reason: `At the best this profile can truthfully reach for this job (${report.ceiling}/100). The gap is ${report.unclaimable.join(", ") || "experience the candidate does not have"} — cover it with transferable framing where honest, and report it plainly.`,
+        }
+      : { target, iterationsRemaining, action: "stop" as const, reason: `Target of ${ATS_TARGET} reached.` };
+  }
+  if (iterationsRemaining <= 0) {
+    return {
+      target,
+      iterationsRemaining,
+      action: "stop" as const,
+      reason: "Compile budget for this language is spent — keep the best draft.",
+    };
+  }
+  if (gain < 2) {
+    return {
+      target,
+      iterationsRemaining,
+      action: "stop" as const,
+      reason: `Last revision moved the score by ${gain}. Further rewrites are rearranging, not improving — keep the best draft.`,
+    };
+  }
+  return {
+    target,
+    iterationsRemaining,
+    action: "revise" as const,
+    reason: atCeiling
+      ? `${report.total}/100, and the profile does not spell out ${report.unclaimable.join(", ") || "the gaps"}. One revision: send cv-writer the previous CV, add only the JD terms the candidate's real work makes credible, and cover the rest with transferable framing in the summary and bullets; ${iterationsRemaining} compile(s) left.`
+      : `${report.total}/100 against a reachable ${target}. Send cv-writer the previous CV plus the claimable gaps; ${iterationsRemaining} compile(s) left.`,
+  };
+}
 
 export default defineTool({
   description:
-    "Score one compiled language variant against the job description (deterministic hybrid: weighted keywords 40%, semantic embedding similarity 40%, structure & quantified metrics 20%). Returns the total, breakdown, matched/missing keywords, and concrete suggestions. Call after every compile_pdf, with the same language.",
+    "Score one compiled language variant against the job description (deterministic hybrid: weighted keywords 35%, semantic embedding similarity 35%, structure & quantified metrics 15%, title/years fit 15% — then multiplied by the share of must-have keywords present, so a missing must-have caps the whole score). Returns the total, breakdown, matched/missing keywords, the must-haves still absent, and concrete suggestions. Call after every compile_pdf, with the same language.",
   inputSchema: z.object({
     applicationId: z.string(),
     language: z.string().min(2).describe("ISO code of the variant to score"),
@@ -30,14 +103,69 @@ export default defineTool({
       );
     }
 
+    /*
+     * Idempotence. `compile_pdf` clears `atsReport` on every recompile, so a
+     * report that is still here can only describe the exact text in front of
+     * us. Re-scoring would re-embed the CV and push a duplicate entry into the
+     * plateau history, making a repeat call look like a revision that achieved
+     * nothing.
+     */
+    const loopState = cvLoop.get();
+    if (variant.atsReport !== null) {
+      return {
+        language: lang,
+        ...variant.atsReport,
+        ...decide(variant.atsReport, loopState.scores[lang] ?? [], loopState, lang),
+        unchanged: true,
+      };
+    }
+
     const keywords = (application.jdKeywords ?? []) as JdKeyword[];
     const t = titlesFor(lang);
+
+    // Years come from the profile's real date columns, not the CV's display
+    // dates ("Jan 2022"), which vary by language and would need re-parsing.
+    const profile = await db.profile.findUnique({
+      where: { userId },
+      include: { skills: true, experiences: true, projects: true },
+    });
+
+    // Everything the candidate can truthfully be said to have. A JD keyword
+    // absent from this can never appear in a compilable CV, so it fixes the
+    // ceiling the revise loop is allowed to chase.
+    const claimableText = profile
+      ? [
+          profile.headline ?? "",
+          profile.summary ?? "",
+          ...profile.skills.map((s) => s.name),
+          ...profile.experiences.flatMap((e) => [e.role, e.company, ...e.stack, ...e.bullets]),
+          ...profile.projects.flatMap((p) => [
+            p.title,
+            p.description ?? "",
+            ...p.stack,
+            ...p.bullets,
+          ]),
+          // "English" and a degree are claims too — they live in these columns.
+          JSON.stringify(profile.languages),
+          JSON.stringify(profile.education),
+        ].join("\n")
+      : undefined;
 
     const { report, jdEmbedding } = await scoreAts({
       cvText: variant.cvText,
       jdText: application.jdText,
       keywords,
-      sectionTitles: [t.skills, t.experience, t.education],
+      sections: t,
+      fit: {
+        role: application.jdRole,
+        cvTitles: [
+          variant.cvJson.header.headline,
+          ...variant.cvJson.experiences.map((e) => e.role),
+        ],
+        requiredYears: requiredYearsFromJd(application.jdText),
+        cvYears: profile ? totalYears(profile.experiences) : null,
+      },
+      claimableText,
       cachedJdEmbedding: (application.jdEmbedding as number[] | null) ?? undefined,
       abortSignal: ctx.abortSignal,
     });
@@ -48,6 +176,20 @@ export default defineTool({
       data: { variants, jdEmbedding: jdEmbedding ?? undefined },
     });
 
-    return { language: lang, ...report };
+    /*
+     * Stop policy, decided here rather than in the prompt: the model should not
+     * be doing arithmetic on its own score to work out whether to go again.
+     *
+     * `ATS_TARGET` is the ambition, but a profile missing a required skill can
+     * never reach it — `ceiling` is what this candidate can truthfully score
+     * for this job, and grinding past it only invites padding.
+     */
+    const history = [...(loopState.scores[lang] ?? []), report.total];
+    cvLoop.update((state) => ({
+      ...state,
+      scores: { ...state.scores, [lang]: history },
+    }));
+
+    return { language: lang, ...report, ...decide(report, history, loopState, lang) };
   },
 });

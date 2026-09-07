@@ -17,4 +17,10 @@ export const cvLoop = defineState("cv-agent.loop", () => ({
    */
   rejections: {} as Record<string, number>,
   rejectionCap: 3,
+  /**
+   * Every ATS total scored per language, oldest first. `score_ats` reads it to
+   * spot a plateau: two revisions that move the number by nothing are two more
+   * that will not either.
+   */
+  scores: {} as Record<string, number[]>,
 }));

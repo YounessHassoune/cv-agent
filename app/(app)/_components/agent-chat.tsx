@@ -2,8 +2,11 @@
 
 import type { UserContent } from "ai";
 import { Client, type ClientSessionState, type MessageStreamEvent } from "eve/client";
-import { useEveAgent } from "eve/react";
-import { AlertCircleIcon } from "lucide-react";
+import type { EveMessage } from "eve/react";
+import { defaultMessageReducer, useEveAgent } from "eve/react";
+import { AlertCircleIcon, ArrowUpRightIcon, SquareIcon } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Conversation,
@@ -17,9 +20,14 @@ import {
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
 import { cn } from "@/lib/utils";
-import { AgentMessage } from "./agent-message";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import { Message, MessageContent } from "@/components/ai-elements/message";
+import { AgentMessage, isToolRunning } from "./agent-message";
 
 const AGENT_NAME = "ApplyFlow";
+
+/** How long a cancellation may sit silently before the UI explains itself. */
+const SLOW_CANCEL_MS = 6000;
 
 type AgentStatus = ReturnType<typeof useEveAgent>["status"];
 type CancellationState = "idle" | "requested" | "cancelling";
@@ -48,6 +56,13 @@ export type AgentChatProps = {
   readonly persistUrl?: string;
   /** Called to abandon a broken thread and begin a fresh session. */
   readonly onResetThread?: () => void | Promise<void>;
+  /**
+   * Transcript of a turn this component does not own — one started on another
+   * page and still running. While set, the chat renders these instead of its
+   * own store and refuses to send, because a second turn on a busy session is
+   * not a thing the user meant to start.
+   */
+  readonly liveMessages?: readonly EveMessage[];
 };
 
 export function AgentChat({
@@ -61,13 +76,20 @@ export function AgentChat({
   initialSession,
   persistUrl,
   onResetThread,
+  liveMessages,
 }: AgentChatProps = {}) {
   const isPanel = variant === "panel";
+  const router = useRouter();
   const [client] = useState(() => new Client({ host: "" }));
   const sessionIdRef = useRef<string | undefined>(undefined);
   const cancellationRef = useRef<Cancellation>({ requested: false });
   const [cancellationError, setCancellationError] = useState<string>();
   const [cancellationState, setCancellationState] = useState<CancellationState>("idle");
+  /** A message sent while the agent was working — delivered once it stops. */
+  const [queued, setQueued] = useState<UserContent | string>();
+  /** The application this conversation created, so the user can go and see it. */
+  const [applicationId, setApplicationId] = useState<string>();
+  const applicationIdRef = useRef<string>(undefined);
 
   const cancelTurn = useCallback(
     (turnId: string) => {
@@ -107,6 +129,16 @@ export function AgentChat({
 
   const handleEvent = useCallback(
     (event: MessageStreamEvent) => {
+      // The application appears mid-turn, the moment `analyze_jd` returns —
+      // surface it as soon as it does rather than waiting for the turn to end.
+      if (applicationIdRef.current === undefined) {
+        const found = findApplicationId(event);
+        if (found !== undefined) {
+          applicationIdRef.current = found;
+          setApplicationId(found);
+        }
+      }
+
       if (event.type !== "turn.started") {
         return;
       }
@@ -134,6 +166,14 @@ export function AgentChat({
       }
     },
     onFinish(snapshot) {
+      /*
+       * The application page is server-rendered, so a turn that just compiled
+       * a PDF and scored it leaves the panel around it showing the state from
+       * before the run. Without this the user has to reload to see their own
+       * results — which is exactly what they were doing.
+       */
+      router.refresh();
+
       // The Tailor page has no application yet when the turn starts — the
       // agent creates one mid-turn — so fall back to the id `analyze_jd`
       // reported. Without this the transcript is lost and the application
@@ -151,8 +191,18 @@ export function AgentChat({
       });
     },
   });
-  const isBusy = agent.status === "submitted" || agent.status === "streaming";
-  const isEmpty = agent.data.messages.length === 0;
+  const isFollowing = liveMessages !== undefined;
+  const messages = liveMessages ?? agent.data.messages;
+  const isBusy = isFollowing || agent.status === "submitted" || agent.status === "streaming";
+  /*
+   * The agent goes quiet for tens of seconds at a time — before its first
+   * event, and again between steps while it decides what to do next. Both gaps
+   * used to render as a frozen screen. This fills every one of them and clears
+   * the moment a step starts or text begins arriving.
+   */
+  const lastMessage = messages[messages.length - 1];
+  const awaitingFirstToken = isBusy && isBetweenSteps(lastMessage);
+  const isEmpty = messages.length === 0;
   const errorMessage = cancellationError ?? agent.error?.message;
   const submitStatus = isBusy && cancellationState !== "idle" ? "submitted" : agent.status;
 
@@ -181,44 +231,139 @@ export function AgentChat({
   const withContext = (text: string) =>
     contextPrefix && isEmpty ? `${contextPrefix}\n\n${text}` : text;
 
-  const sendSuggestion = async (text: string) => {
-    if (isBusy) return;
+  /**
+   * Never awaited. `send()` resolves when the whole turn finishes, and the
+   * composer only clears once its submit handler settles — awaiting it leaves
+   * the user staring at their own text for the length of the run.
+   */
+  const dispatch = (payload: UserContent | string) => {
     prepareTurn();
-    await agent.send(withContext(text));
+    void agent.send(payload);
   };
 
-  const handleSubmit = async (message: PromptInputMessage) => {
+  const sendSuggestion = (text: string) => {
+    if (isBusy) return;
+    dispatch(withContext(text));
+  };
+
+  const handleSubmit = (message: PromptInputMessage) => {
     const text = message.text.trim();
-    if ((text.length === 0 && message.files.length === 0) || isBusy) return;
+    if (text.length === 0 && message.files.length === 0) return;
 
-    prepareTurn();
+    let payload: UserContent | string = withContext(text);
+    if (message.files.length > 0) {
+      const parts: UserContent = [];
+      if (text.length > 0) parts.push({ text: withContext(text), type: "text" });
+      for (const file of message.files) {
+        parts.push({
+          data: file.url,
+          filename: file.filename,
+          mediaType: file.mediaType,
+          type: "file",
+        });
+      }
+      payload = parts;
+    }
 
-    if (message.files.length === 0) {
-      await agent.send(withContext(text));
+    /*
+     * Sending mid-run means "stop and listen to me" — usually the user asking
+     * for a correction they have just spotted. Queue the message, stop the
+     * turn, and deliver it once the cancellation lands. Dropping it (the old
+     * behaviour) looked like the app had ignored them.
+     */
+    if (isFollowing) return; // the composer is disabled; nothing to queue against
+    if (isBusy) {
+      setQueued(payload);
+      requestCancellation();
       return;
     }
 
-    const parts: UserContent = [];
-    if (text.length > 0) {
-      parts.push({ text: withContext(text), type: "text" });
-    }
-    for (const file of message.files) {
-      parts.push({
-        data: file.url,
-        filename: file.filename,
-        mediaType: file.mediaType,
-        type: "file",
-      });
-    }
-
-    await agent.send(parts);
+    dispatch(payload);
   };
 
+  // The queued message goes the moment the agent is free again.
+  useEffect(() => {
+    if (queued === undefined || isBusy) return;
+    setQueued(undefined);
+    dispatch(queued);
+    // `dispatch` is stable enough here: it only closes over `agent`, which the
+    // hook keeps identity-stable across renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queued, isBusy]);
+
+  // A settled turn ends the cancellation, whatever the outcome.
+  useEffect(() => {
+    if (!isBusy && cancellationState !== "idle" && queued === undefined) {
+      setCancellationState("idle");
+    }
+  }, [isBusy, cancellationState, queued]);
+
+  /*
+   * Cancellation is cooperative: the server stops the turn at its next step
+   * boundary, so a request already in flight to a model runs to completion
+   * first. That can take another 30 seconds, during which the old UI just sat
+   * there looking broken. Say so instead.
+   */
+  const [cancelSlow, setCancelSlow] = useState(false);
+  useEffect(() => {
+    if (cancellationState === "idle") {
+      setCancelSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setCancelSlow(true), SLOW_CANCEL_MS);
+    return () => clearTimeout(timer);
+  }, [cancellationState]);
+
+  /*
+   * Only the unscoped chat needs this: inside an application panel the user is
+   * already looking at the thing the link would point to.
+   */
+  const applicationLink =
+    applicationId !== undefined && !isPanel ? (
+      <Link
+        className="flex items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 text-sm transition-colors hover:border-primary/45"
+        href={`/applications/${applicationId}`}
+      >
+        <span className="min-w-0">
+          <span className="block font-medium">
+            {isBusy ? "Your application is being prepared" : "Your application is ready"}
+          </span>
+          <span className="block text-muted-foreground text-xs">
+            Open it to read the CV, the match breakdown and download the PDF.
+          </span>
+        </span>
+        <ArrowUpRightIcon className="size-4 shrink-0 text-primary" />
+      </Link>
+    ) : null;
+
+  /** Plain-language account of what the chat is doing between messages. */
+  // Following a turn started elsewhere is plumbing, not news: the transcript
+  // streaming in already tells the user the work is happening.
+  const activityNote =
+    cancellationState !== "idle"
+      ? cancelSlow
+        ? "Still finishing the step it had already started — it will stop right after."
+        : queued !== undefined
+          ? "Stopping the current run — your message goes as soon as it does."
+          : "Stopping…"
+      : queued !== undefined
+        ? "Your message is queued and will send in a moment."
+        : undefined;
+
   const composer = (
-    <PromptInput onSubmit={handleSubmit}>
-      <PromptInputTextarea placeholder={placeholder} />
-      <PromptInputSubmit onStop={requestCancellation} status={submitStatus} />
-    </PromptInput>
+    <div className="space-y-2">
+      {applicationLink}
+      {activityNote ? (
+        <p className="flex items-center gap-2 px-1 text-muted-foreground text-xs">
+          <SquareIcon className="size-3 shrink-0 animate-pulse fill-current" />
+          {activityNote}
+        </p>
+      ) : null}
+      <PromptInput onSubmit={handleSubmit}>
+        <PromptInputTextarea placeholder={placeholder} />
+        <PromptInputSubmit onStop={requestCancellation} status={submitStatus} />
+      </PromptInput>
+    </div>
   );
 
   const suggestionChips =
@@ -287,7 +432,7 @@ export function AgentChat({
               isPanel ? "px-4" : "max-w-3xl px-4 sm:px-6",
             )}
           >
-            {agent.data.messages.map((message, index) => (
+            {messages.map((message, index) => (
               <AgentMessage
                 canRespond={!isBusy}
                 isStreaming={
@@ -295,12 +440,23 @@ export function AgentChat({
                 }
                 key={message.id}
                 message={message}
+                turnActive={isBusy && index === messages.length - 1}
                 onInputResponses={(inputResponses) => {
                   prepareTurn();
                   return agent.respond(inputResponses);
                 }}
               />
             ))}
+
+            {awaitingFirstToken ? (
+              <Message from="assistant">
+                <MessageContent>
+                  <Shimmer as="span" className="text-sm">
+                    Thinking…
+                  </Shimmer>
+                </MessageContent>
+              </Message>
+            ) : null}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
@@ -357,13 +513,17 @@ export function AgentChat({
 }
 
 /**
- * Restores a conversation from eve's durable stream before mounting the chat.
+ * Restores a conversation from eve's durable stream before mounting the chat,
+ * and — this is the part that matters — keeps following a turn that is still
+ * running.
  *
- * The saved `chatEvents` snapshot only exists once a turn settles, so a run
- * that errored or was cancelled leaves an application with a session id but no
- * transcript. `snapshot()` reads the events back from the session itself, which
- * is the source of truth either way. `useEveAgent` reads `initialEvents` when
- * it creates its store, so the chat must not mount until this resolves.
+ * `useEveAgent` streams only the turns it starts itself: `initialEvents` and
+ * `initialSession` are read once when it creates its store. So a run started
+ * on the Tailor page and then navigated away from would go on working with
+ * nothing on screen, and the page around it would still be showing pre-run
+ * data when it finished. Here we attach to the live stream instead, project
+ * the events ourselves with eve's own reducer, and hand back to the hook at
+ * the turn boundary.
  */
 export function ResumableAgentChat({
   sessionId,
@@ -372,41 +532,120 @@ export function ResumableAgentChat({
   ...props
 }: AgentChatProps & { readonly sessionId?: string }) {
   const savedEvents = initialEvents?.length ? initialEvents : undefined;
+  const router = useRouter();
   const [restored, setRestored] = useState<{
     events: readonly MessageStreamEvent[];
     session?: ClientSessionState;
   }>();
   const [settled, setSettled] = useState(false);
+  /** Set only while a turn belonging to another page is still running. */
+  const [following, setFollowing] = useState<readonly EveMessage[]>();
 
   useEffect(() => {
-    // Nothing to restore: a fresh thread, or the server already had the events.
-    if (!sessionId || savedEvents) {
+    if (!sessionId) {
       setSettled(true);
       return;
     }
 
     let cancelled = false;
     const controller = new AbortController();
+    const session = new Client({ host: "" }).sessions.attach(sessionId);
 
-    void new Client({ host: "" }).sessions
-      .attach(sessionId)
-      .snapshot({ signal: controller.signal })
-      .then((snapshot) => {
+    void (async () => {
+      /*
+       * Always read the session, even when the server handed us a saved log.
+       * That log is only written when a turn settles, so it is exactly the
+       * thing that goes stale while a turn is running — trusting it is how a
+       * live run looks finished.
+       */
+      let events: readonly MessageStreamEvent[] = savedEvents ?? [];
+      try {
+        const snapshot = await session.snapshot({ signal: controller.signal });
         if (cancelled) return;
-        setRestored({ events: snapshot.events, session: snapshot.session });
-      })
-      .catch(() => {
-        // An unreadable session still opens a usable (empty) composer.
-      })
-      .finally(() => {
-        if (!cancelled) setSettled(true);
-      });
+        events = snapshot.events;
+        setRestored({ events, session: snapshot.session });
+      } catch {
+        // An unreadable session still opens a usable (saved, or empty) composer.
+      }
+      if (cancelled) return;
+      setSettled(true);
+
+      if (!isTurnActive(events)) return;
+
+      // Project the live tail with eve's own reducer so the transcript looks
+      // identical to the one the hook would have built.
+      const reducer = defaultMessageReducer();
+      let data = events.reduce((acc, event) => reducer.reduce(acc, event), reducer.initial());
+      const collected = [...events];
+      setFollowing(data.messages);
+
+      /*
+       * `session.stream()` follows forever: unlike `send()`, it does not stop
+       * at the turn boundary but reconnects and waits for the next turn. Left
+       * alone, this loop never ended — no save, no refresh, a composer that
+       * stayed disabled until the user reloaded. Break on eve's own boundary
+       * events and drop the connection ourselves.
+       */
+      const follower = new AbortController();
+      const onAbort = () => follower.abort();
+      controller.signal.addEventListener("abort", onAbort, { once: true });
+      try {
+        // The iterator also gives up on its own after a run of idle
+        // reconnects. A turn can sit silent for over a minute while a
+        // subagent writes, so re-attach from where we left off until eve
+        // says the turn is over — a few tries, not forever.
+        let reachedBoundary = false;
+        for (let attempt = 0; attempt < 5 && !reachedBoundary; attempt++) {
+          for await (const event of session.stream({
+            startIndex: collected.length,
+            signal: follower.signal,
+          })) {
+            if (cancelled) return;
+            collected.push(event);
+            data = reducer.reduce(data, event);
+            setFollowing(data.messages);
+            if (isTurnBoundary(event)) {
+              reachedBoundary = true;
+              break;
+            }
+          }
+          if (cancelled || follower.signal.aborted) return;
+        }
+      } catch {
+        // A dropped follow just means the transcript stops updating; the hand
+        // back below still runs and the turn keeps going on the server.
+      } finally {
+        follower.abort();
+        controller.signal.removeEventListener("abort", onAbort);
+      }
+      if (cancelled) return;
+
+      // The turn ended. Nobody else can save it — the page that started it
+      // unmounted long ago, so its `onFinish` never ran.
+      if (props.persistUrl !== undefined) {
+        void fetch(props.persistUrl, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ events: collected }),
+          keepalive: true,
+        }).catch(() => {
+          // A dropped save only costs a snapshot round trip on the next load.
+        });
+      }
+
+      // Hand the completed transcript to the hook, and pull the server-rendered
+      // page around us up to date with what the run produced.
+      // Cursor at the tail, so the hook's next send does not replay the run.
+      setRestored({ events: collected, session: { sessionId, streamIndex: collected.length } });
+      setFollowing(undefined);
+      router.refresh();
+    })();
 
     return () => {
       cancelled = true;
       controller.abort();
     };
-  }, [sessionId, savedEvents]);
+  }, [sessionId, savedEvents, router, props.persistUrl]);
 
   if (!settled) {
     return (
@@ -419,10 +658,53 @@ export function ResumableAgentChat({
   return (
     <AgentChat
       {...props}
-      initialEvents={savedEvents ?? restored?.events}
+      // One remount, at the moment the followed turn ends, so the hook rebuilds
+      // its store from the complete event log rather than the stale prefix.
+      initialEvents={restored?.events ?? savedEvents}
       initialSession={restored?.session ?? initialSession}
+      key={following === undefined ? "owned" : "following"}
+      liveMessages={following}
     />
   );
+}
+
+/**
+ * Whether the session's last lifecycle event left a turn running. `turn.started`
+ * with nothing after it means work is still in flight.
+ */
+function isTurnActive(events: readonly MessageStreamEvent[]): boolean {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const type = events[i].type;
+    if (isTurnBoundary(events[i]) || type.startsWith("turn.")) {
+      return type === "turn.started";
+    }
+  }
+  return false;
+}
+
+/** The events eve itself treats as the end of a turn (see `send()`'s stream). */
+function isTurnBoundary(event: MessageStreamEvent): boolean {
+  return (
+    event.type === "session.waiting" ||
+    event.type === "session.completed" ||
+    event.type === "session.failed"
+  );
+}
+
+/**
+ * Whether the agent is thinking rather than doing: no assistant message yet,
+ * or its most recent part is already finished. Reading only the tail is what
+ * makes this catch the pauses *between* steps — the message is full of
+ * completed activity lines, and none of it means anything is happening now.
+ */
+function isBetweenSteps(message: EveMessage | undefined): boolean {
+  if (message === undefined || message.role !== "assistant") return true;
+
+  const tail = message.parts[message.parts.length - 1];
+  if (tail === undefined) return true;
+  if (tail.type === "step-start") return true;
+  if (tail.type === "text") return tail.text.trim().length === 0;
+  return !isToolRunning(tail);
 }
 
 function toErrorMessage(error: unknown): string {
@@ -440,16 +722,26 @@ function isStuckThread(message: string | undefined): boolean {
 }
 
 /**
- * Finds the application `analyze_jd` created during this turn by reading the
- * id back out of the stream, so an unscoped chat can persist itself to it.
+ * Finds the application `analyze_jd` created, by reading the id back out of the
+ * stream. An unscoped chat has no application when the turn starts — the agent
+ * creates one mid-turn — so this is how the page learns about it, both to link
+ * the user to it and to persist the transcript against it.
+ *
+ * ponytail: a regex over the serialized event, not a typed walk of the tool
+ * output. The id only ever appears under this key; give it a schema if a second
+ * producer ever appears.
  */
-function applicationChatUrl(events: readonly MessageStreamEvent[]): string | undefined {
+function findApplicationId(value: unknown): string | undefined {
   try {
-    const match = JSON.stringify(events).match(/"applicationId"\s*:\s*"([A-Za-z0-9_-]+)"/);
-    return match ? `/api/applications/${match[1]}/chat` : undefined;
+    return JSON.stringify(value)?.match(/"applicationId"\s*:\s*"([A-Za-z0-9_-]+)"/)?.[1];
   } catch {
     return undefined; // circular or oversized payload — history just isn't saved
   }
+}
+
+function applicationChatUrl(events: readonly MessageStreamEvent[]): string | undefined {
+  const id = findApplicationId(events);
+  return id === undefined ? undefined : `/api/applications/${id}/chat`;
 }
 
 function StatusDot({ status }: { readonly status: AgentStatus }) {

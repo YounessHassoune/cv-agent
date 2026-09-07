@@ -22,11 +22,25 @@ export function allowedTerms(profile: ProfileFacts): string[] {
 }
 
 /**
- * Returns every claim in the CV that the master profile does not support.
- * This is the hard anti-hallucination boundary: the model can phrase things
- * however it likes, but it cannot introduce a skill, employer, or project.
+ * Returns every claim in the CV that nothing permits.
+ *
+ * The profile is the source of truth, but it is not a complete inventory: a
+ * developer whose profile lists React, Next.js and Nest.js plainly writes
+ * TypeScript, and refusing to say so costs a real match for no honesty gained.
+ * So `permitted` widens the vocabulary to the terms *this job asked for* —
+ * a computable rule that lets the CV speak the role's language without letting
+ * the writer wander into tech nobody mentioned.
+ *
+ * Employers and projects are never widened: those are facts, not vocabulary.
+ *
+ * Anything permitted but absent from the profile is still a claim the user has
+ * to stand behind, so `unsupportedClaims` reports it for review.
  */
-export function findFabrications(cv: Cv, profile: ProfileFacts): string[] {
+export function findFabrications(
+  cv: Cv,
+  profile: ProfileFacts,
+  permitted: readonly string[] = [],
+): string[] {
   const knownTerms = new Set<string>();
   for (const skill of profile.skills) knownTerms.add(normalize(skill.name));
   for (const exp of profile.experiences) for (const t of exp.stack) knownTerms.add(normalize(t));
@@ -42,9 +56,12 @@ export function findFabrications(cv: Cv, profile: ProfileFacts): string[] {
     ...cv.experiences.flatMap((exp) => exp.stack),
     ...cv.projects.flatMap((project) => project.stack),
   ];
+  const allowed = new Set([...knownTerms, ...permitted.map(normalize)]);
   for (const term of claimedTerms) {
-    if (!knownTerms.has(normalize(term))) {
-      violations.push(`skill/stack term "${term}" is not in the master profile`);
+    if (!allowed.has(normalize(term))) {
+      violations.push(
+        `skill/stack term "${term}" is neither in the master profile nor asked for by this job`,
+      );
     }
   }
   for (const exp of cv.experiences) {
@@ -59,4 +76,30 @@ export function findFabrications(cv: Cv, profile: ProfileFacts): string[] {
   }
 
   return [...new Set(violations)];
+}
+
+/**
+ * Terms the CV claims that the master profile does not back up. These are
+ * allowed through — the job asked for them and the profile is not exhaustive —
+ * but they are the user's assertion, not the profile's, so every one is shown
+ * for confirmation before the application is sent.
+ */
+export function unsupportedClaims(cv: Cv, profile: ProfileFacts): string[] {
+  const known = new Set<string>();
+  for (const skill of profile.skills) known.add(normalize(skill.name));
+  for (const exp of profile.experiences) for (const t of exp.stack) known.add(normalize(t));
+  for (const project of profile.projects) for (const t of project.stack) known.add(normalize(t));
+
+  const claimed = [
+    ...cv.skills.flatMap((group) => group.items),
+    ...cv.experiences.flatMap((exp) => exp.stack),
+    ...cv.projects.flatMap((project) => project.stack),
+  ];
+
+  const unsupported = new Map<string, string>(); // normalized -> first spelling seen
+  for (const term of claimed) {
+    const key = normalize(term);
+    if (!known.has(key) && !unsupported.has(key)) unsupported.set(key, term);
+  }
+  return [...unsupported.values()];
 }

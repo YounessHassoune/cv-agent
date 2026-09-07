@@ -149,7 +149,7 @@ async function main() {
     cvText: text,
     jdText: JD_TEXT,
     keywords: KEYWORDS,
-    sectionTitles: [t.skills, t.experience, t.education],
+    sections: t,
   });
   // EMBEDDING_MODEL is optional; without it the semantic half is skipped.
 
@@ -158,7 +158,10 @@ async function main() {
   console.log(`  keyword    ${report.breakdown.keyword}`);
   console.log(`  semantic   ${report.breakdown.semantic ?? "n/a (no embedding provider)"}`);
   console.log(`  structure  ${report.breakdown.structure}`);
+  console.log(`  fit        ${report.breakdown.fit ?? "n/a (JD states no title or years)"}`);
+  console.log(`  gate       ${report.gate} (share of must-have keywords present)`);
   console.log(`  matched    ${report.matched.join(", ") || "—"}`);
+  console.log(`  listed     ${report.listedOnly.join(", ") || "—"}`);
   console.log(`  missing    ${report.missing.join(", ") || "—"}`);
   for (const suggestion of report.suggestions) console.log(`  · ${suggestion}`);
   console.log("");
