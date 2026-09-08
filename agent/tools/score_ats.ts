@@ -63,7 +63,8 @@ function decide(
       target,
       iterationsRemaining,
       action: "stop" as const,
-      reason: "Compile budget for this language is spent — keep the best draft.",
+      reason:
+        "Compile budget for this language is spent for this turn — keep the best draft and close. It refills on the user's next message, so do not tell them revisions have run out.",
     };
   }
   if (gain < 2) {

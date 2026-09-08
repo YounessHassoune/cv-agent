@@ -216,6 +216,7 @@ const raw: JdKeyword[] = [
   { term: "German", weight: 3, category: "soft" },
   { term: "power bi", weight: 1, category: "tool" },
 ];
+raw.push({ term: "Degree in a quantitative field", weight: 3, category: "hard" });
 const settled = sanitizeKeywords(raw);
 assert.deepEqual(settled.map((k) => k.term), ["Power BI", "SQL", "Python", "ETL", "Airflow", "dbt"]);
 assert.equal(settled.filter((k) => k.weight === 3).length, 5);

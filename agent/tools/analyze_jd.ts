@@ -8,7 +8,7 @@ import { cvLoop } from "../lib/state";
 
 export default defineTool({
   description:
-    "Create the single Application draft row for this job. Call this exactly once per job — no matter how many target languages — after jd-analyst has analyzed the JD, passing its extraction through. Returns the applicationId used by compile_pdf / score_ats / stage_application for every language.",
+    "Create the single Application draft row for this job. Call this exactly once per job — no matter how many target languages — after jd-analyst has analyzed the JD, passing its extraction through. Returns the applicationId used by compile_pdf and score_ats for every language.",
   inputSchema: z.object({
     jdText: z.string().min(50).describe("The full job description text"),
     targetLanguages: z

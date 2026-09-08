@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BriefcaseIcon,
   CheckIcon,
+  FileTextIcon,
   FolderGitIcon,
   GraduationCapIcon,
   LanguagesIcon,
@@ -13,6 +14,7 @@ import {
   PanelRightOpenIcon,
   PlusIcon,
   SaveIcon,
+  ScrollTextIcon,
   TextIcon,
   TrashIcon,
   UserRoundIcon,
@@ -36,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CV_TEMPLATE_LIST, DEFAULT_TEMPLATE } from "@/lib/cv-templates";
 import { cn } from "@/lib/utils";
 import { CvImportDialog } from "./cv-import-dialog";
+import { ProfilePdfView } from "./profile-pdf-view";
 import { PhotoField } from "./photo-field";
 
 export type ProfileForm = {
@@ -275,6 +278,9 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
   const [activeSection, setActiveSection] = useState<SectionId>("identity");
   // Preview-only: the photo slot is always drawn so the header keeps its shape.
   const [showPhoto, setShowPhoto] = useState(true);
+  // The preview pane shows either the live document or the PDF it compiles to,
+  // the same pair of views the application review page offers.
+  const [previewView, setPreviewView] = useState<"preview" | "pdf">("preview");
   const [status, setStatus] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState<string>();
 
@@ -804,9 +810,31 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
       {/* One compact toolbar rather than a heading row plus a controls row: the
           two choices here both restyle the document below, so they sit on it. */}
       <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
-        <h2 className="mr-auto font-medium text-muted-foreground text-xs uppercase tracking-wide">
-          Live preview
-        </h2>
+        {/* Two views of one document: the live rendering, and the PDF it
+            actually compiles to — built from the draft on screen, so it shows
+            unsaved edits too. */}
+        <div className="mr-auto flex rounded-lg bg-muted p-[3px]">
+          {[
+            { id: "preview" as const, label: "Preview", icon: ScrollTextIcon },
+            { id: "pdf" as const, label: "PDF", icon: FileTextIcon },
+          ].map((item) => (
+            <button
+              aria-pressed={previewView === item.id}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 font-medium text-sm transition-colors",
+                previewView === item.id
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              key={item.id}
+              onClick={() => setPreviewView(item.id)}
+              type="button"
+            >
+              <item.icon className="size-3.5" />
+              {item.label}
+            </button>
+          ))}
+        </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -859,16 +887,19 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
         </div>
       </div>
 
-      <div className="scrollbar-slim min-h-0 flex-1 overflow-y-auto pb-6">
-        <CvPreview cv={preview} showPhoto={showPhoto} template={form.template} />
-      </div>
+      {previewView === "preview" ? (
+        <div className="scrollbar-slim min-h-0 flex-1 overflow-y-auto pb-6">
+          <CvPreview cv={preview} showPhoto={showPhoto} template={form.template} />
+        </div>
+      ) : (
+        <ProfilePdfView
+          className="min-h-0 flex-1 pb-6"
+          cv={preview}
+          photo={showPhoto && Boolean(form.photoUrl)}
+          template={form.template}
+        />
+      )}
 
-      {/* The one thing worth saying here, kept to one line. The template's own
-          description is already in the picker beside it. */}
-      <p className="shrink-0 text-muted-foreground text-xs leading-relaxed">
-        The photo is a preview device only. Every compiled PDF stays single-column and photo-free,
-        which is what ATS parsers read best.
-      </p>
     </div>
   );
 

@@ -25,6 +25,22 @@ export const STALL_MS = 75_000;
 export const STALL_CHECK_MS = 10_000;
 
 /**
+ * Tools whose result changes what the server already rendered. The document,
+ * the preview and the score all come from a server component, so a turn that
+ * compiles a PDF halfway through leaves the page beside the chat showing the
+ * state from before it — the user watched "PDF ready" scroll past and still
+ * had to reload to see the PDF.
+ */
+const SERVER_STATE_TOOLS = new Set(["analyze_jd", "compile_pdf", "score_ats"]);
+
+/** Whether this event means the page around the chat is now out of date. */
+export function changesServerState(event: MessageStreamEvent): boolean {
+  if (event.type !== "action.result") return false;
+  const result = (event.data as { result?: { toolName?: unknown } } | undefined)?.result;
+  return typeof result?.toolName === "string" && SERVER_STATE_TOOLS.has(result.toolName);
+}
+
+/**
  * Whether the session's last lifecycle event left a turn running. `turn.started`
  * with nothing after it means work is still in flight.
  */

@@ -8,11 +8,13 @@ import {
   MinusIcon,
   PlusIcon,
   RotateCcwIcon,
+  XIcon,
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
@@ -116,11 +118,18 @@ export function PdfViewer({
   className,
   /** Hidden inside the dialog, where expanding again makes no sense. */
   expandable = true,
+  closeControl,
 }: {
   readonly src: string;
   readonly title?: string;
   readonly className?: string;
   readonly expandable?: boolean;
+  /**
+   * Sits at the end of the toolbar, where the expand button is on the inline
+   * copy. The full-screen dialog passes its own close here rather than using
+   * the dialog's floating one, which lands on top of the page it is covering.
+   */
+  readonly closeControl?: React.ReactNode;
 }) {
   const [zoom, setZoom] = useState<number | null>(null);
 
@@ -191,15 +200,49 @@ export function PdfViewer({
               <TooltipContent>View full size</TooltipContent>
             </Tooltip>
 
-            <DialogContent className="flex h-[92dvh] w-[min(72rem,calc(100vw-2rem))] max-w-none flex-col gap-3 p-4 sm:max-w-none">
+            {/* The dialog's own close button floats over whatever it covers,
+                which here is the CV itself. Turned off, and re-hung at the end
+                of the viewer's toolbar with the other controls. */}
+            <DialogContent
+              className="flex h-[92dvh] w-[min(72rem,calc(100vw-2rem))] max-w-none flex-col gap-3 p-4 sm:max-w-none"
+              showCloseButton={false}
+            >
               <DialogTitle className="sr-only">{title}</DialogTitle>
               <DialogDescription className="sr-only">
                 Full-size view of the compiled CV.
               </DialogDescription>
-              <PdfViewer className="min-h-0 flex-1" expandable={false} src={src} title={title} />
+              <PdfViewer
+                className="min-h-0 flex-1"
+                closeControl={
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <DialogClose
+                          render={
+                            <Button
+                              aria-label="Close"
+                              className="size-7 text-muted-foreground"
+                              size="icon"
+                              variant="ghost"
+                            >
+                              <XIcon className="size-3.5" />
+                            </Button>
+                          }
+                        />
+                      }
+                    />
+                    <TooltipContent>Close</TooltipContent>
+                  </Tooltip>
+                }
+                expandable={false}
+                src={src}
+                title={title}
+              />
             </DialogContent>
           </Dialog>
         ) : null}
+
+        {closeControl}
       </div>
 
       <ViewerFrame className="min-h-0 flex-1" src={src} title={title} zoom={zoom} />

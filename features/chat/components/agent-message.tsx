@@ -8,6 +8,7 @@ import type {
 } from "eve/react";
 import {
   AlertCircleIcon,
+  ArrowRightIcon,
   CheckCircleIcon,
   CheckIcon,
   CopyIcon,
@@ -28,7 +29,7 @@ import {
 } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { StoredAnswers } from "../lib/answers";
 
@@ -95,12 +96,14 @@ export function AgentMessage({
   const running = new Set<string>();
   const phantoms = new Set<string>();
   /*
-   * Which round a step belongs to. The pipeline writes, compiles and scores
-   * once per pass, and the self-healing loop runs it again — so the same three
-   * lines appeared three times in a row with nothing to say which was which.
+   * The pipeline writes, compiles and scores, and the improvement pass runs
+   * the same three steps again — which read as "CV draft ready / PDF ready /
+   * Match check 59 / Improved draft ready / PDF rebuilt / Match re-checked
+   * 75", six lines for three things. Only the last run of each step is shown,
+   * so the feed is one line per step carrying its final result.
    */
-  const rounds = new Map<string, number>();
-  const roundByCallId = new Map<string, number>();
+  const supersededCalls = new Set<string>();
+  const lastCallByTool = new Map<string, string>();
   for (const part of message.parts) {
     if (part.type !== "dynamic-tool") continue;
     if (part.state === "output-error") {
@@ -109,9 +112,9 @@ export function AgentMessage({
     } else if (part.state === "output-available") {
       const key = toolKey(part);
       succeeded.add(key);
-      const round = rounds.get(key) ?? 0;
-      roundByCallId.set(part.toolCallId, round);
-      rounds.set(key, round + 1);
+      const previous = lastCallByTool.get(key);
+      if (previous !== undefined) supersededCalls.add(previous);
+      lastCallByTool.set(key, part.toolCallId);
     }
     if (isToolRunning(part) && part.toolMetadata?.eve?.inputRequest === undefined) {
       const key = toolKey(part);
@@ -132,7 +135,7 @@ export function AgentMessage({
       from={message.role}
     >
       <MessageContent>
-        {message.parts.map((part, index) => part.type === "dynamic-tool" && phantoms.has(part.toolCallId) ? null : (
+        {message.parts.map((part, index) => part.type === "dynamic-tool" && (phantoms.has(part.toolCallId) || supersededCalls.has(part.toolCallId)) ? null : (
           <AgentMessagePart
             answers={answers}
             canRespond={canRespond}
@@ -143,7 +146,6 @@ export function AgentMessage({
             isPending={isLastMessage && index === message.parts.length - 1}
             isUser={message.role === "user"}
             key={partKey(part, index)}
-            round={part.type === "dynamic-tool" ? (roundByCallId.get(part.toolCallId) ?? 0) : 0}
             onInputResponses={onInputResponses}
             part={part}
             showCaret={isStreaming && message.role === "assistant" && index === lastTextIndex}
@@ -238,7 +240,6 @@ function AgentMessagePart({
   isUser,
   onInputResponses,
   part,
-  round,
   showCaret,
   turnActive,
 }: {
@@ -246,8 +247,6 @@ function AgentMessagePart({
   readonly canRespond: boolean;
   /** Whether this part sits at the very end of the conversation. */
   readonly isPending: boolean;
-  /** 0 for a step's first pass, 1+ for each revision of the same step. */
-  readonly round: number;
   /** How many times this same step has failed in this message. */
   readonly failureCount: number;
   /** Whether another call to this same tool already succeeded here. */
@@ -290,7 +289,6 @@ function AgentMessagePart({
           isPending={isPending}
           onInputResponses={onInputResponses}
           part={part}
-          round={round}
           turnActive={turnActive}
         />
       );
@@ -317,7 +315,7 @@ export function isToolRunning(part: EveMessagePart): boolean {
 
 const TOOL_ACTIVITY: Record<
   string,
-  { running: string; done: string; failed?: string; repeat?: string; retry?: string }
+  { running: string; done: string; failed?: string; retry?: string }
 > = {
   getprofile: { running: "Reading your profile…", done: "Profile loaded" },
   jdanalyst: { running: "Analyzing the job offer…", done: "Job offer analyzed", failed: "Analyzing the job offer" },
@@ -326,13 +324,11 @@ const TOOL_ACTIVITY: Record<
     running: "Tailoring your CV…",
     done: "CV draft ready",
     failed: "Writing your CV",
-    repeat: "Improved draft ready",
   },
   compilepdf: {
     running: "Building the PDF…",
     done: "PDF ready",
     failed: "Building the PDF",
-    repeat: "PDF rebuilt",
     // A rejected draft is the fact check doing its job, not something going wrong.
     retry: "Draft claimed something your profile doesn't back, so it is asking for a corrected draft.",
   },
@@ -340,11 +336,6 @@ const TOOL_ACTIVITY: Record<
     running: "Checking the match with the job…",
     done: "Match check",
     failed: "Checking the match",
-    repeat: "Match re-checked",
-  },
-  stageapplication: {
-    running: "Preparing your application for review…",
-    done: "Ready for your review",
   },
   askquestion: { running: "Waiting for your answer…", done: "Answer received" },
 };
@@ -360,20 +351,13 @@ function readScore(part: EveDynamicToolPart): string | undefined {
 }
 
 /**
- * What a finished step says. The pipeline runs write → compile → score, then
- * runs it again to improve the score, so the plain labels repeated verbatim
- * and read like the feed was stuck. Later rounds say they are revisions, and
- * the score line carries the number it just produced — the one thing the user
- * is waiting to hear.
+ * What a finished step says. Only the last run of a step is rendered, so this
+ * is the final state of that step — and for the score, the number the user is
+ * actually waiting to hear.
  */
-function describeResult(
-  activity: { done: string; repeat?: string },
-  round: number,
-  part: EveDynamicToolPart,
-): string {
-  const label = round > 0 ? (activity.repeat ?? activity.done) : activity.done;
+function describeResult(activity: { done: string }, part: EveDynamicToolPart): string {
   const score = readScore(part);
-  return score === undefined ? label : `${label} — ${score}`;
+  return score === undefined ? activity.done : `${activity.done} — ${score}`;
 }
 
 /** Groups a tool's parts so repeated failures of the *same* step are counted. */
@@ -395,15 +379,12 @@ function ToolActivity({
   isPending,
   onInputResponses,
   part,
-  round,
   turnActive,
 }: {
   readonly answers: StoredAnswers;
   readonly canRespond: boolean;
   /** Whether this call sits at the very end of the conversation. */
   readonly isPending: boolean;
-  /** 0 for this step's first pass, 1+ for each revision of the same step. */
-  readonly round: number;
   readonly failureCount: number;
   readonly hadSiblingSuccess: boolean;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
@@ -453,7 +434,7 @@ function ToolActivity({
       statusLine = activity ? (
         <ActivityLine
           icon={<CheckIcon className="size-3.5" />}
-          label={describeResult(activity, round, part)}
+          label={describeResult(activity, part)}
         />
       ) : null;
       break;
@@ -671,6 +652,108 @@ function formatBytes(size: number | undefined): string | undefined {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+type InputOption = { id: string; label: string; description?: string; style?: string };
+
+/**
+ * Marks a question whose answers are not mutually exclusive.
+ *
+ * eve's `ask_question` takes `{ prompt, options?, allowFreeform? }` and nothing
+ * else — the schema is strict, and a response carries one `optionId` or free
+ * text. So the only place to say "more than one of these can be true" is the
+ * option id, which is a machine identifier the user never sees. Every id
+ * carrying the prefix is the signal; a channel that does not know the
+ * convention still shows the options as ordinary buttons.
+ */
+const MULTI_PREFIX = "multi:";
+
+function isMultiSelect(options: readonly InputOption[]): boolean {
+  return options.length > 1 && options.every((option) => option.id.startsWith(MULTI_PREFIX));
+}
+
+/**
+ * Checkboxes plus one confirm, for a proposal where the user can want two
+ * things at once ("quantify the bullets" *and* "reorder the skills").
+ *
+ * The answer goes back as free text — the joined labels — because the response
+ * contract has room for exactly one option id. The model reads the labels it
+ * wrote itself, so nothing is lost in the round trip.
+ */
+function MultiSelectOptions({
+  canRespond,
+  onSubmit,
+  options,
+  sent,
+}: {
+  readonly canRespond: boolean;
+  readonly onSubmit: (labels: string[]) => void;
+  readonly options: readonly InputOption[];
+  readonly sent: boolean;
+}) {
+  const [checked, setChecked] = useState<readonly string[]>([]);
+  const disabled = !canRespond || sent;
+
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        {options.map((option) => {
+          const isChecked = checked.includes(option.id);
+          return (
+            <label
+              className={cn(
+                "flex w-full cursor-pointer gap-3 rounded-lg border px-3 py-2.5 transition-colors",
+                "hover:border-primary/40 hover:bg-accent has-focus-visible:ring-2 has-focus-visible:ring-ring",
+                isChecked && "border-primary/50 bg-accent",
+                disabled && "pointer-events-none opacity-50",
+              )}
+              key={option.id}
+            >
+              <input
+                checked={isChecked}
+                className="mt-0.5 size-4 shrink-0 accent-primary"
+                disabled={disabled}
+                onChange={(event) => {
+                  setChecked((current) =>
+                    event.target.checked
+                      ? [...current, option.id]
+                      : current.filter((id) => id !== option.id),
+                  );
+                }}
+                type="checkbox"
+              />
+              <span className="min-w-0">
+                <span className="block font-medium text-sm">{option.label}</span>
+                {option.description !== undefined && (
+                  <span className="mt-0.5 block text-muted-foreground text-xs leading-relaxed">
+                    {option.description}
+                  </span>
+                )}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          className={cn(buttonVariants({ size: "sm" }))}
+          disabled={disabled || checked.length === 0}
+          onClick={() => {
+            const labels = options
+              .filter((option) => checked.includes(option.id))
+              .map((option) => option.label);
+            onSubmit(labels);
+          }}
+          type="button"
+        >
+          {checked.length > 1 ? `Apply ${checked.length}` : "Apply"}
+        </button>
+        <span className="text-muted-foreground text-xs">
+          Pick as many as you want, or type your own answer below.
+        </span>
+      </div>
+    </>
+  );
+}
+
 function InputRequestActions({
   answers,
   canRespond,
@@ -710,40 +793,89 @@ function InputRequestActions({
     (option) => option.id === inputResponse?.optionId,
   );
 
+  const options = inputRequest.options ?? [];
+  const multiSelect = isMultiSelect(options);
+
   return (
-    <div className="space-y-3 rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3">
-      <p className="text-muted-foreground text-sm">{inputRequest.prompt}</p>
+    <div className="space-y-3 rounded-xl border bg-card p-4 shadow-xs">
+      <p className="font-medium text-sm leading-relaxed">{inputRequest.prompt}</p>
       {answered ? (
-        <p className="font-medium text-sm">
-          Responded: {selectedOption?.label ?? inputResponse.text ?? inputResponse.optionId}
+        <p className="flex items-center gap-2 text-muted-foreground text-sm">
+          <CheckCircleIcon className="size-4 shrink-0 text-primary" />
+          <span>{selectedOption?.label ?? inputResponse.text ?? inputResponse.optionId}</span>
         </p>
       ) : !isPending ? (
         // Answered on another device, or by freeform text. Either way it is
         // settled: the run went on without needing anything more here.
         <p className="text-muted-foreground text-sm">Answered.</p>
+      ) : multiSelect ? (
+        <MultiSelectOptions
+          canRespond={canRespond}
+          onSubmit={(labels) => {
+            setSent(true);
+            void onInputResponses([
+              { requestId: inputRequest.requestId, text: labels.join(", ") },
+            ]);
+          }}
+          options={options}
+          sent={sent}
+        />
       ) : (
-        <div className="flex flex-wrap gap-2">
-          {inputRequest.options?.map((option) => (
-            <Button
-              disabled={!canRespond || sent}
-              key={option.id}
-              onClick={() => {
-                setSent(true);
-                void onInputResponses([
-                  {
-                    optionId: option.id,
-                    requestId: inputRequest.requestId,
-                  },
-                ]);
-              }}
-              size="sm"
-              type="button"
-              variant={option.style === "danger" ? "destructive" : "default"}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
+        <>
+          {/*
+           * One full-width row per option, label above its description. The
+           * old row of identical solid buttons made a proposal — "rewrite the
+           * bullets", "quantify them", "draft a demo project" — unreadable at
+           * a glance, and threw away the descriptions the agent wrote for each
+           * one.
+           */}
+          <div className="flex flex-col gap-2">
+            {options.map((option) => (
+              <button
+                className={cn(
+                  "group w-full rounded-lg border px-3 py-2.5 text-left transition-colors",
+                  "hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "disabled:pointer-events-none disabled:opacity-50",
+                  option.style === "danger" && "hover:border-destructive/40",
+                )}
+                disabled={!canRespond || sent}
+                key={option.id}
+                onClick={() => {
+                  setSent(true);
+                  void onInputResponses([
+                    {
+                      optionId: option.id,
+                      requestId: inputRequest.requestId,
+                    },
+                  ]);
+                }}
+                type="button"
+              >
+                <span className="flex items-center justify-between gap-3">
+                  <span
+                    className={cn(
+                      "font-medium text-sm",
+                      option.style === "danger" && "text-destructive",
+                    )}
+                  >
+                    {option.label}
+                  </span>
+                  <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </span>
+                {option.description !== undefined && (
+                  <span className="mt-0.5 block text-muted-foreground text-xs leading-relaxed">
+                    {option.description}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          {/* Freeform is always open in this app — the composer is right there
+              — but it is only worth saying when the buttons are the answer. */}
+          {options.length > 0 && (
+            <p className="text-muted-foreground text-xs">Or type your own answer below.</p>
+          )}
+        </>
       )}
     </div>
   );

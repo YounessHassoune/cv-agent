@@ -140,7 +140,12 @@ function DropdownMenuRadioItem({
   );
 }
 
-/** Radix called this `Label`; Base UI calls it `GroupLabel`. */
+/**
+ * Radix called this `Label`; Base UI calls it `GroupLabel` — and throws
+ * "MenuGroupContext is missing" unless one sits inside a `Menu.Group`. Radix's
+ * label was standalone, so every call site here is too: carry the group with
+ * the label rather than making each caller remember it.
+ */
 function DropdownMenuLabel({
   className,
   inset,
@@ -149,12 +154,14 @@ function DropdownMenuLabel({
   inset?: boolean;
 }) {
   return (
-    <DropdownMenuPrimitive.GroupLabel
-      data-slot="dropdown-menu-label"
-      data-inset={inset}
-      className={cn("px-2 py-1.5 text-sm font-medium data-[inset]:pl-8", className)}
-      {...props}
-    />
+    <DropdownMenuPrimitive.Group>
+      <DropdownMenuPrimitive.GroupLabel
+        data-slot="dropdown-menu-label"
+        data-inset={inset}
+        className={cn("px-2 py-1.5 text-sm font-medium data-[inset]:pl-8", className)}
+        {...props}
+      />
+    </DropdownMenuPrimitive.Group>
   );
 }
 

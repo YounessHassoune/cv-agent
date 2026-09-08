@@ -74,3 +74,51 @@ export const CvSchema = z.object({
 });
 
 export type Cv = z.infer<typeof CvSchema>;
+
+/**
+ * The same CV, relaxed for hand editing.
+ *
+ * `CvSchema` is a contract with a model: every field required, every list
+ * non-empty, so a half-built draft can never become a PDF. A person editing
+ * their own document is not that — they delete their last project, clear a
+ * headline they are rewriting, and save mid-thought. The strict minimums would
+ * turn each of those into an error about a CV they can see in front of them.
+ * The fabrication guard is skipped for the same reason: these are the user's
+ * own words about their own work, not a model's claims about someone else's.
+ */
+export const EditedCvSchema = z.object({
+  language: z.string().min(2),
+  header: z.object({
+    fullName: z.string(),
+    headline: z.string(),
+    email: z.string(),
+    phone: z.string(),
+    location: z.string(),
+    links: z.array(z.string()),
+  }),
+  summary: z.string().max(2000),
+  skills: z.array(z.object({ category: z.string(), items: z.array(z.string()) })),
+  experiences: z.array(
+    z.object({
+      company: z.string(),
+      role: z.string(),
+      location: z.string(),
+      start: z.string(),
+      end: z.string(),
+      bullets: z.array(z.string()),
+      stack: z.array(z.string()),
+    }),
+  ),
+  projects: z.array(
+    z.object({
+      title: z.string(),
+      link: z.string(),
+      bullets: z.array(z.string()),
+      stack: z.array(z.string()),
+    }),
+  ),
+  education: z.array(
+    z.object({ institution: z.string(), degree: z.string(), dates: z.string() }),
+  ),
+  languages: z.array(z.object({ name: z.string(), level: z.string() })),
+});

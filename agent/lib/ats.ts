@@ -60,6 +60,15 @@ const SPOKEN_LANGUAGES = new Set(
 const MAX_MUST_HAVES = 5;
 
 /**
+ * Qualification requirements ("Degree in a quantitative field", "Bachelor's in
+ * Computer Science") read like keywords but cannot behave like them: a real CV
+ * names its actual degree, so the phrase never matches and the term only ever
+ * subtracts. The education section states the truth; the keyword list stays
+ * about skills.
+ */
+const QUALIFICATION_PHRASE = /\b(degree|diploma|bachelor|master|msc|bsc|phd|licence|licenciatura)\b/i;
+
+/**
  * What the scorer will actually use, from what the analyst returned.
  *
  * The same job description analysed twice produced 29/100 and 57/100, because
@@ -75,6 +84,7 @@ export function sanitizeKeywords(keywords: readonly JdKeyword[]): JdKeyword[] {
     const term = keyword.term.trim();
     const key = normalize(term);
     if (key.length === 0 || seen.has(key) || SPOKEN_LANGUAGES.has(key)) continue;
+    if (QUALIFICATION_PHRASE.test(key)) continue;
     seen.add(key);
     kept.push({ ...keyword, term });
   }
@@ -573,7 +583,7 @@ export function cosine(a: number[], b: number[]): number {
  * zero point of the semantic scale: whatever number this model hands out for
  * text that has nothing to do with the job is noise, not relevance.
  */
-const SEMANTIC_CONTROL_TEXT =
+export const SEMANTIC_CONTROL_TEXT =
   "Sourdough bread baking notes. Feed the starter twice daily, autolyse the flour and water for an hour, then fold the dough every thirty minutes. Bake covered at 240C for twenty minutes and uncovered for fifteen. Seasonal jam recipes, garden composting tips, and a weekend cycling route through the hills.";
 
 /**
@@ -598,7 +608,7 @@ async function embedControl(abortSignal?: AbortSignal): Promise<number[] | null>
  * scale: no real CV reads more like the job than a plain recitation of the
  * job's own requirements.
  */
-function idealCandidateText(keywords: JdKeyword[], role?: string | null): string {
+export function idealCandidateText(keywords: JdKeyword[], role?: string | null): string {
   return [role ?? "", ...keywords.map((k) => [k.term, ...(k.aliases ?? [])].join(" "))]
     .filter(Boolean)
     .join("\n");

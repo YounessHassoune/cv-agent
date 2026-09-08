@@ -10,6 +10,7 @@ import { readAnswers, type StoredAnswers, writeAnswers } from "../lib/answers";
 import { isBetweenSteps } from "../lib/messages";
 import {
   applicationChatUrl,
+  changesServerState,
   findApplicationId,
   PATIENT_STREAM_RECONNECT,
   persistSnapshot,
@@ -33,6 +34,9 @@ type Options = Pick<
 
 /** Every turn this hook starts rides the patient reconnect policy. */
 const STREAM_OPTIONS = { streamReconnectPolicy: PATIENT_STREAM_RECONNECT } as const;
+
+/** Shortest gap between two server refreshes triggered by tool results. */
+const REFRESH_THROTTLE_MS = 1500;
 
 /**
  * Events that mean the server has handed control back to the user, whatever
@@ -91,6 +95,20 @@ export function useAgentChat({
 
   /** When the stream last produced anything, for the stall watchdog below. */
   const lastEventAtRef = useRef(Date.now());
+  /** Last server refresh, so a compile and its score do not fire two. */
+  const lastRefreshAtRef = useRef(0);
+
+  /*
+   * `router.refresh()` re-runs the server component beside this chat. Tools
+   * land in bursts — compile, then score seconds later — so one refresh covers
+   * the burst rather than one per event.
+   */
+  const refreshPage = useCallback(() => {
+    const now = Date.now();
+    if (now - lastRefreshAtRef.current < REFRESH_THROTTLE_MS) return;
+    lastRefreshAtRef.current = now;
+    router.refresh();
+  }, [router]);
   /** Answers this browser gave, which the server stream does not record. */
   const [answers, setAnswers] = useState<StoredAnswers>({});
 
@@ -114,6 +132,10 @@ export function useAgentChat({
           setApplicationId(found);
         }
       }
+
+      // A finished PDF, score or draft is already in the database; the page
+      // around this chat is server-rendered and does not know yet.
+      if (changesServerState(event)) refreshPage();
 
       if (event.type === "turn.started") {
         setTurnOpen(true);

@@ -6,6 +6,7 @@ import { defaultMessageReducer } from "eve/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  changesServerState,
   isTurnActive,
   isTurnBoundary,
   PATIENT_STREAM_RECONNECT,
@@ -19,6 +20,9 @@ import {
  * forever, so a dead session cannot spin here.
  */
 const MAX_REATTACHES = 20;
+
+/** Shortest gap between two server refreshes triggered by tool results. */
+const REFRESH_THROTTLE_MS = 1500;
 
 type Options = {
   readonly sessionId?: string;
@@ -124,6 +128,7 @@ export function useResumableSession({
        * it arrives; a session sitting idle shows nothing until one starts.
        */
       let active = isTurnActive(collected);
+      let lastRefresh = 0;
       if (active) setFollowing(data.messages);
 
       const handBack = () => {
@@ -166,6 +171,16 @@ export function useResumableSession({
 
             collected.push(event);
             data = reducer.reduce(data, event);
+
+            // Same reason as in `useAgentChat`: the PDF and the score are on
+            // the page around this chat, and that page is server-rendered.
+            if (changesServerState(event)) {
+              const now = Date.now();
+              if (now - lastRefresh >= REFRESH_THROTTLE_MS) {
+                lastRefresh = now;
+                router.refresh();
+              }
+            }
 
             if (event.type === "turn.started") active = true;
             if (!active) continue;

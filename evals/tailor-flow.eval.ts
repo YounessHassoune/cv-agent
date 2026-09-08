@@ -1,5 +1,4 @@
 import { defineEval } from "eve/evals";
-import { includes } from "eve/evals/expect";
 
 const JD = `Senior Full-Stack Engineer
 
@@ -20,7 +19,7 @@ Nice to have: Terraform, Kubernetes, GraphQL.`;
  * Requires a seeded profile (`pnpm db:seed`) and a model provider.
  */
 export default defineEval({
-  description: "The agent walks the full tailoring workflow and stops for approval.",
+  description: "The agent walks the full tailoring workflow and hands the result back.",
   async test(t) {
     await t.send(`Tailor my CV for this job. Write it in English.\n\n${JD}`);
 
@@ -30,8 +29,7 @@ export default defineEval({
     t.calledTool("compile_pdf");
     t.calledTool("score_ats");
 
-    // stage_application is approval-gated, so the run must park for a human
-    // rather than silently finishing.
-    t.calledTool("stage_application");
+    // Nothing is staged or submitted: the CV, the PDF and the score are on
+    // screen, and the run ends by telling the user where it landed.
   },
 });
