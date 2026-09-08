@@ -1,19 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { CheckIcon, ChevronDownIcon, LightbulbIcon } from "lucide-react";
+import { AlertTriangleIcon, CheckIcon, ChevronDownIcon } from "lucide-react";
 
 import { type AtsReport, ATS_WEIGHTS } from "@/agent/lib/ats.ts";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 /**
- * The old panel showed four flat clouds of keyword pills (matched, missing,
- * listed-only, unsupported) at equal weight, which left the reader to work out
- * for themselves which ones actually cost them the job. This one answers that
- * directly: it sorts every term into what it means for the reader and what they
- * can do about it, blocking problems first, and hides the things that need no
- * action behind a count.
+ * The score, and what would move it.
+ *
+ * The previous panel put five term lists, four bars and the engine's raw
+ * suggestion strings on one page at equal weight, and left the reader to work
+ * out which of them mattered. This one is built around the only question the
+ * reader actually has — "what do I fix?" — so each of the four things the
+ * score is made of gets its own line, its own number, and one sentence saying
+ * how to raise it. The terms behind that sentence stay folded away until
+ * asked for.
  */
 
 function scoreTone(score: number): string {
@@ -28,57 +31,116 @@ function scoreBar(score: number): string {
   return "bg-destructive";
 }
 
-/** "Keywords (35%)" - read off the weights so the labels can never drift. */
-function pct(label: string, key: keyof typeof ATS_WEIGHTS): string {
-  return `${label} (${Math.round(ATS_WEIGHTS[key] * 100)}%)`;
+function weightOf(key: keyof typeof ATS_WEIGHTS): string {
+  return `${Math.round(ATS_WEIGHTS[key] * 100)}%`;
 }
 
-type Severity = "blocking" | "weak" | "optional" | "impossible";
-
-const severityStyle: Record<Severity, { dot: string; chip: string }> = {
-  blocking: {
-    dot: "bg-destructive",
-    chip: "border-destructive/25 bg-destructive/8 text-destructive",
-  },
-  weak: { dot: "bg-warning", chip: "border-warning/30 bg-warning/8 text-warning" },
-  optional: { dot: "bg-muted-foreground/40", chip: "border-border bg-field text-muted-foreground" },
-  impossible: { dot: "bg-muted-foreground/40", chip: "border-border bg-field text-muted-foreground" },
-};
-
-function GapGroup({
+/** One labelled group of keyword chips, shown only inside an opened row. */
+function Terms({
   terms,
+  tone,
   title,
-  body,
-  severity,
+  hint,
 }: {
   readonly terms: string[];
+  readonly tone: "bad" | "warn" | "muted";
   readonly title: string;
-  readonly body: string;
-  readonly severity: Severity;
+  readonly hint: string;
 }) {
   if (terms.length === 0) return null;
-  const style = severityStyle[severity];
+
+  const chip = {
+    bad: "border-destructive/25 bg-destructive/8 text-destructive",
+    warn: "border-warning/30 bg-warning/8 text-warning",
+    muted: "border-border bg-field text-muted-foreground",
+  }[tone];
 
   return (
-    <div className="space-y-2.5 px-5 py-4">
-      <div className="flex items-baseline gap-2">
-        <span className={cn("size-1.5 shrink-0 translate-y-[-2px] rounded-full", style.dot)} />
-        <h3 className="font-medium text-sm">{title}</h3>
-        <span className="ml-auto shrink-0 text-muted-foreground text-xs tabular-nums">
-          {terms.length}
-        </span>
-      </div>
-      <p className="pl-3.5 text-muted-foreground text-xs leading-relaxed">{body}</p>
-      <div className="flex flex-wrap gap-1.5 pl-3.5">
+    <div className="space-y-1.5">
+      <p className="font-medium text-xs">
+        {title} <span className="text-muted-foreground">— {hint}</span>
+      </p>
+      <div className="flex flex-wrap gap-1.5">
         {terms.map((term) => (
           <span
-            className={cn("rounded-full border px-2.5 py-1 font-medium text-xs", style.chip)}
+            className={cn("rounded-full border px-2 py-0.5 font-medium text-xs", chip)}
             key={term}
           >
             {term}
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * One component of the score: its number, and the single sentence that says
+ * how to raise it. Detail is behind the row, not in front of it.
+ */
+function ScoreRow({
+  action,
+  children,
+  label,
+  value,
+  weight,
+}: {
+  /** The one thing that would raise this number. */
+  readonly action: string;
+  readonly children?: React.ReactNode;
+  readonly label: string;
+  readonly value: number | null;
+  readonly weight: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasDetail = children !== undefined && children !== null && children !== false;
+
+  const head = (
+    <>
+      <div className="flex items-baseline gap-2">
+        <span className="font-medium text-sm">{label}</span>
+        <span className="text-muted-foreground text-xs">{weight}</span>
+        <span
+          className={cn(
+            "ml-auto font-semibold text-sm tabular-nums",
+            value === null ? "text-muted-foreground" : scoreTone(value),
+          )}
+        >
+          {value === null ? "n/a" : value}
+        </span>
+        {hasDetail ? (
+          <ChevronDownIcon
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-180",
+            )}
+          />
+        ) : null}
+      </div>
+      <Progress
+        className="mt-2 h-1"
+        indicatorClassName={value === null ? undefined : scoreBar(value)}
+        value={value ?? 0}
+      />
+      <p className="mt-2 text-left text-muted-foreground text-xs leading-relaxed">{action}</p>
+    </>
+  );
+
+  return (
+    <div className="px-5 py-4">
+      {hasDetail ? (
+        <button
+          aria-expanded={open}
+          className="w-full cursor-pointer"
+          onClick={() => setOpen((value) => !value)}
+          type="button"
+        >
+          {head}
+        </button>
+      ) : (
+        head
+      )}
+      {open && hasDetail ? <div className="mt-3 space-y-3">{children}</div> : null}
     </div>
   );
 }
@@ -106,22 +168,19 @@ export function InsightsPanel({
     );
   }
 
-  // A must-have the profile cannot support is a different problem from one it
-  // can: the first needs the experience, the second only needs rewriting. They
-  // were previously shown as one undifferentiated list.
+  /*
+   * A must-have the profile can support is a rewrite; one it cannot is a gap
+   * in the candidate's experience. Same list in the report, opposite advice.
+   */
   const unclaimable = new Set(report.unclaimable);
-  const blockingGaps = report.missingMustHaves.filter((term) => !unclaimable.has(term));
+  const blocking = report.missingMustHaves.filter((term) => !unclaimable.has(term));
   const mustHaves = new Set(report.missingMustHaves);
-  const optionalGaps = report.missing.filter(
+  const optional = report.missing.filter(
     (term) => !mustHaves.has(term) && !unclaimable.has(term),
   );
 
-  const actionable =
-    blockingGaps.length + unsupported.length + report.listedOnly.length + optionalGaps.length;
-
   return (
     <div className="scrollbar-slim h-full overflow-y-auto">
-      {/* Headline number, with the honest ceiling beside it rather than buried. */}
       <div className="space-y-3 border-b px-5 py-5">
         <div className="flex items-end justify-between gap-3">
           <div className="flex items-baseline gap-1.5">
@@ -135,97 +194,121 @@ export function InsightsPanel({
             </span>
             <span className="text-muted-foreground text-sm">/ 100</span>
           </div>
-          {report.ceiling !== null && report.ceiling < 100 ? (
-            <p className="text-right text-muted-foreground text-xs leading-relaxed">
-              Best this profile
-              <br />
-              can truthfully reach: <span className="tabular-nums">{report.ceiling}</span>
+          {report.ceiling !== null && report.ceiling > report.total ? (
+            <p className="text-right text-muted-foreground text-xs">
+              Reachable with this profile:{" "}
+              <span className="tabular-nums text-foreground">{report.ceiling}</span>
             </p>
           ) : null}
         </div>
         <Progress indicatorClassName={scoreBar(report.total)} value={report.total} />
 
         {report.gate < 1 ? (
-          <p className="rounded-lg border border-destructive/25 bg-destructive/8 px-3 py-2 text-destructive text-xs leading-relaxed">
-            <span className="font-medium">
-              {report.missingMustHaves.length} must-have{" "}
-              {report.missingMustHaves.length === 1 ? "keyword is" : "keywords are"} missing.
-            </span>{" "}
-            A real screen filters on these, so the score is capped at{" "}
-            {Math.round(report.gate * 100)}% of what the rest of the CV earned.
+          <p className="text-destructive text-xs leading-relaxed">
+            {report.missingMustHaves.length} must-have{" "}
+            {report.missingMustHaves.length === 1 ? "keyword is" : "keywords are"} missing, so the
+            score is held at {Math.round(report.gate * 100)}% of what the rest of the CV earned.
           </p>
         ) : null}
       </div>
 
-      {/* What to do, in the order it matters. */}
-      <div className="divide-y border-b">
-        {actionable === 0 && report.unclaimable.length === 0 ? (
-          <div className="flex items-center gap-2.5 px-5 py-4 text-sm">
-            <CheckIcon className="size-4 shrink-0 text-success" />
-            Nothing left to close. Every keyword this profile can support is covered.
-          </div>
-        ) : null}
-
-        <GapGroup
-          body="These are the terms a screen filters on. The profile can support them, so this is a rewrite job."
-          severity="blocking"
-          terms={blockingGaps}
-          title="Fix first"
-        />
-        <GapGroup
-          body="Your CV claims these but your master profile does not list them. Keep only the ones that are true: an interviewer will assume every word here is yours."
-          severity="weak"
-          terms={unsupported}
-          title="Confirm before you apply"
-        />
-        <GapGroup
-          body="These appear only in the skills list. A term backed by a bullet scores higher with both a recruiter and a match model."
-          severity="weak"
-          terms={report.listedOnly}
-          title="Back these with a bullet"
-        />
-        <GapGroup
-          body="Worth covering if they are genuinely true of your experience, but they will not get the CV rejected on their own."
-          severity="optional"
-          terms={optionalGaps}
-          title="Optional gains"
-        />
-        <GapGroup
-          body="Nothing in your profile supports these, so no rewrite can honestly add them. They are the gap between your score and its ceiling."
-          severity="impossible"
-          terms={report.unclaimable}
-          title="Out of reach for this profile"
-        />
-      </div>
-
-      {/* Score composition, kept below the actions because it explains rather
-          than instructs. */}
-      <div className="space-y-4 border-b px-5 py-5">
-        <h3 className="font-medium text-sm">How the score is made up</h3>
-        <ScoreRow label={pct("Keywords", "keyword")} value={report.breakdown.keyword} />
-        <ScoreRow label={pct("Semantic relevance", "semantic")} value={report.breakdown.semantic} />
-        <ScoreRow label={pct("Title and years fit", "fit")} value={report.breakdown.fit} />
-        <ScoreRow label={pct("Structure and metrics", "structure")} value={report.breakdown.structure} />
-      </div>
-
-      {report.suggestions.length > 0 ? (
-        <div className="space-y-2.5 border-b px-5 py-5">
-          <h3 className="flex items-center gap-2 font-medium text-sm">
-            <LightbulbIcon className="size-4 text-warning" />
-            Suggestions
-          </h3>
-          <ul className="space-y-2 text-muted-foreground text-xs leading-relaxed">
-            {report.suggestions.map((suggestion) => (
-              <li className="flex gap-2" key={suggestion}>
-                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground/50" />
-                {suggestion}
-              </li>
+      {/* The one thing that is about the user rather than the score. */}
+      {unsupported.length > 0 ? (
+        <div className="space-y-2 border-b bg-warning/5 px-5 py-4">
+          <p className="flex items-center gap-2 font-medium text-sm">
+            <AlertTriangleIcon className="size-4 shrink-0 text-warning" />
+            Check {unsupported.length} claim{unsupported.length === 1 ? "" : "s"} before applying
+          </p>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            The CV says these; your profile does not. Keep only what is true — an interviewer will
+            assume every word is yours.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {unsupported.map((term) => (
+              <span
+                className="rounded-full border border-warning/30 bg-warning/8 px-2 py-0.5 font-medium text-warning text-xs"
+                key={term}
+              >
+                {term}
+              </span>
             ))}
-          </ul>
+          </div>
         </div>
       ) : null}
 
-      {/* Matched terms need no action, so they are a count until asked for. */}
+      <div className="divide-y border-b">
+        <p className="px-5 pt-4 pb-1 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+          What the score is made of
+        </p>
+
+        <ScoreRow
+          action={keywordAction(blocking, report.listedOnly, optional, report.unclaimable)}
+          label="Keywords"
+          value={report.breakdown.keyword}
+          weight={weightOf("keyword")}
+        >
+          <Terms
+            hint="the profile supports these, so it is a rewrite"
+            terms={blocking}
+            title="Fix first"
+            tone="bad"
+          />
+          <Terms
+            hint="listed but never evidenced, so they count 60%"
+            terms={report.listedOnly}
+            title="Back with a bullet"
+            tone="warn"
+          />
+          <Terms
+            hint="worth adding where genuinely true"
+            terms={optional}
+            title="Nice to have"
+            tone="muted"
+          />
+          <Terms
+            hint="nothing in the profile supports them"
+            terms={report.unclaimable}
+            title="Out of reach"
+            tone="muted"
+          />
+        </ScoreRow>
+
+        <ScoreRow
+          action={
+            report.breakdown.semantic === null
+              ? "Not measured — no embedding provider is configured."
+              : "Measures how closely the whole CV reads like this job ad. Ask the agent to rewrite your summary and bullets in the job's own words, leading with the work closest to the role."
+          }
+          label="Reads like the job"
+          value={report.breakdown.semantic}
+          weight={weightOf("semantic")}
+        />
+
+        <ScoreRow
+          action={
+            report.breakdown.fit === null
+              ? "The ad gave no job title or years requirement, so this is not scored."
+              : report.breakdown.fit >= 85
+                ? "Your headline and job titles line up with the role."
+                : "Your headline and past titles barely overlap the advertised one. Ask the agent to align the headline with the job title where that is truthful."
+          }
+          label="Title and experience"
+          value={report.breakdown.fit}
+          weight={weightOf("fit")}
+        />
+
+        <ScoreRow
+          action={
+            report.breakdown.structure >= 85
+              ? "Sections and formatting parse cleanly."
+              : "Mostly about numbers: bullets with a figure in them score higher. Ask the agent to quantify more bullets — only where you have a real number."
+          }
+          label="Layout and numbers"
+          value={report.breakdown.structure}
+          weight={weightOf("structure")}
+        />
+      </div>
+
       {report.matched.length > 0 ? (
         <div className="px-5 py-4">
           <button
@@ -235,7 +318,7 @@ export function InsightsPanel({
             type="button"
           >
             <CheckIcon className="size-4 shrink-0 text-success" />
-            <span className="font-medium">{report.matched.length} keywords matched</span>
+            <span className="font-medium">{report.matched.length} keywords already matched</span>
             <ChevronDownIcon
               className={cn("ml-auto size-4 transition-transform", showMatched && "rotate-180")}
             />
@@ -244,7 +327,7 @@ export function InsightsPanel({
             <div className="mt-3 flex flex-wrap gap-1.5">
               {report.matched.map((term) => (
                 <span
-                  className="rounded-full border border-success/25 bg-success/8 px-2.5 py-1 font-medium text-success text-xs"
+                  className="rounded-full border border-success/25 bg-success/8 px-2 py-0.5 font-medium text-success text-xs"
                   key={term}
                 >
                   {term}
@@ -258,20 +341,26 @@ export function InsightsPanel({
   );
 }
 
-function ScoreRow({ label, value }: { readonly label: string; readonly value: number | null }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-xs">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium tabular-nums">{value === null ? "n/a" : value}</span>
-      </div>
-      <Progress
-        className="h-1"
-        indicatorClassName={value === null ? undefined : scoreBar(value)}
-        value={value ?? 0}
-      />
-    </div>
-  );
+/** The one sentence under the keyword bar: the biggest lever, named. */
+function keywordAction(
+  blocking: string[],
+  listedOnly: string[],
+  optional: string[],
+  unclaimable: string[],
+): string {
+  if (blocking.length > 0) {
+    return `${blocking.length} required term${blocking.length === 1 ? "" : "s"} the profile can support ${blocking.length === 1 ? "is" : "are"} missing — ask the agent to work ${blocking.slice(0, 2).join(" and ")} into a bullet.`;
+  }
+  if (listedOnly.length > 0) {
+    return `${listedOnly.join(", ")} appear only in the skills list. A term evidenced in a bullet counts for more.`;
+  }
+  if (optional.length > 0) {
+    return `Optional gains left: ${optional.slice(0, 3).join(", ")}. Add them only where they are genuinely true.`;
+  }
+  if (unclaimable.length > 0) {
+    return `Everything the profile supports is already in. The rest (${unclaimable.length} term${unclaimable.length === 1 ? "" : "s"}) needs experience you do not have yet.`;
+  }
+  return "Every keyword this job asked for is covered.";
 }
 
 /** Derives one-tap chat prompts from what the report actually says is wrong. */

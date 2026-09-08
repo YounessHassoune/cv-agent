@@ -26,6 +26,23 @@ export type AgentChatProps = {
   /** Called to abandon a broken thread and begin a fresh session. */
   readonly onResetThread?: () => void | Promise<void>;
   /**
+   * Called with the eve session id as soon as one exists. Pages that own no
+   * database row for the thread (the landing page) store it themselves, so a
+   * reload rejoins the live session rather than starting a blank one.
+   */
+  readonly onSessionId?: (sessionId: string) => void;
+  /**
+   * Called when the event stream ends while a turn of ours is still running —
+   * the connection died, not the work. The run carries on server-side, so the
+   * owner re-attaches to it rather than leaving a spinner on screen forever.
+   */
+  readonly onStreamDropped?: (sessionId: string) => void;
+  /**
+   * Reports whether this chat is currently streaming a turn it started. The
+   * owner uses it to stand down its own view of the same session.
+   */
+  readonly onBusyChange?: (isBusy: boolean) => void;
+  /**
    * Transcript of a turn this component does not own — one started on another
    * page and still running. While set, the chat renders these instead of its
    * own store and refuses to send, because a second turn on a busy session is

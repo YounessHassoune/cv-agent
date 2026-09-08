@@ -1,4 +1,5 @@
-import { AgentChat } from "@/features/chat";
+import { requireUser } from "@/app/lib/current-user";
+import { HomeChat } from "./home-chat";
 import { RecentWork } from "./recent-work";
 
 const HEADING = "Tailor a CV";
@@ -14,11 +15,15 @@ const SUGGESTIONS = [
   "Score my last draft against the JD",
 ];
 
-export function HomeView() {
+export async function HomeView() {
+  const user = await requireUser();
+
   return (
-    <AgentChat
+    <HomeChat
       footer={<RecentWork />}
       heading={HEADING}
+      // Per user: a shared browser must not reopen someone else's thread.
+      storageKey={`applyflow.chat.session.${user.userId}`}
       subheading={SUBHEADING}
       suggestions={SUGGESTIONS}
     />

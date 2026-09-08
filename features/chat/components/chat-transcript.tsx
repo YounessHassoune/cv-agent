@@ -10,10 +10,15 @@ import {
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { cn } from "@/lib/utils";
+import type { StoredAnswers } from "../lib/answers";
 import { AgentMessage } from "./agent-message";
 
 type Props = {
   readonly messages: readonly EveMessage[];
+  /** Answers this browser gave, which the server stream does not record. */
+  readonly answers: StoredAnswers;
+  /** Whether the agent's own questions accept an answer right now. */
+  readonly canRespond: boolean;
   readonly isBusy: boolean;
   readonly isPanel: boolean;
   /** Index of the message being streamed into, or null when nothing is. */
@@ -24,7 +29,9 @@ type Props = {
 };
 
 export function ChatTranscript({
+  answers,
   awaitingFirstToken,
+  canRespond,
   isBusy,
   isPanel,
   messages,
@@ -38,7 +45,9 @@ export function ChatTranscript({
       >
         {messages.map((message, index) => (
           <AgentMessage
-            canRespond={!isBusy}
+            answers={answers}
+            canRespond={canRespond}
+            isLastMessage={index === messages.length - 1}
             isStreaming={index === streamingIndex}
             key={message.id}
             message={message}

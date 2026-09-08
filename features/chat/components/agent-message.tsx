@@ -30,6 +30,7 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { StoredAnswers } from "../lib/answers";
 
 export type AgentInputResponse = {
   readonly optionId?: string;
@@ -40,13 +41,18 @@ export type AgentInputResponse = {
 type EveFilePart = Extract<EveMessagePart, { type: "file" }>;
 
 export function AgentMessage({
+  answers,
   canRespond,
+  isLastMessage,
   isStreaming,
   message,
   onInputResponses,
   turnActive,
 }: {
+  readonly answers: StoredAnswers;
   readonly canRespond: boolean;
+  /** Only the tail of the last message can still be waiting on the user. */
+  readonly isLastMessage: boolean;
   readonly isStreaming: boolean;
   readonly message: EveMessage;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
@@ -88,13 +94,24 @@ export function AgentMessage({
    */
   const running = new Set<string>();
   const phantoms = new Set<string>();
+  /*
+   * Which round a step belongs to. The pipeline writes, compiles and scores
+   * once per pass, and the self-healing loop runs it again — so the same three
+   * lines appeared three times in a row with nothing to say which was which.
+   */
+  const rounds = new Map<string, number>();
+  const roundByCallId = new Map<string, number>();
   for (const part of message.parts) {
     if (part.type !== "dynamic-tool") continue;
     if (part.state === "output-error") {
       const key = toolKey(part);
       failuresByTool.set(key, (failuresByTool.get(key) ?? 0) + 1);
     } else if (part.state === "output-available") {
-      succeeded.add(toolKey(part));
+      const key = toolKey(part);
+      succeeded.add(key);
+      const round = rounds.get(key) ?? 0;
+      roundByCallId.set(part.toolCallId, round);
+      rounds.set(key, round + 1);
     }
     if (isToolRunning(part) && part.toolMetadata?.eve?.inputRequest === undefined) {
       const key = toolKey(part);
@@ -117,10 +134,16 @@ export function AgentMessage({
       <MessageContent>
         {message.parts.map((part, index) => part.type === "dynamic-tool" && phantoms.has(part.toolCallId) ? null : (
           <AgentMessagePart
+            answers={answers}
             canRespond={canRespond}
             failureCount={failuresByTool.get(toolKey(part)) ?? 0}
             hadSiblingSuccess={succeeded.has(toolKey(part))}
+            // A question the run has already moved past is history, not a
+            // prompt — even though eve replays it looking brand new.
+            isPending={isLastMessage && index === message.parts.length - 1}
+            isUser={message.role === "user"}
             key={partKey(part, index)}
+            round={part.type === "dynamic-tool" ? (roundByCallId.get(part.toolCallId) ?? 0) : 0}
             onInputResponses={onInputResponses}
             part={part}
             showCaret={isStreaming && message.role === "assistant" && index === lastTextIndex}
@@ -129,10 +152,16 @@ export function AgentMessage({
         ))}
       </MessageContent>
 
-      {/* Revealed on hover, the way every chat app does it — present when
-          wanted, invisible while reading. */}
+      {/* The answer's copy button stays put; the one on your own message is
+          revealed on hover, the way every chat app does it. */}
       {message.role === "assistant" && !isStreaming && answer.length > 0 ? (
-        <MessageActions className="opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+        <MessageActions>
+          <CopyAction text={answer} />
+        </MessageActions>
+      ) : null}
+
+      {message.role === "user" && answer.length > 0 ? (
+        <MessageActions className="justify-end opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
           <CopyAction text={answer} />
         </MessageActions>
       ) : null}
@@ -158,20 +187,73 @@ function CopyAction({ text }: { readonly text: string }) {
   );
 }
 
+/**
+ * A pasted job description is the normal first message here, and it is
+ * hundreds of lines long. Left whole it buried the conversation: the agent's
+ * reply started a screen and a half below its own question. Clamp it, and let
+ * the user open it back up.
+ *
+ * Rendered as plain text rather than markdown — a JD full of `*` bullets and
+ * `#` headings is not a document the user asked us to format.
+ */
+const COLLAPSE_CHARS = 600;
+const COLLAPSE_LINES = 8;
+
+function UserText({ text }: { readonly text: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const lineCount = text.split("\n").length;
+  const isLong = text.length > COLLAPSE_CHARS || lineCount > COLLAPSE_LINES;
+
+  const body = <p className="whitespace-pre-wrap wrap-break-word">{text}</p>;
+  if (!isLong) return body;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        className={cn(
+          !expanded &&
+            "max-h-40 overflow-hidden mask-[linear-gradient(to_bottom,black_60%,transparent)]",
+        )}
+      >
+        {body}
+      </div>
+      <button
+        className="self-start text-xs underline underline-offset-2 opacity-80 transition-opacity hover:opacity-100"
+        onClick={() => setExpanded((value) => !value)}
+        type="button"
+      >
+        {expanded ? "Show less" : lineCount > 1 ? `Show more (${lineCount} lines)` : "Show more"}
+      </button>
+    </div>
+  );
+}
+
 function AgentMessagePart({
+  answers,
   canRespond,
   failureCount,
   hadSiblingSuccess,
+  isPending,
+  isUser,
   onInputResponses,
   part,
+  round,
   showCaret,
   turnActive,
 }: {
+  readonly answers: StoredAnswers;
   readonly canRespond: boolean;
+  /** Whether this part sits at the very end of the conversation. */
+  readonly isPending: boolean;
+  /** 0 for a step's first pass, 1+ for each revision of the same step. */
+  readonly round: number;
   /** How many times this same step has failed in this message. */
   readonly failureCount: number;
   /** Whether another call to this same tool already succeeded here. */
   readonly hadSiblingSuccess: boolean;
+  /** Your own message: plain text, and collapsed when it is a pasted wall. */
+  readonly isUser: boolean;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
   readonly part: EveMessagePart;
   readonly showCaret: boolean;
@@ -181,6 +263,7 @@ function AgentMessagePart({
     case "step-start":
       return null;
     case "text":
+      if (isUser) return <UserText text={part.text} />;
       return (
         <MessageResponse caret="block" isAnimating={showCaret}>
           {part.text}
@@ -200,11 +283,14 @@ function AgentMessagePart({
     case "dynamic-tool":
       return (
         <ToolActivity
+          answers={answers}
           canRespond={canRespond}
           failureCount={failureCount}
           hadSiblingSuccess={hadSiblingSuccess}
+          isPending={isPending}
           onInputResponses={onInputResponses}
           part={part}
+          round={round}
           turnActive={turnActive}
         />
       );
@@ -231,20 +317,31 @@ export function isToolRunning(part: EveMessagePart): boolean {
 
 const TOOL_ACTIVITY: Record<
   string,
-  { running: string; done: string; failed?: string; retry?: string }
+  { running: string; done: string; failed?: string; repeat?: string; retry?: string }
 > = {
   getprofile: { running: "Reading your profile…", done: "Profile loaded" },
   jdanalyst: { running: "Analyzing the job offer…", done: "Job offer analyzed", failed: "Analyzing the job offer" },
   analyzejd: { running: "Setting up your application…", done: "Application created" },
-  cvwriter: { running: "Tailoring your CV…", done: "CV draft ready", failed: "Writing your CV" },
+  cvwriter: {
+    running: "Tailoring your CV…",
+    done: "CV draft ready",
+    failed: "Writing your CV",
+    repeat: "Improved draft ready",
+  },
   compilepdf: {
     running: "Building the PDF…",
     done: "PDF ready",
     failed: "Building the PDF",
+    repeat: "PDF rebuilt",
     // A rejected draft is the fact check doing its job, not something going wrong.
     retry: "Draft claimed something your profile doesn't back, so it is asking for a corrected draft.",
   },
-  scoreats: { running: "Checking the match with the job…", done: "Match check done", failed: "Checking the match" },
+  scoreats: {
+    running: "Checking the match with the job…",
+    done: "Match check",
+    failed: "Checking the match",
+    repeat: "Match re-checked",
+  },
   stageapplication: {
     running: "Preparing your application for review…",
     done: "Ready for your review",
@@ -254,6 +351,29 @@ const TOOL_ACTIVITY: Record<
 
 function activityFor(toolName: string) {
   return TOOL_ACTIVITY[toolName.toLowerCase().replace(/[^a-z0-9]/g, "")];
+}
+
+/** The ATS score, when the step that just finished is the one that computes it. */
+function readScore(part: EveDynamicToolPart): string | undefined {
+  const output = part.output as { total?: unknown } | null | undefined;
+  return typeof output?.total === "number" ? `${output.total}/100` : undefined;
+}
+
+/**
+ * What a finished step says. The pipeline runs write → compile → score, then
+ * runs it again to improve the score, so the plain labels repeated verbatim
+ * and read like the feed was stuck. Later rounds say they are revisions, and
+ * the score line carries the number it just produced — the one thing the user
+ * is waiting to hear.
+ */
+function describeResult(
+  activity: { done: string; repeat?: string },
+  round: number,
+  part: EveDynamicToolPart,
+): string {
+  const label = round > 0 ? (activity.repeat ?? activity.done) : activity.done;
+  const score = readScore(part);
+  return score === undefined ? label : `${label} — ${score}`;
 }
 
 /** Groups a tool's parts so repeated failures of the *same* step are counted. */
@@ -268,14 +388,22 @@ function toolKey(part: EveMessagePart): string {
  * still surface their interactive prompt.
  */
 function ToolActivity({
+  answers,
   canRespond,
   failureCount,
   hadSiblingSuccess,
+  isPending,
   onInputResponses,
   part,
+  round,
   turnActive,
 }: {
+  readonly answers: StoredAnswers;
   readonly canRespond: boolean;
+  /** Whether this call sits at the very end of the conversation. */
+  readonly isPending: boolean;
+  /** 0 for this step's first pass, 1+ for each revision of the same step. */
+  readonly round: number;
   readonly failureCount: number;
   readonly hadSiblingSuccess: boolean;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
@@ -323,16 +451,25 @@ function ToolActivity({
       break;
     case "output-available":
       statusLine = activity ? (
-        <ActivityLine icon={<CheckIcon className="size-3.5" />} label={activity.done} />
+        <ActivityLine
+          icon={<CheckIcon className="size-3.5" />}
+          label={describeResult(activity, round, part)}
+        />
       ) : null;
       break;
     case "output-error":
-      statusLine = (
+      /*
+       * A step that failed and then succeeded is not news — the agent routed
+       * around it, which is its job. Announcing it in red on every single run
+       * made a working pipeline look broken. Only an unrecovered failure is
+       * worth the user's attention.
+       */
+      statusLine = hadSiblingSuccess ? null : (
         <ActivityLine
           className="text-destructive/80"
           icon={<AlertCircleIcon className="size-3.5" />}
           label={
-            failureCount >= REPEATED_FAILURE && !hadSiblingSuccess
+            failureCount >= REPEATED_FAILURE
               ? `${activity?.failed ?? "That step"} keeps failing. This run can't finish. Try again, and if it repeats the step is broken rather than unlucky.`
               : (activity?.retry ?? "That step hit a snag, trying another way.")
           }
@@ -364,7 +501,9 @@ function ToolActivity({
     <div className="space-y-2">
       {statusLine}
       <InputRequestActions
+        answers={answers}
         canRespond={canRespond}
+        isPending={isPending}
         onInputResponses={onInputResponses}
         part={part}
       />
@@ -533,20 +672,40 @@ function formatBytes(size: number | undefined): string | undefined {
 }
 
 function InputRequestActions({
+  answers,
   canRespond,
+  isPending,
   onInputResponses,
   part,
 }: {
+  readonly answers: StoredAnswers;
   readonly canRespond: boolean;
+  readonly isPending: boolean;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
   readonly part: EveDynamicToolPart;
 }) {
+  /*
+   * The answer only comes back as `inputResponse` once the server echoes it,
+   * which is a round trip away. Remember the click locally so a second one
+   * cannot start a second turn in the gap.
+   */
+  const [sent, setSent] = useState(false);
+
   const inputRequest = part.toolMetadata?.eve?.inputRequest;
   if (!inputRequest) {
     return null;
   }
 
-  const inputResponse = part.toolMetadata?.eve?.inputResponse;
+  /*
+   * eve records the question in its durable stream but not the answer, so a
+   * replayed transcript shows every question as if it were still open — live
+   * buttons under a run that answered them minutes ago. Two things close one:
+   * the answer this browser remembers giving, and the plain fact that the
+   * conversation moved on past it.
+   */
+  const remembered = answers[inputRequest.requestId];
+  const inputResponse = part.toolMetadata?.eve?.inputResponse ?? remembered;
+  const answered = inputResponse !== undefined;
   const selectedOption = inputRequest.options?.find(
     (option) => option.id === inputResponse?.optionId,
   );
@@ -554,17 +713,22 @@ function InputRequestActions({
   return (
     <div className="space-y-3 rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3">
       <p className="text-muted-foreground text-sm">{inputRequest.prompt}</p>
-      {inputResponse ? (
+      {answered ? (
         <p className="font-medium text-sm">
           Responded: {selectedOption?.label ?? inputResponse.text ?? inputResponse.optionId}
         </p>
+      ) : !isPending ? (
+        // Answered on another device, or by freeform text. Either way it is
+        // settled: the run went on without needing anything more here.
+        <p className="text-muted-foreground text-sm">Answered.</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {inputRequest.options?.map((option) => (
             <Button
-              disabled={!canRespond}
+              disabled={!canRespond || sent}
               key={option.id}
               onClick={() => {
+                setSent(true);
                 void onInputResponses([
                   {
                     optionId: option.id,

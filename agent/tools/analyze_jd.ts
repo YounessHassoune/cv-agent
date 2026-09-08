@@ -1,5 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
+import { sanitizeKeywords } from "../lib/ats";
 import { resolveUserId } from "../lib/auth";
 import { db } from "../lib/db";
 import { ExtractionSchema } from "../lib/extraction-schema";
@@ -21,6 +22,14 @@ export default defineTool({
   }),
   async execute({ jdText, targetLanguages, extraction }, ctx) {
     const userId = resolveUserId(ctx);
+
+    /*
+     * The analyst is a language model, so its keyword list is a suggestion.
+     * The scorer gates on must-haves, which makes one over-eager weight-3 the
+     * difference between 29/100 and 57/100 on the same job — settle the list
+     * here, once, before anything is stored or scored against it.
+     */
+    const keywords = sanitizeKeywords(extraction.keywords);
 
     const languages = [...new Set(targetLanguages.map((lang) => lang.toLowerCase()))];
 
@@ -45,7 +54,7 @@ export default defineTool({
           targetProfile: extraction.targetProfile,
           responsibilities: extraction.responsibilities,
           targetLanguages: open.languages,
-          keywords: extraction.keywords,
+          keywords,
           unchanged: true,
           note: "This job already has an application — reusing it. Do not create another.",
         };
@@ -57,7 +66,7 @@ export default defineTool({
         userId,
         jdText,
         languages,
-        jdKeywords: extraction.keywords,
+        jdKeywords: keywords,
         jdRole: extraction.role,
         jdSeniority: extraction.seniority,
         status: "DRAFT",
@@ -84,7 +93,7 @@ export default defineTool({
       targetProfile: extraction.targetProfile,
       responsibilities: extraction.responsibilities,
       targetLanguages: languages,
-      keywords: extraction.keywords,
+      keywords,
     };
   },
 });

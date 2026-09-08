@@ -8,6 +8,8 @@ import {
   type JdKeyword,
   keywordScore,
   requiredYearsFromJd,
+  sanitizeKeywords,
+  semanticToScore,
   scoreAts,
   structureScore,
   totalYears,
@@ -163,5 +165,61 @@ const spelled = await scoreAts({
   fit: { role: "Fullstack Engineer - IAM Team", cvTitles: ["Full Stack Developer"] },
 });
 assert.ok(spelled.report.breakdown.fit !== null && spelled.report.breakdown.fit >= 60, `fit ${spelled.report.breakdown.fit}`);
+
+// --- one requirement, three spellings: the biggest source of lost points ---
+assert.equal(keywordScore("Data analysis for retail clients", [kw("Data Analytics")]).score, 100);
+assert.equal(keywordScore("Owned the data analytics roadmap", [kw("data analysis")]).score, 100);
+assert.equal(keywordScore("Data visualisation in Power BI", [kw("Data Visualization")]).score, 100);
+assert.equal(keywordScore("Data modelling in SQL", [kw("data modeling")]).score, 100);
+assert.equal(keywordScore("Statistical modelling of demand", [kw("statistics")]).score, 100);
+// ...without merging things that are genuinely different
+assert.equal(keywordScore("Data analysis for retail", [kw("Databricks")]).score, 0);
+
+// --- a term the CV carries is claimable, whatever language the profile is in ---
+const french = await scoreAts({
+  ...base,
+  cvText: "Skills\nGo, Data Visualization\nExperience\nBuilt dashboards\nEducation\nBSc",
+  keywords: [kw("Data Visualization", 3)],
+  claimableText: "Visualisation de données et tableaux de bord",
+});
+assert.deepEqual(french.report.unclaimable, []);
+assert.ok(
+  french.report.ceiling !== null && french.report.ceiling >= french.report.total,
+  `ceiling ${french.report.ceiling}`,
+);
+
+/*
+ * --- the semantic scale is anchored to what this JD can actually produce ---
+ *
+ * Measured with text-embedding-3-small on a real ad: unrelated prose 0.09, an
+ * ad from another field 0.19, a strong real CV 0.38, a recitation of the ad's
+ * own requirements 0.46. A CV never approaches 1 — half a job ad is company
+ * boilerplate — so a fixed 0.2–0.75 window scored a perfect CV at 35/100.
+ */
+const anchors = { floor: 0.17, top: 0.46 };
+assert.equal(semanticToScore(0.09, anchors), 0); // unrelated prose
+assert.equal(semanticToScore(0.19, anchors), 7); // another field's job ad
+assert.ok(semanticToScore(0.38, anchors) > 65, "a strong on-topic CV must not read as a poor match");
+assert.equal(semanticToScore(0.46, anchors), 100); // the job's own requirements
+assert.equal(semanticToScore(0.9, anchors), 100); // clamped, never above 100
+// anchors too close to divide by → the measured fallback window, not a blow-up
+assert.equal(semanticToScore(0.38, { floor: 0.4, top: 0.41 }), semanticToScore(0.38, { floor: 0.15, top: 0.45 }));
+
+// --- the keyword list the scorer sees is settled, not whatever came back ---
+const raw: JdKeyword[] = [
+  { term: "Power BI", weight: 3, category: "tool" },
+  { term: "SQL", weight: 3, category: "hard" },
+  { term: "Python", weight: 3, category: "hard" },
+  { term: "ETL", weight: 3, category: "hard" },
+  { term: "Airflow", weight: 3, category: "tool" },
+  { term: "dbt", weight: 3, category: "tool" },
+  { term: "German", weight: 3, category: "soft" },
+  { term: "power bi", weight: 1, category: "tool" },
+];
+const settled = sanitizeKeywords(raw);
+assert.deepEqual(settled.map((k) => k.term), ["Power BI", "SQL", "Python", "ETL", "Airflow", "dbt"]);
+assert.equal(settled.filter((k) => k.weight === 3).length, 5);
+assert.equal(settled.at(-1)?.weight, 2);
+
 console.log("ats: all checks passed");
 

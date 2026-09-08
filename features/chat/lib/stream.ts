@@ -1,6 +1,30 @@
 import type { MessageStreamEvent } from "eve/client";
 
 /**
+ * A turn spends minutes inside subagents, and every one of those gaps is
+ * silence on the wire. eve's default gives up after five idle reconnects —
+ * roughly seven seconds — which is shorter than a single `cv-writer` call, so
+ * a stream that went quiet at the wrong moment never came back and the run
+ * finished with nothing on screen. Wait as long as the work plausibly takes:
+ * reconnects carry a cursor, so nothing is replayed and nothing is missed.
+ */
+export const PATIENT_STREAM_RECONNECT = {
+  streamIdleReconnectPolicy: { baseDelayMs: 500, maxAttempts: 60, maxDelayMs: 5000 },
+  streamOpenReconnectPolicy: { baseDelayMs: 500, maxAttempts: 20, maxDelayMs: 5000 },
+} as const;
+
+/**
+ * How long a running turn may deliver nothing before we treat the connection
+ * as gone. The longest genuine gap is a subagent writing a CV — around forty
+ * seconds — so this leaves plenty of room while still catching a stream that
+ * has quietly stopped without erroring.
+ */
+export const STALL_MS = 75_000;
+
+/** How often the stall watchdog looks. */
+export const STALL_CHECK_MS = 10_000;
+
+/**
  * Whether the session's last lifecycle event left a turn running. `turn.started`
  * with nothing after it means work is still in flight.
  */

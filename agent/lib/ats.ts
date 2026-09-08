@@ -40,6 +40,59 @@ export type AtsReport = {
 };
 
 /**
+ * Spoken languages, in the spellings a JD writes them in. They are real
+ * requirements but they are not ATS keywords: a CV written in English can
+ * never contain the token "German", so scoring one drags every variant down by
+ * a fixed amount that no rewrite can recover. The languages section of the CV
+ * states the truth; the score stays about skills.
+ */
+const SPOKEN_LANGUAGES = new Set(
+  [
+    "english", "german", "french", "spanish", "italian", "dutch", "portuguese", "arabic",
+    "russian", "polish", "turkish", "chinese", "mandarin", "japanese", "swedish", "danish",
+    "norwegian", "finnish", "czech", "romanian", "hungarian", "greek", "hebrew", "hindi",
+    "anglais", "allemand", "français", "francais", "espagnol", "arabe", "néerlandais",
+    "englisch", "deutsch", "französisch", "spanisch", "niederländisch",
+  ].map((name) => name.toLowerCase()),
+);
+
+/** No screen rejects a CV over a fifth "must-have" — see `sanitizeKeywords`. */
+const MAX_MUST_HAVES = 5;
+
+/**
+ * What the scorer will actually use, from what the analyst returned.
+ *
+ * The same job description analysed twice produced 29/100 and 57/100, because
+ * each pass invented its own keyword list and its own set of must-haves — and
+ * must-haves gate the whole score. Enforcing the rules here rather than only
+ * in the prompt keeps two runs of one JD comparable, whatever the model felt
+ * like emitting.
+ */
+export function sanitizeKeywords(keywords: readonly JdKeyword[]): JdKeyword[] {
+  const seen = new Set<string>();
+  const kept: JdKeyword[] = [];
+  for (const keyword of keywords) {
+    const term = keyword.term.trim();
+    const key = normalize(term);
+    if (key.length === 0 || seen.has(key) || SPOKEN_LANGUAGES.has(key)) continue;
+    seen.add(key);
+    kept.push({ ...keyword, term });
+  }
+
+  /*
+   * Only the first few weight-3 terms keep that weight. Which few is decided
+   * by the analyst's own ordering — it lists what the JD leads with first —
+   * and the rest become "expected" rather than gating.
+   */
+  let mustHaves = 0;
+  return kept.map((keyword) => {
+    if (keyword.weight < 3) return keyword;
+    mustHaves += 1;
+    return mustHaves <= MAX_MUST_HAVES ? keyword : { ...keyword, weight: 2 };
+  });
+}
+
+/**
  * The score worth stopping at. Chosen, not measured — see the calibration note
  * on `semanticToScore`. It is a ceiling on effort, never a promise: when the
  * profile cannot truthfully reach it, `ceiling` is the real target.
@@ -161,22 +214,70 @@ function depunctuate(token: string): string {
  */
 const MIN_STEM = 3;
 
+/**
+ * Word families the suffix rules cannot join, because the words differ before
+ * the suffix does. "Data Analytics", "data analysis" and "analytical" are one
+ * requirement written three ways, and a JD asking for the first while the CV
+ * says the second scored a zero — the single largest source of lost points on
+ * real job descriptions.
+ *
+ * ponytail: a table of the families that actually recur in job ads, not a
+ * lexicon. Both sides of every comparison pass through it, so an entry can
+ * only ever merge a family, never split one.
+ */
+const STEM_FAMILY: Record<string, string> = {
+  analy: "analy",
+  analys: "analy",
+  analysi: "analy",
+  analyt: "analy",
+  analyz: "analy",
+  statistic: "statist",
+  visual: "visual",
+};
+
 function stem(word: string): string {
-  let w = word;
+  // British spellings are spelling, not meaning: "visualisation" is
+  // "visualization", "optimise" is "optimize".
+  let w = word.replace(/isation$/, "ization").replace(/ise$/, "ize");
+  let stripped = false;
   const strip = (suffix: string, replacement = ""): boolean => {
     if (!w.endsWith(suffix)) return false;
     if (w.length - suffix.length + replacement.length < MIN_STEM) return false;
     w = w.slice(0, -suffix.length) + replacement;
+    stripped = true;
     return true;
   };
 
   // Plurals: "ies" → y, never touch a "ss" ending ("css", "business").
   if (!strip("ies", "y") && !w.endsWith("ss")) strip("s");
-  // Verb and noun endings, longest first.
+  // Verb and noun endings, longest first. The derivational ones ("ization",
+  // "ical", "ic") come before the inflectional ones so "visualization" reaches
+  // "visual" rather than stopping at "visualizat".
   // "ity" last in the chain: "security"/"secure" meet at "secur".
-  void (strip("ment") || strip("ing") || strip("ions") || strip("ion") || strip("ed") || strip("er") || strip("or") || strip("ity"));
+  void (
+    strip("ization") ||
+    strip("ically") ||
+    strip("ical") ||
+    strip("ment") ||
+    strip("ing") ||
+    strip("ions") ||
+    strip("ion") ||
+    strip("ize") ||
+    strip("ic") ||
+    strip("ed") ||
+    strip("er") ||
+    strip("or") ||
+    strip("ity")
+  );
   strip("e");
-  return w;
+  /*
+   * "modelling"/"modeling" and "programme"/"program" differ by a doubled
+   * consonant the suffix rules leave behind. Only ever collapse one this
+   * stemmer exposed: "full" is a word, and shortening it to "ful" stops
+   * "Full Stack" from meeting "Fullstack". Never "ss" — see the plural rule.
+   */
+  if (stripped) w = w.replace(/([bdfglmnprt])\1$/, "$1");
+  return STEM_FAMILY[w] ?? w;
 }
 
 function stemAll(text: string): string[] {
@@ -468,15 +569,71 @@ export function cosine(a: number[], b: number[]): number {
 }
 
 /**
- * Map raw cosine similarity to 0–100.
- *
- * ponytail: the 0.2–0.75 window is a guess, not a measurement, and embedding
- * models differ widely in where they put unrelated text. Until an eval pins
- * the real distribution for EMBEDDING_MODEL, treat this component as a coarse
- * sort, which is why it no longer carries 40% on its own.
+ * Deliberately off-domain prose. Its similarity to the job description is the
+ * zero point of the semantic scale: whatever number this model hands out for
+ * text that has nothing to do with the job is noise, not relevance.
  */
-function semanticToScore(sim: number): number {
-  const scaled = (sim - 0.2) / (0.75 - 0.2);
+const SEMANTIC_CONTROL_TEXT =
+  "Sourdough bread baking notes. Feed the starter twice daily, autolyse the flour and water for an hour, then fold the dough every thirty minutes. Bake covered at 240C for twenty minutes and uncovered for fifteen. Seasonal jam recipes, garden composting tips, and a weekend cycling route through the hills.";
+
+/**
+ * The control text's embedding never changes while the process lives, so it is
+ * fetched once. Only a successful result is remembered — a failed call must
+ * not poison every later score.
+ */
+let controlEmbedding: number[] | null | undefined;
+
+async function embedControl(abortSignal?: AbortSignal): Promise<number[] | null> {
+  if (controlEmbedding === undefined) {
+    const embedding = await embedText(SEMANTIC_CONTROL_TEXT, abortSignal);
+    if (embedding === null) return null;
+    controlEmbedding = embedding;
+  }
+  return controlEmbedding;
+}
+
+/**
+ * What an ideal candidate for this job would say, assembled from the analysis
+ * we already have. Its similarity to the job description is the top of the
+ * scale: no real CV reads more like the job than a plain recitation of the
+ * job's own requirements.
+ */
+function idealCandidateText(keywords: JdKeyword[], role?: string | null): string {
+  return [role ?? "", ...keywords.map((k) => [k.term, ...(k.aliases ?? [])].join(" "))]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
+ * Anchors for the semantic scale, measured against this job description rather
+ * than assumed: `floor` is what unrelated text scores, `top` is what the job's
+ * own requirements score.
+ */
+export type SemanticAnchors = { floor: number; top: number };
+
+/**
+ * The window used when the anchors cannot be measured.
+ *
+ * Measured with text-embedding-3-small, one real job ad against four texts:
+ * unrelated prose 0.09, a job ad from another field 0.19, a strong real CV
+ * 0.38, a purpose-built ideal CV 0.44. A CV and a job ad are different kinds
+ * of document — half an ad is company boilerplate — so the pair never
+ * approaches 1, and the old 0.2–0.75 window scored a perfect CV at 35/100 and
+ * called it a poor match. Re-measure these two numbers if EMBEDDING_MODEL
+ * changes; `ats.test.ts` pins the shape of the curve, not the model.
+ */
+const SEMANTIC_FALLBACK: SemanticAnchors = { floor: 0.15, top: 0.45 };
+
+/** Below this the anchors are too close together to divide by. */
+const MIN_SEMANTIC_SPAN = 0.05;
+
+/**
+ * Map raw cosine similarity to 0–100, against the range this job description
+ * can actually produce.
+ */
+export function semanticToScore(sim: number, anchors: SemanticAnchors): number {
+  const { floor, top } = anchors.top - anchors.floor >= MIN_SEMANTIC_SPAN ? anchors : SEMANTIC_FALLBACK;
+  const scaled = (sim - floor) / (top - floor);
   return Math.round(Math.max(0, Math.min(1, scaled)) * 100);
 }
 
@@ -507,8 +664,25 @@ export async function scoreAts(input: {
   const jdEmbedding =
     input.cachedJdEmbedding ?? (await embedText(input.jdText, input.abortSignal));
   const cvEmbedding = jdEmbedding ? await embedText(input.cvText, input.abortSignal) : null;
-  const semantic =
-    jdEmbedding && cvEmbedding ? semanticToScore(cosine(jdEmbedding, cvEmbedding)) : null;
+
+  /*
+   * Both ends of the scale are measured against this job description, so the
+   * number means the same thing whatever the embedding model does with
+   * absolute distances: 0 is "unrelated to this job", 100 is "reads like the
+   * job's own requirements".
+   */
+  let semantic: number | null = null;
+  if (jdEmbedding && cvEmbedding) {
+    const [control, ideal] = await Promise.all([
+      embedControl(input.abortSignal),
+      embedText(idealCandidateText(input.keywords, input.fit?.role), input.abortSignal),
+    ]);
+    const anchors =
+      control && ideal
+        ? { floor: cosine(jdEmbedding, control), top: cosine(jdEmbedding, ideal) }
+        : SEMANTIC_FALLBACK;
+    semantic = semanticToScore(cosine(jdEmbedding, cvEmbedding), anchors);
+  }
 
   /** Available components only; the rest of the weights renormalize over them. */
   const blend = (keyword: number, structureValue: number): number => {
@@ -549,7 +723,17 @@ export async function scoreAts(input: {
   let unclaimable: string[] = [];
   if (input.claimableText !== undefined) {
     const claimStems = stemAll(normalize(glueSpacedHeadings(input.claimableText)));
-    const claimable = (k: JdKeyword) => stemsContainTerm(claimStems, k);
+    /*
+     * Reachable, not merely spelled out. A term the CV already carries has
+     * passed the fabrication guard, so it is claimable by definition — and the
+     * profile is often written in another language than the JD, where a
+     * literal check finds nothing at all. Counting only literal matches capped
+     * the ceiling at the current score on every run, which told the loop it
+     * was already finished and told the user this was the best their profile
+     * could do. It was not.
+     */
+    const claimable = (k: JdKeyword) =>
+      matchedTerms.has(k.term) || stemsContainTerm(claimStems, k);
     unclaimable = input.keywords.filter((k) => !claimable(k)).map((k) => k.term);
 
     const totalWeight = input.keywords.reduce((sum, k) => sum + k.weight, 0);

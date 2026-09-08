@@ -30,28 +30,33 @@ function decide(
   loop: LoopState,
   lang: string,
 ) {
-  const target = Math.min(ATS_TARGET, (report.ceiling ?? ATS_TARGET) - CEILING_SLACK);
+  /*
+   * The target is the target. The ceiling is an estimate made from the terms
+   * the profile happens to spell out — in the language it happens to be
+   * written in — so letting it *lower* the target is how a run stopped at
+   * 29/100 and told the user that was their honest best. It now only ends a
+   * loop that has already tried twice and stopped moving.
+   */
+  const target = ATS_TARGET;
   const iterationsRemaining = loop.cap - (loop.iterations[lang] ?? 0);
   const gain =
     history.length >= 2 ? report.total - (history[history.length - 2] as number) : Number.POSITIVE_INFINITY;
 
-  /*
-   * The ceiling only counts what the profile spells out, but the vocabulary
-   * rule lets the writer add a JD term the candidate's work plainly involves
-   * (TypeScript for a Next.js developer) and cover the rest in prose. So a low
-   * ceiling on the first draft is a hint, not a verdict: always allow one
-   * revision before stopping at it. The revised score resets the ceiling.
-   */
-  const atCeiling = report.ceiling !== null && target < ATS_TARGET;
-  if (report.total >= target && (!atCeiling || history.length >= 2 || iterationsRemaining <= 0)) {
-    return atCeiling
-      ? {
-          target,
-          iterationsRemaining,
-          action: "stop" as const,
-          reason: `At the best this profile can truthfully reach for this job (${report.ceiling}/100). The gap is ${report.unclaimable.join(", ") || "experience the candidate does not have"} — cover it with transferable framing where honest, and report it plainly.`,
-        }
-      : { target, iterationsRemaining, action: "stop" as const, reason: `Target of ${ATS_TARGET} reached.` };
+  if (report.total >= target) {
+    return { target, iterationsRemaining, action: "stop" as const, reason: `Target of ${ATS_TARGET} reached.` };
+  }
+
+  // Within touching distance of everything this profile can claim, after a
+  // real attempt at it. Grinding further only invites padding.
+  const atCeiling =
+    report.ceiling !== null && history.length >= 2 && report.total >= report.ceiling - CEILING_SLACK;
+  if (atCeiling) {
+    return {
+      target,
+      iterationsRemaining,
+      action: "stop" as const,
+      reason: `At the best this profile can truthfully reach for this job (${report.ceiling}/100). The gap is ${report.unclaimable.join(", ") || "experience the candidate does not have"} — cover it with transferable framing where honest, and report it plainly.`,
+    };
   }
   if (iterationsRemaining <= 0) {
     return {
@@ -73,9 +78,7 @@ function decide(
     target,
     iterationsRemaining,
     action: "revise" as const,
-    reason: atCeiling
-      ? `${report.total}/100, and the profile does not spell out ${report.unclaimable.join(", ") || "the gaps"}. One revision: send cv-writer the previous CV, add only the JD terms the candidate's real work makes credible, and cover the rest with transferable framing in the summary and bullets; ${iterationsRemaining} compile(s) left.`
-      : `${report.total}/100 against a reachable ${target}. Send cv-writer the previous CV plus the claimable gaps; ${iterationsRemaining} compile(s) left.`,
+    reason: `${report.total}/100 against a target of ${target}. Send cv-writer the previous CV plus the gaps it can truthfully close: the missing keywords the candidate's real work supports, named in the JD's own words, and transferable framing in the summary and bullets for the rest${report.unclaimable.length > 0 ? ` (the profile does not spell out ${report.unclaimable.join(", ")})` : ""}. ${iterationsRemaining} compile(s) left.`,
   };
 }
 
