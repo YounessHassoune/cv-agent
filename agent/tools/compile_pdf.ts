@@ -11,6 +11,13 @@ import { extractPdfText, renderCvPdf } from "../lib/pdf";
 import { cvLoop } from "../lib/state";
 import { readVariants, sameCv } from "../lib/variants";
 
+/**
+ * How many terms a CV may claim that the profile does not list. The job's
+ * keywords widen the vocabulary, but every borrowed term is something the user
+ * has to stand behind — a dozen of them is padding, not tailoring.
+ */
+const MAX_UNSUPPORTED_CLAIMS = 6;
+
 export default defineTool({
   description:
     "Validate one language variant of the tailored CV against the master profile, render it as an ATS-friendly single-column PDF, and store it on the application. Call once per language. Rejects any skill, stack term, or employer not present in the profile — fix the CV and retry if that happens.",
@@ -96,6 +103,28 @@ export default defineTool({
     ]);
     const violations = findFabrications(cv, profile, jdVocabulary);
     const unsupported = unsupportedClaims(cv, profile);
+
+    /*
+     * The job's vocabulary is a licence to speak the role's language, not a
+     * licence to acquire its experience. A draft that borrows a dozen terms
+     * the profile never mentions is not tailored, it is padded: it inflates
+     * the keyword score, and it hands the user a page of claims to defend in
+     * an interview. Cap it, and make the writer choose its best ones.
+     */
+    if (violations.length === 0 && unsupported.length > MAX_UNSUPPORTED_CLAIMS) {
+      const rejections = (loop.rejections[lang] ?? 0) + 1;
+      cvLoop.update((s) => ({ ...s, rejections: { ...s.rejections, [lang]: rejections } }));
+
+      if (rejections < loop.rejectionCap) {
+        throw new Error(
+          `CV rejected — it claims ${unsupported.length} terms the profile does not list, and ${MAX_UNSUPPORTED_CLAIMS} is the limit:\n- ${unsupported.join("\n- ")}\n` +
+            `Keep at most ${MAX_UNSUPPORTED_CLAIMS} of these — the ones the candidate's real work makes genuinely credible — and remove the rest from skills[].items and the stack arrays. Cover what you remove with transferable framing in the prose instead, then call compile_pdf again. ${loop.rejectionCap - rejections} attempt(s) left for this language.`,
+        );
+      }
+      // Out of attempts: compiling a padded CV still beats no CV, and the
+      // staging summary lists every one of these for the user to strike.
+    }
+
     if (violations.length > 0) {
       const rejections = (loop.rejections[lang] ?? 0) + 1;
       cvLoop.update((s) => ({
