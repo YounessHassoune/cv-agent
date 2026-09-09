@@ -40,6 +40,7 @@ function toDateInput(value: string): string {
 function replaceWith(current: ProfileForm, imported: ImportedProfile): ProfileForm {
   return {
     template: current.template,
+    theme: current.theme,
     photoUrl: "",
     fullName: imported.fullName,
     headline: imported.headline,

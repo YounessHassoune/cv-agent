@@ -12,6 +12,8 @@ export type CvVariant = {
   cvText: string;
   atsReport: AtsReport | null;
   template: string;
+  /** Colour theme, chosen independently of the layout. Absent on older rows. */
+  theme?: string;
   /** Pages the compiled PDF came to, so a repeat compile can answer without rendering. */
   pageCount?: number;
   /**

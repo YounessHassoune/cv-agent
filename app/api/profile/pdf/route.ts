@@ -3,7 +3,13 @@ import { db } from "@/agent/lib/db.ts";
 import { renderCvPdf } from "@/agent/lib/pdf.ts";
 import { getCurrentUser } from "@/app/lib/current-user";
 import { loadPdfPhoto } from "@/app/lib/pdf-photo";
-import { CV_TEMPLATE_IDS, DEFAULT_TEMPLATE, type CvTemplateId } from "@/lib/cv-templates";
+import {
+  CV_TEMPLATE_IDS,
+  DEFAULT_TEMPLATE,
+  DEFAULT_THEME,
+  type CvTemplateId,
+  normalizeTheme,
+} from "@/lib/cv-templates";
 
 /**
  * Renders the CV builder's current draft as a PDF.
@@ -23,6 +29,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     cv?: unknown;
     template?: string;
+    theme?: string;
     photo?: boolean;
   } | null;
 
@@ -32,6 +39,7 @@ export async function POST(request: Request) {
   const template = CV_TEMPLATE_IDS.includes(body?.template as CvTemplateId)
     ? (body?.template as CvTemplateId)
     : DEFAULT_TEMPLATE;
+  const theme = normalizeTheme(body?.theme) ?? DEFAULT_THEME;
 
   const profile = body?.photo
     ? await db.profile.findUnique({
@@ -42,7 +50,14 @@ export async function POST(request: Request) {
 
   const name = (parsed.data.header.fullName || "cv").replace(/[^\w-]+/g, "_");
 
-  return new Response(await renderCvPdf(parsed.data, template, await loadPdfPhoto(profile?.photoUrl)), {
+  const pdf = await renderCvPdf(
+    parsed.data,
+    template,
+    await loadPdfPhoto(profile?.photoUrl),
+    theme,
+  );
+
+  return new Response(pdf, {
     headers: {
       "content-type": "application/pdf",
       "content-disposition": `inline; filename="${name}_CV.pdf"`,

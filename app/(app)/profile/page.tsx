@@ -1,6 +1,6 @@
 import { db } from "@/agent/lib/db.ts";
 import { requireUser } from "@/app/lib/current-user";
-import { DEFAULT_TEMPLATE } from "@/lib/cv-templates";
+import { DEFAULT_TEMPLATE, DEFAULT_THEME } from "@/lib/cv-templates";
 import { type ProfileForm, ProfileEditor } from "./profile-editor";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ const empty: ProfileForm = {
   summary: "",
   photoUrl: "",
   template: DEFAULT_TEMPLATE,
+  theme: DEFAULT_THEME,
   contact: { email: "", phone: "", location: "", links: [] },
   languages: [],
   education: [],
@@ -40,6 +41,7 @@ export default async function ProfilePage() {
     summary: profile.summary ?? "",
     photoUrl: profile.photoUrl ?? "",
     template: profile.template ?? DEFAULT_TEMPLATE,
+    theme: profile.theme ?? DEFAULT_THEME,
     contact: {
       email: contact.email ?? user.email,
       phone: contact.phone ?? "",

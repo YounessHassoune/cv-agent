@@ -14,12 +14,13 @@ import { extractPdfText, renderCvPdf } from "@/agent/lib/pdf.ts";
 import { readVariants, sameCv } from "@/agent/lib/variants.ts";
 import { getCurrentUser } from "@/app/lib/current-user";
 import { titlesFor } from "@/lib/cv-sections";
-import { CV_TEMPLATE_IDS } from "@/lib/cv-templates";
+import { CV_TEMPLATE_IDS, normalizeTheme } from "@/lib/cv-templates";
 
 const Body = z.object({
   language: z.string().min(2),
   cv: EditedCvSchema,
   template: z.enum(CV_TEMPLATE_IDS).optional(),
+  theme: z.string().refine((value) => normalizeTheme(value) !== undefined, "Unknown theme").optional(),
 });
 
 /**
@@ -62,6 +63,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       jdEmbedding: true,
       jdRole: true,
       template: true,
+      theme: true,
       variants: true,
     },
   });
@@ -77,10 +79,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 
   const template = parsed.data.template ?? variant.template ?? application.template;
+  const theme = parsed.data.theme ?? variant.theme ?? application.theme;
 
   // Nothing changed — a Save on a document the user opened and closed again.
   // Re-rendering and re-embedding it would cost a model call for no difference.
-  if (sameCv(variant.cvJson, cv) && template === variant.template) {
+  if (sameCv(variant.cvJson, cv) && template === variant.template && theme === variant.theme) {
     return NextResponse.json({
       language,
       unchanged: true,
@@ -94,7 +97,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     include: { skills: true, experiences: true, projects: true },
   });
 
-  const pdfBytes = await renderCvPdf(cv, template);
+  const pdfBytes = await renderCvPdf(cv, template, undefined, theme);
   const { text, pageCount } = await extractPdfText(pdfBytes);
 
   // Everything the candidate can truthfully be said to have — the same input
@@ -134,6 +137,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     cvText: text,
     atsReport: report,
     template,
+    theme,
     pageCount,
     unsupported: profile ? unsupportedClaims(cv, profile) : (variant.unsupported ?? []),
     updatedAt,
@@ -141,7 +145,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
   await db.application.update({
     where: { id: application.id },
-    data: { variants, template, jdEmbedding: jdEmbedding ?? undefined },
+    data: { variants, template, theme, jdEmbedding: jdEmbedding ?? undefined },
   });
   await db.cvPdf.upsert({
     where: { applicationId_language: { applicationId: application.id, language } },

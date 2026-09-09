@@ -19,7 +19,8 @@
     "db:generate": "prisma generate",
     "db:seed": "node prisma/seed.ts",
     "db:studio": "prisma studio",
-    "verify": "node scripts/verify-pipeline.ts"
+    "verify": "node scripts/verify-pipeline.ts",
+    "check:templates": "node scripts/check-templates.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

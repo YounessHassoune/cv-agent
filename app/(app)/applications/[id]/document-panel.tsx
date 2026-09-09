@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { type CvPreviewData, CvPreview } from "@/components/cv-preview";
+import { CvThemePicker } from "@/components/cv-theme-picker";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -48,6 +49,8 @@ export function DocumentPanel({
   language,
   template,
   onTemplateChange,
+  theme,
+  onThemeChange,
 }: {
   readonly applicationId: string;
   readonly title: string;
@@ -59,6 +62,8 @@ export function DocumentPanel({
   readonly language?: string;
   readonly template: string;
   readonly onTemplateChange: (template: string) => void;
+  readonly theme: string;
+  readonly onThemeChange: (theme: string) => void;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"preview" | "edit" | "pdf">("preview");
@@ -89,7 +94,7 @@ export function DocumentPanel({
   const activeTemplate = CV_TEMPLATE_LIST.find((t) => t.id === template) ?? CV_TEMPLATE_LIST[0];
   const withPhoto = showPhoto && Boolean(shown?.photoUrl);
 
-  const pdfQuery = new URLSearchParams({ template, photo: withPhoto ? "1" : "0" });
+  const pdfQuery = new URLSearchParams({ template, theme, photo: withPhoto ? "1" : "0" });
   if (language) pdfQuery.set("lang", language);
   // Same path after every recompile, so without this the browser serves the PDF
   // it already has and the user has to reload to see their own new CV.
@@ -113,6 +118,7 @@ export function DocumentPanel({
       body: JSON.stringify({
         language,
         template,
+        theme,
         cv: previewToCv(shown, language),
       }),
     });
@@ -221,7 +227,7 @@ export function DocumentPanel({
           value={template}
         >
           <SelectTrigger
-            aria-label="CV template"
+            aria-label="CV layout"
             className={cn(
               "shrink-0 gap-1.5 rounded-lg bg-card font-medium",
               shown?.photoUrl ? "" : "ml-auto",
@@ -231,9 +237,6 @@ export function DocumentPanel({
             <LayoutTemplateIcon className="size-3.5" />
             <SelectValue>{activeTemplate.label}</SelectValue>
           </SelectTrigger>
-          {/* Item-aligned positioning only (Base UI's default, and what Radix's
-              default `position` did): the popper variant pins the list to the
-              trigger's height and clips it. */}
           <SelectContent align="end" className="w-80">
             {CV_TEMPLATE_LIST.map((option) => (
               <SelectItem className="py-2" key={option.id} value={option.id}>
@@ -249,6 +252,9 @@ export function DocumentPanel({
             ))}
           </SelectContent>
         </Select>
+
+        {/* Colour is its own axis, exactly as in the builder. */}
+        <CvThemePicker onChange={onThemeChange} size="sm" value={theme} />
       </div>
 
       {view === "pdf" ? (
@@ -291,6 +297,7 @@ export function DocumentPanel({
               }
               showPhoto={withPhoto}
               template={template}
+              theme={theme}
             />
           ) : (
             <p className="py-16 text-center text-muted-foreground text-sm">

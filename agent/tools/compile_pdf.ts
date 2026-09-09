@@ -217,8 +217,11 @@ export default defineTool({
 
     // Explicit choice wins, then the application's template, then the profile default.
     const templateId = template ?? application.template ?? profile.template;
+    // Colour is the user's presentation choice, never the agent's: it takes the
+    // one already on the application, or the profile default.
+    const themeId = application.theme ?? profile.theme;
 
-    const pdfBytes = await renderCvPdf(cv, templateId);
+    const pdfBytes = await renderCvPdf(cv, templateId, undefined, themeId);
     const { text, pageCount } = await extractPdfText(pdfBytes);
 
     ctx.abortSignal.throwIfAborted();
@@ -229,6 +232,7 @@ export default defineTool({
       cvText: text,
       atsReport: null, // stale after a recompile — score_ats refreshes it
       template: templateId,
+      theme: themeId,
       pageCount,
       unsupported,
       updatedAt: new Date().toISOString(),

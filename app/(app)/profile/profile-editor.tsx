@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { type CvPreviewData, CvPreview } from "@/components/cv-preview";
+import { CvThemePicker } from "@/components/cv-theme-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +36,7 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { CV_TEMPLATE_LIST, DEFAULT_TEMPLATE } from "@/lib/cv-templates";
+import { CV_TEMPLATE_LIST, DEFAULT_TEMPLATE, DEFAULT_THEME } from "@/lib/cv-templates";
 import { cn } from "@/lib/utils";
 import { CvImportDialog } from "./cv-import-dialog";
 import { ProfilePdfView } from "./profile-pdf-view";
@@ -50,6 +51,7 @@ export type ProfileForm = {
   summary: string;
   photoUrl: string;
   template: string;
+  theme: string;
   contact: { email: string; phone: string; location: string; links: string[] };
   languages: { name: string; level: string }[];
   education: { institution: string; degree: string; start: string; end: string }[];
@@ -400,6 +402,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
         summary: next.summary || undefined,
         photoUrl: next.photoUrl || undefined,
         template: next.template || DEFAULT_TEMPLATE,
+        theme: next.theme || DEFAULT_THEME,
         contact: {
           email: next.contact.email,
           phone: next.contact.phone || undefined,
@@ -889,7 +892,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
             value={form.template}
           >
             <SelectTrigger
-              aria-label="CV template"
+              aria-label="CV layout"
               className="gap-1.5 rounded-full bg-card pr-2.5 pl-3.5 font-medium"
               size="sm"
             >
@@ -911,12 +914,20 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
               ))}
             </SelectContent>
           </Select>
+
+          {/* Colour is its own axis: any layout in any colour. */}
+          <CvThemePicker onChange={(theme) => patch({ theme })} value={form.theme} />
         </div>
       </div>
 
       {previewView === "preview" ? (
         <div className="scrollbar-slim min-h-0 flex-1 overflow-y-auto pb-6">
-          <CvPreview cv={preview} showPhoto={showPhoto} template={form.template} />
+          <CvPreview
+            cv={preview}
+            showPhoto={showPhoto}
+            template={form.template}
+            theme={form.theme}
+          />
         </div>
       ) : (
         <ProfilePdfView
@@ -924,6 +935,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
           cv={preview}
           photo={showPhoto && Boolean(form.photoUrl)}
           template={form.template}
+          theme={form.theme}
         />
       )}
 

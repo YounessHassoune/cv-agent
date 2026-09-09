@@ -34,8 +34,10 @@ model Profile {
   /// Data URL of the (downscaled) profile photo. Preview only — the compiled
   /// PDF stays photo-free, which is what ATS parsers prefer.
   photoUrl    String?
-  /// Default CV template id (see lib/cv-templates.ts).
+  /// Default CV layout id (see lib/cv-templates.ts).
   template    String       @default("modern")
+  /// Default colour theme id, chosen independently of the layout.
+  theme       String       @default("mono")
   contact     Json // { email, phone?, location?, links: string[] }
   languages   Json         @default("[]") // [{ name, level }]
   education   Json         @default("[]") // [{ institution, degree, start?, end? }]
@@ -124,8 +126,10 @@ model Application {
   jdSeniority String?
   /// Requested target languages (ISO codes), e.g. ["en", "fr"].
   languages   String[] @default(["en"])
-  /// Template this application's PDFs are compiled with.
+  /// Layout this application's PDFs are compiled with.
   template    String   @default("modern")
+  /// Colour theme this application's PDFs are compiled with.
+  theme       String   @default("mono")
   /// Per-language variants: { [lang]: { cvJson, cvText, atsReport, template, updatedAt } }
   variants    Json?
   /// Persisted eve chat for this application. `chatEvents` is the ordered

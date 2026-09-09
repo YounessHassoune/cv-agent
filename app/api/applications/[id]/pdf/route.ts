@@ -3,11 +3,15 @@ import { renderCvPdf } from "@/agent/lib/pdf.ts";
 import { readVariants } from "@/agent/lib/variants.ts";
 import { getCurrentUser } from "@/app/lib/current-user";
 import { loadPdfPhoto } from "@/app/lib/pdf-photo";
-import { CV_TEMPLATE_IDS, type CvTemplateId } from "@/lib/cv-templates";
+import { CV_TEMPLATE_IDS, type CvTemplateId, normalizeTheme } from "@/lib/cv-templates";
 
 function requestedTemplate(url: URL): CvTemplateId | undefined {
   const value = url.searchParams.get("template");
   return CV_TEMPLATE_IDS.includes(value as CvTemplateId) ? (value as CvTemplateId) : undefined;
+}
+
+function requestedTheme(url: URL): string | undefined {
+  return normalizeTheme(url.searchParams.get("theme"));
 }
 
 export async function GET(
@@ -27,6 +31,7 @@ export async function GET(
   const url = new URL(request.url);
   const requested = url.searchParams.get("lang")?.toLowerCase();
   const template = requestedTemplate(url);
+  const theme = requestedTheme(url);
   // The photo is opt-in per request, driven by the review panel's switch, and
   // lives on the master profile rather than the tailored CV.
   const wantsPhoto = url.searchParams.get("photo") === "1";
@@ -69,9 +74,15 @@ export async function GET(
       : null;
     const photo = await loadPdfPhoto(profile?.photoUrl);
 
-    return new Response(await renderCvPdf(variant.cvJson, template ?? variant.template, photo), {
-      headers,
-    });
+    return new Response(
+      await renderCvPdf(
+        variant.cvJson,
+        template ?? variant.template,
+        photo,
+        theme ?? variant.theme,
+      ),
+      { headers },
+    );
   }
 
   // No CV JSON (a legacy row): the compiled bytes are all there is.

@@ -67,8 +67,12 @@ export function SkillsField({
 
   return (
     <div className="space-y-3">
-      {groups.map(([category, items]) => (
-        <div className="rounded-xl border bg-field/50 p-3" key={category}>
+      {/* Keyed by position, never by the category text: keying on the text
+          meant every keystroke in the name field produced a different key, so
+          React threw the input away and mounted a new one — you got one
+          character in and lost focus. */}
+      {groups.map(([category, items], group) => (
+        <div className="rounded-xl border bg-field/50 p-3" key={group}>
           <div className="mb-2.5 flex items-center gap-2">
             <Input
               aria-label="Category"

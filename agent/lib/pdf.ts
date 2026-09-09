@@ -12,8 +12,12 @@ import {
 import { extractText, getDocumentProxy } from "unpdf";
 import { titlesFor } from "../../lib/cv-sections.ts";
 import {
+  accentFlat,
+  CV_ACCENT_ALPHA,
   CV_ALPHA,
   CV_INK,
+  type CvTheme,
+  resolveTheme,
   CV_SEPARATOR,
   type CvTemplate,
   inkFlat,
@@ -36,14 +40,21 @@ const h = React.createElement;
  * Every template stays single column, plain text, standard headings and a core
  * PDF font — the parts an ATS actually parses. Only typography and spacing vary.
  */
-function stylesFor(template: CvTemplate) {
+function stylesFor(template: CvTemplate, theme: CvTheme) {
   const l = template.layout;
+  const { accent: hue, stripSolid } = theme;
   const bold = l.serif ? "Times-Bold" : "Helvetica-Bold";
   const textAlign = l.centered ? ("center" as const) : ("left" as const);
   // Templates that skip the rule lean on a lighter title instead, and the serif
   // template draws its rule heavier. Both match the preview skins.
   const ruleAlpha = l.serif ? CV_ALPHA.ruleStrong : CV_ALPHA.rule;
   const chipPadY = pt(0.125);
+  // The accented templates colour the same four things the preview does: the
+  // name, the section titles and their rules, and the tint behind the strip,
+  // chips and pills. Everything else is ink, on paper, as before.
+  const tint = hue ? accentFlat(hue, CV_ACCENT_ALPHA.chip) : null;
+  const ruled = l.titleStyle === "rule";
+  const banded = l.titleStyle === "band";
 
   return StyleSheet.create({
     page: {
@@ -67,16 +78,33 @@ function stylesFor(template: CvTemplate) {
       marginBottom: pt(l.padY),
       paddingHorizontal: pt(l.padX),
       paddingVertical: pt(0.3),
-      backgroundColor: shadeFlat(CV_ALPHA.strip),
+      backgroundColor: hue
+        ? stripSolid
+          ? hue
+          : accentFlat(hue, CV_ACCENT_ALPHA.strip)
+        : shadeFlat(CV_ALPHA.strip),
       flexDirection: "row",
       flexWrap: "wrap",
       justifyContent: l.centered ? "center" : "flex-start",
       columnGap: pt(1),
       rowGap: pt(0.15),
     },
-    stripItem: { fontSize: pt(l.meta), color: inkFlat(CV_ALPHA.muted), lineHeight: 1.2 },
+    stripItem: {
+      fontSize: pt(l.meta),
+      color: stripSolid ? "#ffffff" : inkFlat(CV_ALPHA.muted),
+      lineHeight: 1.2,
+    },
 
-    header: { marginBottom: pt(l.sectionGap) },
+    header: l.headerBand
+      ? {
+          marginTop: -pt(l.padY),
+          marginHorizontal: -pt(l.padX),
+          marginBottom: pt(l.sectionGap),
+          paddingHorizontal: pt(l.padX),
+          paddingVertical: pt(l.padY * 0.8),
+          backgroundColor: hue ? accentFlat(hue, CV_ACCENT_ALPHA.strip) : shadeFlat(CV_ALPHA.strip),
+        }
+      : { marginBottom: pt(l.sectionGap) },
     // Mirrors the preview's header: a row beside the identity block, or a
     // centred column above it on centred templates.
     headerWithPhoto: {
@@ -84,6 +112,17 @@ function stylesFor(template: CvTemplate) {
       flexDirection: l.centered ? "column" : "row",
       alignItems: "center",
       gap: pt(l.photoGap),
+      ...(l.headerBand
+        ? {
+            marginTop: -pt(l.padY),
+            marginHorizontal: -pt(l.padX),
+            paddingHorizontal: pt(l.padX),
+            paddingVertical: pt(l.padY * 0.8),
+            backgroundColor: hue
+              ? accentFlat(hue, CV_ACCENT_ALPHA.strip)
+              : shadeFlat(CV_ALPHA.strip),
+          }
+        : {}),
     },
     photo: {
       width: pt(l.photoSize),
@@ -104,7 +143,9 @@ function stylesFor(template: CvTemplate) {
     name: {
       fontSize: pt(l.name),
       fontFamily: bold,
-      letterSpacing: -pt(l.name * 0.02),
+      color: hue ?? CV_INK,
+      textTransform: l.nameCase === "upper" ? "uppercase" : undefined,
+      letterSpacing: l.nameCase === "upper" ? pt(l.name * 0.08) : -pt(l.name * 0.02),
       textAlign,
       // Display leading, matching the preview's name. Without it the name
       // inherits the tall body line-height, and its box grows enough to sit on
@@ -126,31 +167,55 @@ function stylesFor(template: CvTemplate) {
     sectionTitle: {
       fontSize: pt(l.sectionTitle),
       fontFamily: bold,
-      color: l.sectionRule ? CV_INK : inkFlat(CV_ALPHA.muted),
+      color: hue ?? (ruled || banded ? CV_INK : inkFlat(CV_ALPHA.muted)),
       textTransform: "uppercase",
       letterSpacing: pt(l.sectionTitle * l.sectionTracking),
-      textAlign,
+      textAlign: l.titleCenter ? "center" : textAlign,
       // The rule hugs the title, so the tall body line-height is dropped here.
       lineHeight: 1.2,
-      borderBottomWidth: l.sectionRule ? 0.75 : 0,
-      borderBottomColor: shadeFlat(ruleAlpha),
-      paddingBottom: l.sectionRule ? pt(0.25) : 0,
+      borderBottomWidth: ruled ? 0.75 : 0,
+      borderBottomColor: hue ? accentFlat(hue, CV_ACCENT_ALPHA.rule) : shadeFlat(ruleAlpha),
+      paddingBottom: ruled ? pt(0.25) : banded ? pt(0.22) : 0,
+      backgroundColor: banded
+        ? (hue ? accentFlat(hue, CV_ACCENT_ALPHA.strip) : shadeFlat(CV_ALPHA.chip))
+        : undefined,
+      paddingTop: banded ? pt(0.22) : 0,
+      paddingHorizontal: banded ? pt(0.4) : 0,
+      borderRadius: banded ? pt(0.15) : 0,
       marginBottom: pt(0.5),
     },
 
     /** Gaps sit *between* entries, never after the last one. */
     entryGap: { marginBottom: pt(l.entryGap) },
     eduGap: { marginBottom: pt(0.375) },
-    entryHeader: { flexDirection: "row", justifyContent: "space-between", columnGap: pt(0.75) },
+    entryHeader:
+      l.gutter > 0
+        ? { flexDirection: "row", columnGap: pt(0.75) }
+        : { flexDirection: "row", justifyContent: "space-between", columnGap: pt(0.75) },
+    /** The left meta column, and the indent that keeps bullets under the title. */
+    gutterCol: { width: pt(l.gutter), flexShrink: 0 },
+    gutterText: { fontSize: pt(l.meta), color: inkFlat(CV_ALPHA.muted), lineHeight: 1.25 },
+    entryBody: l.gutter > 0 ? { paddingLeft: pt(l.gutter + 0.75) } : {},
+    // No column gap on the row: the gap lives inside each column as padding,
+    // so N columns always come to exactly 100% and the last one never wraps
+    // onto a line of its own, orphaned from its category.
+    skillColumns: l.skillColumns > 1 ? { flexDirection: "row", flexWrap: "wrap" } : {},
+    skillColumn:
+      l.skillColumns > 1 ? { width: `${100 / l.skillColumns}%`, paddingRight: pt(0.75) } : {},
+
     entryTitle: { flexShrink: 1 },
 
     chip: {
-      backgroundColor: shadeFlat(CV_ALPHA.chip),
+      backgroundColor: tint ?? shadeFlat(CV_ALPHA.chip),
       borderRadius: pt(0.5),
       paddingHorizontal: pt(0.375),
       paddingVertical: chipPadY,
     },
-    chipText: { fontSize: pt(l.meta), color: inkFlat(CV_ALPHA.muted), lineHeight: 1.2 },
+    chipText: {
+      fontSize: pt(l.meta),
+      color: hue ?? inkFlat(CV_ALPHA.muted),
+      lineHeight: 1.2,
+    },
 
     skillGroup: { marginBottom: pt(0.5) },
     skillLabel: {
@@ -161,7 +226,7 @@ function stylesFor(template: CvTemplate) {
     },
     pillRow: { flexDirection: "row", flexWrap: "wrap", columnGap: pt(0.25), rowGap: pt(0.2) },
     pill: {
-      backgroundColor: shadeFlat(CV_ALPHA.pill),
+      backgroundColor: tint ?? shadeFlat(CV_ALPHA.pill),
       borderRadius: pt(0.5),
       paddingHorizontal: pt(0.375),
       paddingVertical: chipPadY,
@@ -205,6 +270,47 @@ function Chip(styles: Styles, label: string) {
   return h(View, { style: styles.chip }, h(Text, { style: styles.chipText }, label));
 }
 
+/** Groups side by side on a multi-column layout, stacked otherwise. */
+function wrapColumns(
+  groups: React.ReactElement[],
+  styles: Styles,
+  columns: boolean,
+): React.ReactElement[] {
+  return columns ? [h(View, { style: styles.skillColumns }, ...groups)] : groups;
+}
+
+/**
+ * An entry header. On a gutter layout the meta leads, in its own column, and
+ * the title sits beside it; otherwise they share a line. The text layer reads
+ * the same way the page does either way.
+ */
+function EntryHead(styles: Styles, gutter: boolean, title: unknown, parts: string[]) {
+  const shown = parts.filter(Boolean);
+
+  if (gutter) {
+    // Stacked, not joined: one line of "Oct 2017 - Jul 2019 · Casablanca" is
+    // wider than the column and overruns the role beside it.
+    return h(
+      View,
+      { style: styles.entryHeader },
+      h(
+        View,
+        { style: styles.gutterCol },
+        ...shown.map((part, i) => h(Text, { key: i, style: styles.gutterText }, part)),
+      ),
+      h(View, { style: styles.entryTitle }, title as never),
+    );
+  }
+
+  const meta = shown.join(CV_SEPARATOR);
+  return h(
+    View,
+    { style: styles.entryHeader },
+    title as never,
+    ...(meta ? [Chip(styles, meta)] : []),
+  );
+}
+
 function Bullets(styles: Styles, bullets: string[]) {
   return bullets.map((bullet, i) =>
     h(
@@ -237,13 +343,18 @@ export type CvPhoto = { data: Buffer; format: "jpg" | "png" };
 function CvDocument({
   cv,
   templateId,
+  themeId,
   photo,
 }: {
   cv: Cv;
   templateId?: string;
+  themeId?: string;
   photo?: CvPhoto;
 }) {
-  const styles = stylesFor(resolveTemplate(templateId));
+  const template = resolveTemplate(templateId);
+  const theme = resolveTheme(themeId);
+  const styles = stylesFor(template, theme);
+  const { gutter, skillColumns } = template.layout;
   const t = titlesFor(cv.language);
   const contact = [cv.header.email, cv.header.phone, cv.header.location, ...cv.header.links].filter(
     (part): part is string => Boolean(part),
@@ -297,10 +408,22 @@ function CvDocument({
             Section(
               styles,
               t.skills,
+              // Multi-column layouts wrap the groups into a row; single-column
+              // ones stack them exactly as before.
+              wrapColumns(
               cv.skills.map((group, i) =>
                 h(
                   View,
-                  { style: spaced(styles.skillGroup, i, cv.skills.length), key: i, wrap: false },
+                  {
+                    style: spaced(
+                      styles.skillGroup,
+                      i,
+                      cv.skills.length,
+                      skillColumns > 1 ? styles.skillColumn : undefined,
+                    ),
+                    key: i,
+                    wrap: false,
+                  },
                   h(Text, { style: styles.skillLabel }, group.category),
                   h(
                     View,
@@ -315,6 +438,9 @@ function CvDocument({
                   ),
                 ),
               ),
+              styles,
+              skillColumns > 1,
+              ),
             ),
           ]
         : []),
@@ -326,25 +452,29 @@ function CvDocument({
               styles,
               t.experience,
               cv.experiences.map((exp, i) => {
-                const meta = [dateRange(exp.start, exp.end), exp.location]
-                  .filter(Boolean)
-                  .join(CV_SEPARATOR);
+                const meta = [dateRange(exp.start, exp.end), exp.location ?? ""].filter(
+                  (part): part is string => Boolean(part),
+                );
                 return h(
                   View,
                   { style: spaced(styles.entryGap, i, cv.experiences.length), key: i, wrap: false },
-                  h(
-                    View,
-                    { style: styles.entryHeader },
+                  EntryHead(
+                    styles,
+                    gutter > 0,
                     h(
                       Text,
                       { style: styles.entryTitle },
                       h(Text, { style: styles.bold }, exp.role),
                       h(Text, { style: styles.muted }, `${CV_SEPARATOR}${exp.company}`),
                     ),
-                    ...(meta ? [Chip(styles, meta)] : []),
+                    meta,
                   ),
-                  ...Bullets(styles, exp.bullets),
-                  ...Stack(styles, exp.stack),
+                  h(
+                    View,
+                    { style: styles.entryBody },
+                    ...Bullets(styles, exp.bullets),
+                    ...Stack(styles, exp.stack),
+                  ),
                 );
               }),
             ),
@@ -361,14 +491,25 @@ function CvDocument({
                 h(
                   View,
                   { style: spaced(styles.entryGap, i, cv.projects.length), key: i, wrap: false },
+                  EntryHead(
+                    styles,
+                    gutter > 0,
+                    h(
+                      Text,
+                      { style: [styles.entryTitle, styles.bold] },
+                      project.title,
+                      ...(project.link
+                        ? [h(Text, { style: styles.link }, `${CV_SEPARATOR}${project.link}`)]
+                        : []),
+                    ),
+                    [],
+                  ),
                   h(
                     View,
-                    { style: styles.entryHeader },
-                    h(Text, { style: [styles.entryTitle, styles.bold] }, project.title),
-                    ...(project.link ? [h(Text, { style: styles.link }, project.link)] : []),
+                    { style: styles.entryBody },
+                    ...Bullets(styles, project.bullets),
+                    ...Stack(styles, project.stack),
                   ),
-                  ...Bullets(styles, project.bullets),
-                  ...Stack(styles, project.stack),
                 ),
               ),
             ),
@@ -389,13 +530,22 @@ function CvDocument({
                     key: i,
                     wrap: false,
                   },
+                  ...(gutter > 0
+                    ? [
+                        h(
+                          View,
+                          { style: styles.gutterCol },
+                          h(Text, { style: styles.gutterText }, entry.dates ?? ""),
+                        ),
+                      ]
+                    : []),
                   h(
                     Text,
                     { style: styles.entryTitle },
                     h(Text, { style: styles.bold }, entry.degree),
                     h(Text, { style: styles.muted }, `${CV_SEPARATOR}${entry.institution}`),
                   ),
-                  ...(entry.dates ? [Chip(styles, entry.dates)] : []),
+                  ...(gutter === 0 && entry.dates ? [Chip(styles, entry.dates)] : []),
                 ),
               ),
             ),
@@ -422,9 +572,10 @@ export async function renderCvPdf(
   cv: Cv,
   templateId?: string,
   photo?: CvPhoto,
+  themeId?: string,
 ): Promise<Uint8Array<ArrayBuffer>> {
   const buffer = await renderToBuffer(
-    h(CvDocument, { cv, templateId, photo }) as unknown as React.ReactElement<DocumentProps>,
+    h(CvDocument, { cv, templateId, themeId, photo }) as unknown as React.ReactElement<DocumentProps>,
   );
   return Uint8Array.from(buffer);
 }
@@ -436,3 +587,4 @@ export async function extractPdfText(
   const { text, totalPages } = await extractText(doc, { mergePages: true });
   return { text, pageCount: totalPages };
 }
+

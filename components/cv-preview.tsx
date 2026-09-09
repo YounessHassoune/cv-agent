@@ -1,17 +1,19 @@
 "use client";
 
 import { PlusIcon, UserRoundIcon, XIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Children, useEffect, useRef, useState } from "react";
 
 import { titlesFor } from "@/lib/cv-sections";
 import {
+  CV_ACCENT_ALPHA,
   CV_ALPHA,
   CV_SEPARATOR,
-  type CvLayout,
   SHEET_REM,
+  accent,
   ink,
-  resolveTemplate,
   shade,
+  skinFor,
+  type CvSkin,
 } from "@/lib/cv-templates";
 import { cn } from "@/lib/utils";
 
@@ -250,13 +252,21 @@ function Section({
   title,
   children,
 }: {
-  readonly l: CvLayout;
+  readonly l: CvSkin;
   readonly title: string;
   readonly children: React.ReactNode;
 }) {
   // Templates that skip the rule lean on a lighter title instead, and the serif
   // template draws its rule heavier. `stylesFor` in the PDF does the same.
   const ruleAlpha = l.serif ? CV_ALPHA.ruleStrong : CV_ALPHA.rule;
+  const ruled = l.titleStyle === "rule";
+  const banded = l.titleStyle === "band";
+  // On a coloured theme the heading carries the accent and the rule follows it;
+  // a band inverts that — accent ink on an accent wash. `stylesFor` in the PDF
+  // draws exactly the same three cases.
+  const titleColor = l.accent ? accent(l.accent) : ruled || banded ? undefined : ink(CV_ALPHA.muted);
+  const ruleColor = l.accent ? accent(l.accent, CV_ACCENT_ALPHA.rule) : shade(ruleAlpha);
+  const bandColor = l.accent ? accent(l.accent, CV_ACCENT_ALPHA.strip) : shade(CV_ALPHA.chip);
 
   return (
     <section style={{ marginBottom: rem(l.sectionGap) }}>
@@ -266,10 +276,15 @@ function Section({
           fontSize: rem(l.sectionTitle),
           letterSpacing: `${l.sectionTracking}em`,
           lineHeight: 1.2,
-          textAlign: l.centered ? "center" : "left",
-          color: l.sectionRule ? undefined : ink(CV_ALPHA.muted),
-          borderBottom: l.sectionRule ? `0.75px solid ${shade(ruleAlpha)}` : undefined,
-          paddingBottom: l.sectionRule ? rem(0.25) : undefined,
+          textAlign: l.centered || l.titleCenter ? "center" : "left",
+          color: titleColor,
+          borderBottom: ruled ? `0.75px solid ${ruleColor}` : undefined,
+          paddingBottom: ruled ? rem(0.25) : banded ? rem(0.22) : undefined,
+          background: banded ? bandColor : undefined,
+          paddingTop: banded ? rem(0.22) : undefined,
+          paddingLeft: banded ? rem(0.4) : undefined,
+          paddingRight: banded ? rem(0.4) : undefined,
+          borderRadius: banded ? rem(0.15) : undefined,
           marginBottom: rem(0.5),
         }}
       >
@@ -285,7 +300,7 @@ function Bullets({
   items,
   onChange,
 }: {
-  readonly l: CvLayout;
+  readonly l: CvSkin;
   readonly items: string[];
   /** Absent in read-only mode. */
   readonly onChange?: (items: string[]) => void;
@@ -336,13 +351,13 @@ function Bullets({
   );
 }
 
-function Chip({ l, children }: { readonly l: CvLayout; readonly children: React.ReactNode }) {
+function Chip({ l, children }: { readonly l: CvSkin; readonly children: React.ReactNode }) {
   return (
     <span
       className="shrink-0 whitespace-nowrap rounded-full"
       style={{
-        background: shade(CV_ALPHA.chip),
-        color: ink(CV_ALPHA.muted),
+        background: l.accent ? accent(l.accent, CV_ACCENT_ALPHA.chip) : shade(CV_ALPHA.chip),
+        color: l.accent ? accent(l.accent) : ink(CV_ALPHA.muted),
         fontSize: rem(l.meta),
         lineHeight: 1.2,
         padding: `${rem(0.125)} ${rem(0.375)}`,
@@ -364,7 +379,7 @@ function Stack({
   items,
   onChange,
 }: {
-  readonly l: CvLayout;
+  readonly l: CvSkin;
   readonly items?: string[];
   readonly onChange?: (items: string[]) => void;
 }) {
@@ -388,12 +403,68 @@ function Stack({
   );
 }
 
-function EntryHeader({ children }: { readonly children: React.ReactNode }) {
+/**
+ * Title and meta on one line, or — on a gutter layout — meta in its own left
+ * column with the title beside it. Callers pass them in reading order (title,
+ * then meta) either way; this decides where they sit.
+ */
+function EntryHeader({ l, children }: { readonly l: CvSkin; readonly children: React.ReactNode }) {
+  const [title, meta] = Children.toArray(children);
+
+  if (l.gutter > 0) {
+    return (
+      <div className="flex" style={{ columnGap: rem(0.75) }}>
+        <div className="shrink-0" style={{ width: rem(l.gutter) }}>
+          {meta}
+        </div>
+        <div className="min-w-0 flex-1">{title}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-baseline justify-between" style={{ columnGap: rem(0.75) }}>
       {children}
     </div>
   );
+}
+
+/**
+ * An entry's dates and place. Joined into one chip on the inline layouts; in a
+ * gutter they stack, because "Oct 2017 - Jul 2019 · Casablanca" on one line is
+ * wider than the column and ran over the role beside it.
+ */
+function EntryMeta({
+  l,
+  parts,
+}: {
+  readonly l: CvSkin;
+  readonly parts: (string | null | undefined)[];
+}) {
+  const shown = parts.filter(Boolean) as string[];
+  if (shown.length === 0) return null;
+
+  if (l.gutter > 0) {
+    return (
+      <span
+        className="block"
+        style={{ fontSize: rem(l.meta), color: ink(CV_ALPHA.muted), lineHeight: 1.35 }}
+      >
+        {shown.map((part, i) => (
+          <span className="block" key={i}>
+            {part}
+          </span>
+        ))}
+      </span>
+    );
+  }
+
+  return <Chip l={l}>{shown.join(CV_SEPARATOR)}</Chip>;
+}
+
+/** Everything under an entry's header lines up with the title, not the dates. */
+function entryBodyIndent(l: CvSkin): React.CSSProperties | undefined {
+  return l.gutter > 0 ? { paddingLeft: rem(l.gutter + 0.75) } : undefined;
 }
 
 /**
@@ -409,12 +480,15 @@ function EntryHeader({ children }: { readonly children: React.ReactNode }) {
 export function CvPreview({
   cv,
   template,
+  theme,
   className,
   showPhoto,
   onChange,
 }: {
   readonly cv: CvPreviewData;
   readonly template?: string;
+  /** Colour theme id — chosen independently of the layout. */
+  readonly theme?: string;
   readonly className?: string;
   /**
    * Reserve the photo slot even before one is uploaded, so the header keeps
@@ -429,7 +503,7 @@ export function CvPreview({
   readonly onChange?: (cv: CvPreviewData) => void;
 }) {
   const { frame, sheet, scale, width, height } = useSheetScale();
-  const l = resolveTemplate(template).layout;
+  const l = skinFor(template, theme);
   const t = titlesFor(cv.language);
   const photo = showPhoto ?? Boolean(cv.photoUrl);
   const contact = [cv.email, cv.phone, cv.location, ...(cv.links ?? [])].filter(Boolean);
@@ -470,8 +544,12 @@ export function CvPreview({
         <div
           className="flex flex-wrap"
           style={{
-            background: shade(CV_ALPHA.strip),
-            color: ink(CV_ALPHA.muted),
+            background: l.accent
+              ? l.stripSolid
+                ? accent(l.accent)
+                : accent(l.accent, CV_ACCENT_ALPHA.strip)
+              : shade(CV_ALPHA.strip),
+            color: l.stripSolid ? "#fff" : ink(CV_ALPHA.muted),
             fontSize: rem(l.meta),
             lineHeight: 1.2,
             padding: `${rem(0.3)} ${rem(l.padX)}`,
@@ -530,7 +608,23 @@ export function CvPreview({
       <div style={{ padding: `${rem(l.padY)} ${rem(l.padX)}` }}>
         <header
           className={cn(photo && (l.centered ? "flex flex-col items-center" : "flex items-center"))}
-          style={{ marginBottom: rem(l.sectionGap), gap: photo ? rem(l.photoGap) : undefined }}
+          style={{
+            marginBottom: rem(l.sectionGap),
+            gap: photo ? rem(l.photoGap) : undefined,
+            // A banded header is full-bleed: the sheet's padding is pulled back
+            // so the tint reaches the paper edge, as the contact strip does.
+            ...(l.headerBand
+              ? {
+                  background: l.accent
+                    ? accent(l.accent, CV_ACCENT_ALPHA.strip)
+                    : shade(CV_ALPHA.strip),
+                  marginLeft: rem(-l.padX),
+                  marginRight: rem(-l.padX),
+                  marginTop: rem(-l.padY),
+                  padding: `${rem(l.padY * 0.8)} ${rem(l.padX)}`,
+                }
+              : {}),
+          }}
         >
           {photo && cv.photoUrl ? (
             // biome-ignore lint/performance/noImgElement: Cloudinary already
@@ -555,7 +649,13 @@ export function CvPreview({
           <div className="min-w-0" style={{ textAlign: l.centered ? "center" : "left" }}>
             <h2
               className="font-semibold"
-              style={{ fontSize: rem(l.name), letterSpacing: "-0.02em", lineHeight: 1.15 }}
+              style={{
+                fontSize: rem(l.name),
+                textTransform: l.nameCase === "upper" ? "uppercase" : undefined,
+                letterSpacing: l.nameCase === "upper" ? "0.08em" : "-0.02em",
+                lineHeight: 1.15,
+                color: l.accent ? accent(l.accent) : undefined,
+              }}
             >
               {editing ? (
                 <InlineText
@@ -615,6 +715,18 @@ export function CvPreview({
 
         {skills.length > 0 || editing ? (
           <Section l={l} title={t.skills}>
+            {/* Columns are a CSS multi-column, not a grid: groups keep their
+                order down each column and a long one flows rather than being
+                clipped to a cell. `breakInside` keeps a category and its skills
+                together — split across a column boundary they read as two
+                unrelated fragments. */}
+            <div
+              style={
+                l.skillColumns > 1
+                  ? { columnCount: l.skillColumns, columnGap: rem(1.25) }
+                  : undefined
+              }
+            >
             {skills.map((group, i) => {
               const setGroup = (next: (typeof skills)[number]) =>
                 set({ skills: replaceAt(skills, i, next) });
@@ -623,7 +735,10 @@ export function CvPreview({
                 <div
                   className="group"
                   key={i}
-                  style={{ marginBottom: gapAfter(i, skills.length, 0.5) }}
+                  style={{
+                    marginBottom: gapAfter(i, skills.length, 0.5),
+                    breakInside: l.skillColumns > 1 ? "avoid" : undefined,
+                  }}
                 >
                   <p
                     className="flex items-center gap-1 font-semibold"
@@ -652,10 +767,15 @@ export function CvPreview({
                   <div className="flex flex-wrap" style={{ columnGap: rem(0.25), rowGap: rem(0.2) }}>
                     {group.items.map((item, index) => (
                       <span
-                        className={cn("rounded-full", editing && "group/pill inline-flex items-center gap-0.5")}
+                        className={cn(
+                          "rounded-full",
+                          editing && "group/pill inline-flex items-center gap-0.5",
+                        )}
                         key={index}
                         style={{
-                          background: shade(CV_ALPHA.pill),
+                          background: l.accent
+                            ? accent(l.accent, CV_ACCENT_ALPHA.chip)
+                            : shade(CV_ALPHA.pill),
                           fontSize: rem(l.label),
                           lineHeight: 1.2,
                           padding: `${rem(0.125)} ${rem(0.375)}`,
@@ -693,6 +813,7 @@ export function CvPreview({
                 </div>
               );
             })}
+            </div>
             {editing ? (
               <AddButton
                 className="mt-2"
@@ -716,7 +837,7 @@ export function CvPreview({
                   key={i}
                   style={{ marginBottom: gapAfter(i, experiences.length, l.entryGap) }}
                 >
-                  <EntryHeader>
+                  <EntryHeader l={l}>
                     <p className="min-w-0">
                       {editing ? (
                         <>
@@ -771,10 +892,11 @@ export function CvPreview({
                         />
                       </span>
                     ) : meta.some(Boolean) ? (
-                      <Chip l={l}>{meta.filter(Boolean).join(CV_SEPARATOR)}</Chip>
+                      <EntryMeta l={l} parts={meta} />
                     ) : null}
                   </EntryHeader>
 
+                  <div style={entryBodyIndent(l)}>
                   <Bullets
                     items={experience.bullets}
                     l={l}
@@ -791,6 +913,7 @@ export function CvPreview({
                       editing ? (stack) => setExperience({ ...experience, stack }) : undefined
                     }
                   />
+                  </div>
                 </div>
               );
             })}
@@ -831,7 +954,7 @@ export function CvPreview({
                   key={i}
                   style={{ marginBottom: gapAfter(i, projects.length, l.entryGap) }}
                 >
-                  <EntryHeader>
+                  <EntryHeader l={l}>
                     <p className="min-w-0 font-semibold">
                       {editing ? (
                         <InlineText
@@ -867,6 +990,7 @@ export function CvPreview({
                       </span>
                     ) : null}
                   </EntryHeader>
+                  <div style={entryBodyIndent(l)}>
                   <Bullets
                     items={project.bullets}
                     l={l}
@@ -877,6 +1001,7 @@ export function CvPreview({
                     l={l}
                     onChange={editing ? (stack) => setProject({ ...project, stack }) : undefined}
                   />
+                  </div>
                 </div>
               );
             })}
@@ -904,7 +1029,7 @@ export function CvPreview({
                   key={i}
                   style={{ marginBottom: gapAfter(i, education.length, 0.375) }}
                 >
-                  <EntryHeader>
+                  <EntryHeader l={l}>
                     <p className="min-w-0">
                       {editing ? (
                         <>

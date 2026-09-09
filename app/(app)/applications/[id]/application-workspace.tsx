@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import type { AtsReport } from "@/agent/lib/ats.ts";
 import type { CvPreviewData } from "@/components/cv-preview";
+import { DEFAULT_TEMPLATE, DEFAULT_THEME } from "@/lib/cv-templates";
 import { cn } from "@/lib/utils";
 import { DocumentPanel } from "./document-panel";
 import { ReviewPanel } from "./review-panel";
@@ -15,6 +16,7 @@ export type VariantView = {
   cv: CvPreviewData | null;
   report: AtsReport | null;
   template: string;
+  theme: string;
   hasPdf: boolean;
   /**
    * When this variant was last compiled. Rides in the PDF URL as a cache
@@ -66,10 +68,13 @@ export function ApplicationWorkspace({
   // the stored CV JSON. Overrides are keyed by language so switching variants
   // still falls back to whichever template that one was compiled with.
   const [templateByLanguage, setTemplateByLanguage] = useState<Record<string, string>>({});
+  const [themeByLanguage, setThemeByLanguage] = useState<Record<string, string>>({});
   const template =
     (selected ? templateByLanguage[selected.language] : undefined) ??
     selected?.template ??
-    "modern";
+    DEFAULT_TEMPLATE;
+  const theme =
+    (selected ? themeByLanguage[selected.language] : undefined) ?? selected?.theme ?? DEFAULT_THEME;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -122,7 +127,13 @@ export function ApplicationWorkspace({
                 setTemplateByLanguage((current) => ({ ...current, [selected.language]: next }));
               }
             }}
+            onThemeChange={(next) => {
+              if (selected) {
+                setThemeByLanguage((current) => ({ ...current, [selected.language]: next }));
+              }
+            }}
             template={template}
+            theme={theme}
             title={title}
           />
         </div>

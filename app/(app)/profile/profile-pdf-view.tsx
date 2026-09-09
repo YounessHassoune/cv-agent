@@ -22,11 +22,13 @@ const DEBOUNCE_MS = 700;
 export function ProfilePdfView({
   cv,
   template,
+  theme,
   photo,
   className,
 }: {
   readonly cv: CvPreviewData;
   readonly template: string;
+  readonly theme: string;
   readonly photo: boolean;
   readonly className?: string;
 }) {
@@ -43,9 +45,10 @@ export function ProfilePdfView({
       JSON.stringify({
         cv: previewToCv(cv, cv.language ?? "en"),
         template,
+        theme,
         photo,
       }),
-    [cv, template, photo],
+    [cv, template, theme, photo],
   );
 
   useEffect(() => {
