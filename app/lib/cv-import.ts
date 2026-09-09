@@ -1,4 +1,4 @@
-import { Output, generateText } from "ai";
+import { Output, streamText } from "ai";
 import mammoth from "mammoth";
 import { extractText, getDocumentProxy } from "unpdf";
 import { type ImportedProfile, ImportedProfileSchema } from "@/agent/lib/cv-import-schema.ts";
@@ -25,6 +25,18 @@ const TEXT_LAYER_MIN_CHARS = 220;
 
 /** Text handed to the model. Long enough for a 4-page CV, short enough to stay cheap. */
 const MAX_TEXT_CHARS = 40_000;
+
+/** gpt-5*, o3, o4-mini and friends. Everything else rejects `reasoningEffort`. */
+const reasoning = (model: string) => /(^|\/)(gpt-5|o\d)/.test(model);
+
+/** What the model has pulled out so far, for the editor's progress panel. */
+export type Found = {
+  readonly name: string;
+  readonly roles: number;
+  readonly skills: number;
+  readonly education: number;
+  readonly projects: number;
+};
 
 export class CvImportError extends Error {
   readonly status: number;
@@ -97,14 +109,34 @@ PDF text arrives with columns and spacing flattened, so entries may be interleav
 async function parse(
   content: Array<{ type: "text"; text: string } | { type: "file"; data: Uint8Array; mediaType: string }>,
   model: string,
+  effort: "minimal" | "low",
+  onFound: (found: Found) => void,
 ): Promise<ImportedProfile> {
-  const { output } = await generateText({
+  const result = streamText({
     model,
     output: Output.object({ schema: ImportedProfileSchema, name: "cv" }),
     system: SYSTEM,
     messages: [{ role: "user", content }],
+    // Only reasoning models take this, and sending it to the others earns a
+    // warning per call. Left to itself a reasoning model spent ~15k tokens and
+    // 115s thinking about a two-page CV before writing the same fields.
+    ...(reasoning(model) ? { providerOptions: { openai: { reasoningEffort: effort } } } : {}),
   });
-  return output;
+
+  // Streamed rather than awaited whole: this call is the entire wait, and the
+  // partial object is the only honest progress there is to report — the caller
+  // turns it into "found 4 roles, 31 skills" instead of a spinner.
+  for await (const partial of result.partialOutputStream) {
+    onFound({
+      name: partial?.fullName ?? "",
+      roles: partial?.experiences?.length ?? 0,
+      skills: partial?.skills?.length ?? 0,
+      education: partial?.education?.length ?? 0,
+      projects: partial?.projects?.length ?? 0,
+    });
+  }
+
+  return await result.output;
 }
 
 /**
@@ -117,6 +149,10 @@ async function parse(
  */
 export async function importCv(
   file: File,
+  /** Called as the import moves between steps, for the editor's progress panel. */
+  onStage: (stage: "reading" | "parsing") => void = () => {},
+  /** Called repeatedly while the model streams, with counts found so far. */
+  onFound: (found: Found) => void = () => {},
 ): Promise<{ profile: ImportedProfile; source: "text" | "document"; photo: CvPhoto | null }> {
   kindOf(file); // reject unsupported types before reading the body
 
@@ -127,6 +163,7 @@ export async function importCv(
 
   let text: string;
   let photo: CvPhoto | null;
+  onStage("reading");
   try {
     ({ text, photo } = await readDocument(file, bytes));
   } catch {
@@ -138,6 +175,7 @@ export async function importCv(
     throw new CvImportError("That Word document has no readable text in it.");
   }
 
+  onStage("parsing");
   try {
     if (scanned) {
       const profile = await parse(
@@ -146,6 +184,9 @@ export async function importCv(
           { type: "file", data: bytes, mediaType: PDF },
         ],
         requireModelEnv("AGENT_MODEL"),
+        // Reading a scanned page is worth a little more thought than reading text.
+        "low",
+        onFound,
       );
       return { profile, source: "document", photo };
     }
@@ -153,6 +194,8 @@ export async function importCv(
     const profile = await parse(
       [{ type: "text", text: `CV text:\n\n${text.slice(0, MAX_TEXT_CHARS)}` }],
       requireModelEnv("EXTRACTION_MODEL"),
+      "low",
+      onFound,
     );
     return { profile, source: "text", photo };
   } catch (error) {

@@ -89,8 +89,22 @@ model Skill {
 model CvImport {
   userId    String   @id
   filename  String
+  /// "running" while the parse is still going, then "done" or "error". The
+  /// upload response is not the delivery mechanism — the browser can be gone
+  /// long before the parse finishes — so the editor polls this instead.
+  status    String   @default("done")
+  /// Which step the parse is on ("reading", "parsing", "photo"). The editor
+  /// shows it, because a 40s model call behind a bare spinner reads as a hang.
+  stage     String   @default("parsing")
+  /// What the model has found so far while streaming — `{ name, roles, skills,
+  /// education, projects }`. The only honest progress a single long model call
+  /// has to offer, and it survives a refresh because it lives here.
+  found     Json?
+  /// `{}` until the parse finishes.
   profile   Json
   photoUrl  String?
+  /// Why the parse failed, shown to the user on their next visit.
+  error     String?
   createdAt DateTime @default(now())
 }
 

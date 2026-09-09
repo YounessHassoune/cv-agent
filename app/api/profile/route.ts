@@ -12,6 +12,11 @@ import { CV_TEMPLATE_IDS, DEFAULT_TEMPLATE } from "@/lib/cv-templates";
  */
 const MAX_PHOTO_CHARS = 1_400_000;
 
+/** `new Date("last summer")` is an Invalid Date, and Prisma throws on those. */
+const isDate = (value: string) => !Number.isNaN(new Date(value).getTime());
+
+const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
 const ProfileInput = z.object({
   fullName: z.string().min(1),
   headline: z.string().optional(),
@@ -46,8 +51,11 @@ const ProfileInput = z.object({
       company: z.string().min(1),
       role: z.string().min(1),
       location: z.string().optional(),
-      start: z.string().min(4),
-      end: z.string().optional(),
+      start: z.string().min(4).refine(isDate, "Start date isn't a date the CV builder understands."),
+      end: z
+        .string()
+        .optional()
+        .refine((v) => !v || isDate(v), "End date isn't a date the CV builder understands."),
       bullets: z.array(z.string()),
       stack: z.array(z.string()),
     }),
@@ -80,7 +88,14 @@ export async function PUT(request: Request) {
 
   const parsed = ProfileInput.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "invalid", issues: parsed.error.issues }, { status: 400 });
+    // "invalid" told the editor nothing, so a rejected save looked like a bug
+    // rather than a missing field. Name the first offending path instead.
+    const [issue] = parsed.error.issues;
+    const where = issue?.path.join(".") || "profile";
+    return NextResponse.json(
+      { error: `${where}: ${issue?.message ?? "invalid"}`, issues: parsed.error.issues },
+      { status: 400 },
+    );
   }
   const input = parsed.data;
 
@@ -96,7 +111,12 @@ export async function PUT(request: Request) {
     languages: input.languages,
     education: input.education,
     skills: {
-      create: input.skills.map((s) => ({ name: s.name, category: s.category ?? null })),
+      // `Skill` is unique per (profile, name) and CVs happily list the same
+      // skill under two headings, which used to fail the whole save with a
+      // constraint error the user could do nothing about. First one wins.
+      create: input.skills
+        .filter((s, i) => input.skills.findIndex((o) => same(o.name, s.name)) === i)
+        .map((s) => ({ name: s.name, category: s.category ?? null })),
     },
     experiences: {
       create: input.experiences.map((e) => ({

@@ -293,8 +293,11 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
   // rather than patching fields. Still only a draft: nothing reaches the
   // database until Save.
   const applyImport = (apply: (current: ProfileForm) => ProfileForm) => {
-    setForm(apply);
-    setStatus("dirty");
+    const next = apply(form);
+    setForm(next);
+    // Straight to the database: an import the user waited for (and may have
+    // reloaded the page for) sitting unsaved in the form reads as lost work.
+    void save(next);
   };
 
   const filled = useMemo<Record<SectionId, boolean>>(
@@ -316,28 +319,54 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
   );
   const preview = useMemo(() => toPreview(form), [form]);
 
-  const save = async () => {
+  /**
+   * The API rejects these outright and answers with a field path, which is no
+   * use to someone looking at a form. Catching them here names the row instead.
+   */
+  const blocker = (f: ProfileForm): string | undefined => {
+    if (!f.fullName.trim()) return "Add your full name before saving.";
+    if (!f.contact.email.trim()) return "Add a contact email before saving.";
+    const index = f.experiences.findIndex((e) => e.company && e.role && !e.start);
+    if (index >= 0) {
+      const { company, role } = f.experiences[index];
+      return `${role || company || `Experience ${index + 1}`} needs a start date — imported CVs often leave it out.`;
+    }
+    return undefined;
+  };
+
+  /**
+   * Takes the form to save so an import can persist the merge it just made
+   * without waiting a render for `form` to catch up.
+   */
+  const save = async (next: ProfileForm = form) => {
+    const problem = blocker(next);
+    if (problem) {
+      setStatus("error");
+      setMessage(problem);
+      return;
+    }
+
     setStatus("saving");
     setMessage(undefined);
     const response = await fetch("/api/profile", {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        fullName: form.fullName,
-        headline: form.headline || undefined,
-        summary: form.summary || undefined,
-        photoUrl: form.photoUrl || undefined,
-        template: form.template || DEFAULT_TEMPLATE,
+        fullName: next.fullName,
+        headline: next.headline || undefined,
+        summary: next.summary || undefined,
+        photoUrl: next.photoUrl || undefined,
+        template: next.template || DEFAULT_TEMPLATE,
         contact: {
-          email: form.contact.email,
-          phone: form.contact.phone || undefined,
-          location: form.contact.location || undefined,
-          links: form.contact.links.filter(Boolean),
+          email: next.contact.email,
+          phone: next.contact.phone || undefined,
+          location: next.contact.location || undefined,
+          links: next.contact.links.filter(Boolean),
         },
-        languages: form.languages.filter((l) => l.name),
-        education: form.education.filter((e) => e.institution),
-        skills: form.skills.filter((s) => s.name),
-        experiences: form.experiences
+        languages: next.languages.filter((l) => l.name),
+        education: next.education.filter((e) => e.institution),
+        skills: next.skills.filter((s) => s.name),
+        experiences: next.experiences
           .filter((e) => e.company && e.role)
           .map((e) => ({
             company: e.company,
@@ -348,7 +377,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
             bullets: lines(e.bullets),
             stack: commas(e.stack),
           })),
-        projects: form.projects
+        projects: next.projects
           .filter((p) => p.title)
           .map((p) => ({
             title: p.title,
@@ -937,7 +966,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
   const saveButton = (
     <Button
       disabled={status === "saving" || status === "idle"}
-      onClick={save}
+      onClick={() => void save()}
       size="sm"
       type="button"
     >
