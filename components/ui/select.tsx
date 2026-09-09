@@ -46,9 +46,16 @@ function SelectTrigger({
 
 /**
  * Radix's `position="item-aligned" | "popper"` became the boolean
- * `alignItemWithTrigger` on the Positioner, which defaults to true (the old
- * item-aligned behaviour). Radix's `Viewport` is `List`, and the scroll buttons
- * are `ScrollUpArrow` / `ScrollDownArrow`.
+ * `alignItemWithTrigger` on the Positioner. Radix's `Viewport` is `List`, and
+ * the scroll buttons are `ScrollUpArrow` / `ScrollDownArrow`.
+ *
+ * Base UI defaults `alignItemWithTrigger` to true, which lifts the popup so the
+ * selected item covers the trigger — the list then appears above, below or on
+ * top of the control depending on which item happens to be selected, and a long
+ * list (a year picker, say) jumps somewhere different on every open. This
+ * defaults it to a plain dropdown anchored under the trigger; pass
+ * `alignItemWithTrigger` to opt back in. `collisionPadding` keeps a list that
+ * reaches the bottom of the window from being clipped against the edge.
  */
 function SelectContent({
   className,
@@ -57,12 +64,13 @@ function SelectContent({
   alignOffset,
   side,
   sideOffset = 4,
-  alignItemWithTrigger,
+  alignItemWithTrigger = false,
+  collisionPadding = 8,
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
     SelectPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
+    "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger" | "collisionPadding"
   >) {
   return (
     <SelectPrimitive.Portal>
@@ -72,6 +80,7 @@ function SelectContent({
         side={side}
         sideOffset={sideOffset}
         alignItemWithTrigger={alignItemWithTrigger}
+        collisionPadding={collisionPadding}
       >
         <SelectPrimitive.Popup
           data-slot="select-content"

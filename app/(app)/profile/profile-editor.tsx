@@ -39,7 +39,10 @@ import { CV_TEMPLATE_LIST, DEFAULT_TEMPLATE } from "@/lib/cv-templates";
 import { cn } from "@/lib/utils";
 import { CvImportDialog } from "./cv-import-dialog";
 import { ProfilePdfView } from "./profile-pdf-view";
+import { MonthField } from "./month-field";
 import { PhotoField } from "./photo-field";
+import { SkillsField } from "./skills-field";
+import { TagsField } from "./tags-field";
 
 export type ProfileForm = {
   fullName: string;
@@ -125,7 +128,7 @@ function toPreview(form: ProfileForm): CvPreviewData {
       .map((e) => ({
         institution: e.institution,
         degree: e.degree,
-        dates: [e.start, e.end].filter(Boolean).join(" - "),
+        dates: [displayDate(e.start), displayDate(e.end)].filter(Boolean).join(" - "),
       })),
     languages: form.languages
       .filter((l) => l.name.trim())
@@ -173,6 +176,46 @@ const sections: { id: SectionId; label: string; icon: LucideIcon; hint: string }
   },
   { id: "languages", label: "Languages", icon: LanguagesIcon, hint: "Spoken languages and level." },
 ];
+
+/** The levels people actually write on CVs, coarsest first. */
+const LANGUAGE_LEVELS = ["Native", "Fluent", "C2", "C1", "B2", "B1", "A2", "A1"];
+
+const NO_LEVEL = "none";
+
+/**
+ * A select rather than the free-text box this was: a bare input gave no hint
+ * that there was anything to choose from, and the datalist behind it is barely
+ * a control on Safari. A level the CV wrote its own way ("Mother tongue",
+ * "TOEIC 900") is kept by joining the list rather than being thrown away.
+ */
+function LevelSelect({
+  value,
+  onChange,
+}: {
+  readonly value: string;
+  readonly onChange: (next: string) => void;
+}) {
+  const levels =
+    value && !LANGUAGE_LEVELS.includes(value) ? [value, ...LANGUAGE_LEVELS] : LANGUAGE_LEVELS;
+
+  return (
+    <Select onValueChange={(next) => onChange(next === NO_LEVEL ? "" : (next as string))} value={value || NO_LEVEL}>
+      <SelectTrigger aria-label="Level" className="h-7 w-28 shrink-0 border-0 bg-secondary/70 px-2 text-xs shadow-none" size="sm">
+        <SelectValue>
+          <span className={cn("truncate", !value && "text-muted-foreground")}>{value || "Level"}</span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent align="end">
+        <SelectItem value={NO_LEVEL}>No level</SelectItem>
+        {levels.map((level) => (
+          <SelectItem key={level} value={level}>
+            {level}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 function FieldRow({
   label,
@@ -499,16 +542,12 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
                   </FieldRow>
                   <div className="grid grid-cols-2 gap-3">
                     <FieldRow label="Start">
-                      <Input
-                        onChange={(e) => update({ start: e.target.value })}
-                        type="date"
-                        value={exp.start}
-                      />
+                      <MonthField onChange={(start) => update({ start })} value={exp.start} />
                     </FieldRow>
                     <FieldRow label="End">
-                      <Input
-                        onChange={(e) => update({ end: e.target.value })}
-                        type="date"
+                      <MonthField
+                        emptyLabel="Present"
+                        onChange={(end) => update({ end })}
                         value={exp.end}
                       />
                     </FieldRow>
@@ -522,9 +561,10 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
                     value={exp.bullets}
                   />
                 </FieldRow>
-                <FieldRow label="Tech actually used (comma separated)">
-                  <Input
-                    onChange={(e) => update({ stack: e.target.value })}
+                <FieldRow label="Tech actually used">
+                  <TagsField
+                    label="Technology"
+                    onChange={(stack) => update({ stack })}
                     placeholder="TypeScript, Postgres, AWS"
                     value={exp.stack}
                   />
@@ -577,17 +617,13 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
                   <FieldRow label="Degree">
                     <Input onChange={(e) => update({ degree: e.target.value })} value={entry.degree} />
                   </FieldRow>
-                  <FieldRow label="Start year">
-                    <Input
-                      onChange={(e) => update({ start: e.target.value })}
-                      placeholder="2018"
-                      value={entry.start}
-                    />
+                  <FieldRow label="Start">
+                    <MonthField onChange={(start) => update({ start })} value={entry.start} />
                   </FieldRow>
-                  <FieldRow label="End year">
-                    <Input
-                      onChange={(e) => update({ end: e.target.value })}
-                      placeholder="2021"
+                  <FieldRow label="End">
+                    <MonthField
+                      emptyLabel="Ongoing"
+                      onChange={(end) => update({ end })}
                       value={entry.end}
                     />
                   </FieldRow>
@@ -612,53 +648,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
     }
 
     if (id === "skills") {
-      return (
-        <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {form.skills.map((skill, i) => (
-              <div className="flex gap-2" key={i}>
-                <Input
-                  onChange={(e) => {
-                    const skills = [...form.skills];
-                    skills[i] = { ...skill, name: e.target.value };
-                    patch({ skills });
-                  }}
-                  placeholder="Skill"
-                  value={skill.name}
-                />
-                <Input
-                  className="w-32 shrink-0"
-                  onChange={(e) => {
-                    const skills = [...form.skills];
-                    skills[i] = { ...skill, category: e.target.value };
-                    patch({ skills });
-                  }}
-                  placeholder="Category"
-                  value={skill.category}
-                />
-                <Button
-                  aria-label="Remove skill"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => patch({ skills: form.skills.filter((_, x) => x !== i) })}
-                  size="icon"
-                  type="button"
-                  variant="ghost"
-                >
-                  <TrashIcon className="size-3.5" />
-                </Button>
-              </div>
-            ))}
-          </div>
-          <Button
-            className="w-full border-dashed"
-            onClick={() => patch({ skills: [...form.skills, { name: "", category: "" }] })}
-            type="button"
-            variant="outline"
-          >
-            <PlusIcon className="size-4" /> Add skill
-          </Button>
-        </div>
-      );
+      return <SkillsField onChange={(skills) => patch({ skills })} value={form.skills} />;
     }
 
     if (id === "projects") {
@@ -706,8 +696,13 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
                     value={project.bullets}
                   />
                 </FieldRow>
-                <FieldRow label="Tech actually used (comma separated)">
-                  <Input onChange={(e) => update({ stack: e.target.value })} value={project.stack} />
+                <FieldRow label="Tech actually used">
+                  <TagsField
+                    label="Technology"
+                    onChange={(stack) => update({ stack })}
+                    placeholder="React, Node, Redis"
+                    value={project.stack}
+                  />
                 </FieldRow>
               </EntryCard>
             );
@@ -733,10 +728,16 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
 
     if (id === "links") {
       return (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {form.contact.links.map((link, i) => (
-            <div className="flex gap-2" key={i}>
-              <Input
+            <div
+              className="flex items-center gap-2 rounded-xl border bg-field/50 py-1.5 pr-1.5 pl-3 focus-within:border-foreground/30"
+              key={i}
+            >
+              <LinkIcon className="size-3.5 shrink-0 text-muted-foreground" />
+              <input
+                aria-label="Link"
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
                 onChange={(e) => {
                   const links = [...form.contact.links];
                   links[i] = e.target.value;
@@ -747,7 +748,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
               />
               <Button
                 aria-label="Remove link"
-                className="text-muted-foreground hover:text-destructive"
+                className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
                 onClick={() =>
                   patch({
                     contact: {
@@ -778,41 +779,40 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
 
     if (id === "languages") {
       return (
-        <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {form.languages.map((language, i) => (
-              <div className="flex gap-2" key={i}>
-                <Input
-                  onChange={(e) => {
-                    const languages = [...form.languages];
-                    languages[i] = { ...language, name: e.target.value };
-                    patch({ languages });
-                  }}
-                  placeholder="Language"
-                  value={language.name}
-                />
-                <Input
-                  className="w-32 shrink-0"
-                  onChange={(e) => {
-                    const languages = [...form.languages];
-                    languages[i] = { ...language, level: e.target.value };
-                    patch({ languages });
-                  }}
-                  placeholder="Level"
-                  value={language.level}
-                />
-                <Button
-                  aria-label="Remove language"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => patch({ languages: form.languages.filter((_, x) => x !== i) })}
-                  size="icon"
-                  type="button"
-                  variant="ghost"
+        <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {form.languages.map((language, i) => {
+              const update = (values: Partial<(typeof form.languages)[number]>) => {
+                const languages = [...form.languages];
+                languages[i] = { ...language, ...values };
+                patch({ languages });
+              };
+              return (
+                <div
+                  className="flex items-center gap-2 rounded-xl border bg-field/50 py-1.5 pr-1.5 pl-3 focus-within:border-foreground/30"
+                  key={i}
                 >
-                  <TrashIcon className="size-3.5" />
-                </Button>
-              </div>
-            ))}
+                  <input
+                    aria-label="Language"
+                    className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                    onChange={(e) => update({ name: e.target.value })}
+                    placeholder="Language"
+                    value={language.name}
+                  />
+                  <LevelSelect onChange={(level) => update({ level })} value={language.level} />
+                  <Button
+                    aria-label="Remove language"
+                    className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => patch({ languages: form.languages.filter((_, x) => x !== i) })}
+                    size="icon"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <TrashIcon className="size-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
           <Button
             className="w-full border-dashed"
@@ -896,8 +896,6 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
               <LayoutTemplateIcon className="size-3.5" />
               <SelectValue>{activeTemplate.label}</SelectValue>
             </SelectTrigger>
-            {/* Default (item-aligned) positioning only: this Select's popper
-                variant pins the viewport to the trigger's height and clips. */}
             <SelectContent align="end" className="w-80">
               {CV_TEMPLATE_LIST.map((template) => (
                 <SelectItem className="py-2" key={template.id} value={template.id}>
