@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CheckCircle2Icon, FileTextIcon, SparklesIcon, TargetIcon } from "lucide-react";
+import { CheckCircle2Icon, SparklesIcon, TargetIcon } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -30,10 +30,22 @@ export default function AuthLayout({ children }: { readonly children: ReactNode 
         <div className="grid-texture pointer-events-none absolute inset-0 opacity-40" />
 
         <Link className="relative flex items-center gap-2.5" href="/">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <FileTextIcon className="size-4" />
-          </span>
-          <span className="font-medium text-[0.95rem] tracking-tight">ApplyFlow</span>
+          <span
+            aria-hidden="true"
+            className="size-7 shrink-0"
+            style={{
+              backgroundColor: "currentColor",
+              maskImage: "url(/logo-mark.png)",
+              maskPosition: "center",
+              maskRepeat: "no-repeat",
+              maskSize: "contain",
+              WebkitMaskImage: "url(/logo-mark.png)",
+              WebkitMaskPosition: "center",
+              WebkitMaskRepeat: "no-repeat",
+              WebkitMaskSize: "contain",
+            }}
+          />
+          <span className="font-medium text-[0.95rem] tracking-tight">Wellsuited</span>
         </Link>
 
         <div className="relative max-w-md space-y-10">
@@ -70,10 +82,21 @@ export default function AuthLayout({ children }: { readonly children: ReactNode 
       <main className="relative flex flex-col">
         <div className="flex items-center justify-between p-4 sm:p-6">
           <Link className="flex items-center gap-2.5 lg:invisible" href="/">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <FileTextIcon className="size-4" />
-            </span>
-            <span className="font-medium text-sm tracking-tight">ApplyFlow</span>
+          <span
+              aria-hidden="true"
+              className="size-7 shrink-0"
+              style={{
+                maskImage: "url(/logo-mark.png)",
+                maskPosition: "center",
+                maskRepeat: "no-repeat",
+                maskSize: "contain",
+                WebkitMaskImage: "url(/logo-mark.png)",
+                WebkitMaskPosition: "center",
+                WebkitMaskRepeat: "no-repeat",
+                WebkitMaskSize: "contain",
+              }}
+            />
+            <span className="font-medium text-sm tracking-tight">Wellsuited</span>
           </Link>
           <ThemeToggle />
         </div>

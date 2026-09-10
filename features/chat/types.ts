@@ -2,7 +2,7 @@ import type { ClientSessionState, MessageStreamEvent } from "eve/client";
 import type { EveMessage, useEveAgent } from "eve/react";
 import type { ReactNode } from "react";
 
-export const AGENT_NAME = "ApplyFlow";
+export const AGENT_NAME = "Wellsuited";
 
 export const DEFAULT_SUBHEADING =
   "Paste a job description and say which language you want the CV in. Your master profile is the only source of facts.";

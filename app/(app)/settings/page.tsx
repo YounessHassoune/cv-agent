@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { PasswordSection } from "./password-section";
 import { SettingsSection } from "./settings-section";
 
-export const metadata: Metadata = { title: "Settings · ApplyFlow" };
+export const metadata: Metadata = { title: "Settings · Wellsuited" };
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {

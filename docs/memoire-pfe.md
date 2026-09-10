@@ -1,6 +1,6 @@
 # Mémoire de projet de fin d'études
 
-**Conception et réalisation d'un agent IA multi-agents pour l'adaptation automatisée de CV aux offres d'emploi — la plateforme *ApplyFlow***
+**Conception et réalisation d'un agent IA multi-agents pour l'adaptation automatisée de CV aux offres d'emploi — la plateforme *Wellsuited***
 
 ---
 
@@ -36,7 +36,7 @@
 
 Le recrutement contemporain est massivement médiatisé par des logiciels de suivi des candidatures (*Applicant Tracking Systems*, ATS), qui filtrent, indexent et classent les CV avant toute lecture humaine. Un candidat compétent peut ainsi être écarté non pour un défaut de qualification, mais parce que son CV — rédigé une fois pour toutes et envoyé tel quel à des dizaines d'offres — ne parle pas le vocabulaire de l'annonce. Adapter manuellement un CV à chaque offre est en revanche une tâche coûteuse, répétitive et sujette à deux dérives symétriques : le bourrage de mots-clés et l'invention pure et simple de compétences.
 
-Le présent travail, mené au sein de *[l'organisme d'accueil]*, a consisté à concevoir et réaliser **ApplyFlow**, une application web pilotée par un système multi-agents fondé sur les grands modèles de langage (LLM). L'utilisateur maintient un **profil maître** unique — sa vérité factuelle — puis colle une offre d'emploi. Un agent orchestrateur coordonne alors deux sous-agents spécialisés : un **analyste d'offre** qui extrait sémantiquement le poste, la séniorité, le domaine, les responsabilités et une liste de mots-clés pondérés ; et un **rédacteur de CV** qui produit, par langue cible, un CV structuré adapté au poste. Le document est ensuite validé par un **garde-fou anti-fabrication** déterministe, compilé en PDF compatible ATS, puis noté par un **moteur de scoring hybride** (mots-clés pondérés 35 %, similarité sémantique par plongements vectoriels 35 %, structure et quantification 15 %, adéquation titre/ancienneté 15 %, le tout multiplié par un facteur de passage sur les compétences indispensables). Le score déclenche une **boucle d'auto-correction bornée** qui s'arrête au plafond honnête du profil, puis la candidature est soumise à la **validation explicite de l'utilisateur** avant tout usage.
+Le présent travail, mené au sein de *[l'organisme d'accueil]*, a consisté à concevoir et réaliser **Wellsuited**, une application web pilotée par un système multi-agents fondé sur les grands modèles de langage (LLM). L'utilisateur maintient un **profil maître** unique — sa vérité factuelle — puis colle une offre d'emploi. Un agent orchestrateur coordonne alors deux sous-agents spécialisés : un **analyste d'offre** qui extrait sémantiquement le poste, la séniorité, le domaine, les responsabilités et une liste de mots-clés pondérés ; et un **rédacteur de CV** qui produit, par langue cible, un CV structuré adapté au poste. Le document est ensuite validé par un **garde-fou anti-fabrication** déterministe, compilé en PDF compatible ATS, puis noté par un **moteur de scoring hybride** (mots-clés pondérés 35 %, similarité sémantique par plongements vectoriels 35 %, structure et quantification 15 %, adéquation titre/ancienneté 15 %, le tout multiplié par un facteur de passage sur les compétences indispensables). Le score déclenche une **boucle d'auto-correction bornée** qui s'arrête au plafond honnête du profil, puis la candidature est soumise à la **validation explicite de l'utilisateur** avant tout usage.
 
 La solution a été implémentée en TypeScript sur une pile Next.js 16 / React 19 / Tailwind CSS 4 pour l'interface, le framework d'agents *eve* pour le runtime conversationnel durable, Prisma 7 et PostgreSQL pour la persistance, et `@react-pdf/renderer` pour la génération documentaire. La chaîne déterministe (garde-fou → rendu PDF → extraction de texte → scoring) est couverte par une campagne de vérification hors-ligne, complétée par des tests unitaires ciblés et une évaluation de bout en bout du parcours de l'agent.
 
@@ -48,7 +48,7 @@ La solution a été implémentée en TypeScript sur une pile Next.js 16 / React 
 
 Modern hiring is largely mediated by Applicant Tracking Systems (ATS), which parse, index and rank résumés before any human reads them. A qualified candidate can therefore be filtered out not for lack of skill, but because a single, generic CV sent to dozens of openings does not speak the vocabulary of the posting. Tailoring a CV by hand for every application is, however, slow, repetitive work that invites two symmetrical failure modes: keyword stuffing and outright fabrication of experience.
 
-This project, carried out at *[the host company]*, delivers **ApplyFlow**, a web application driven by an LLM-based multi-agent system. The user maintains a single **master profile** — the factual source of truth — and then pastes a job description. An orchestrating agent coordinates two specialised sub-agents: a **JD analyst** that semantically extracts the role, seniority, domain, responsibilities and a set of weighted ATS keywords; and a **CV writer** that produces, per target language, a structured CV adapted to the role. The draft is then checked by a deterministic **anti-fabrication guard**, compiled into an ATS-friendly PDF, and graded by a **hybrid scoring engine** (weighted keywords 35 %, embedding-based semantic similarity 35 %, structure and quantified achievements 15 %, title/years fit 15 %, all multiplied by a must-have coverage gate). The score drives a **bounded self-healing loop** that stops at the profile's honest ceiling, after which the application is submitted for **explicit human approval**.
+This project, carried out at *[the host company]*, delivers **Wellsuited**, a web application driven by an LLM-based multi-agent system. The user maintains a single **master profile** — the factual source of truth — and then pastes a job description. An orchestrating agent coordinates two specialised sub-agents: a **JD analyst** that semantically extracts the role, seniority, domain, responsibilities and a set of weighted ATS keywords; and a **CV writer** that produces, per target language, a structured CV adapted to the role. The draft is then checked by a deterministic **anti-fabrication guard**, compiled into an ATS-friendly PDF, and graded by a **hybrid scoring engine** (weighted keywords 35 %, embedding-based semantic similarity 35 %, structure and quantified achievements 15 %, title/years fit 15 %, all multiplied by a must-have coverage gate). The score drives a **bounded self-healing loop** that stops at the profile's honest ceiling, after which the application is submitted for **explicit human approval**.
 
 The system is implemented in TypeScript on a Next.js 16 / React 19 / Tailwind CSS 4 front end, the *eve* agent framework for durable conversational runtime, Prisma 7 with PostgreSQL for persistence, and `@react-pdf/renderer` for document generation. The deterministic half of the pipeline (guard → PDF render → text extraction → scoring) is covered by an offline verification suite, supplemented by targeted unit tests and an end-to-end evaluation of the agent workflow.
 
@@ -109,7 +109,7 @@ graph TD
     DG --> ADM["Administration & RH"]
     TECH --> DEV["Pôle développement"]
     TECH --> RD["Pôle R&D / Innovation"]
-    RD --> STAGE["Équipe d'accueil<br/>(projet ApplyFlow)"]
+    RD --> STAGE["Équipe d'accueil<br/>(projet Wellsuited)"]
 ```
 
 *Figure 1 — Organigramme simplifié de l'organisme d'accueil (à adapter).*
@@ -227,11 +227,11 @@ Ce chapitre traduit la problématique en une solution spécifiée. Il compare d'
 | **Assistant conversationnel généraliste** | Rédaction libre par LLM | Souplesse maximale, coût nul | Fabrication non contrôlée, absence de mesure, absence de document compilé et de persistance |
 | **Processus manuel** | Réécriture par le candidat | Véracité garantie | Coût élevé, non reproductible, sans retour objectif |
 
-**Synthèse.** Le marché se partage entre des outils qui *mesurent* sans écrire et des outils qui *écrivent* sans mesurer ni vérifier. Aucun ne referme la boucle « analyser → écrire → compiler → mesurer → corriger → faire valider » sur une source de vérité persistante. C'est précisément l'espace occupé par ApplyFlow.
+**Synthèse.** Le marché se partage entre des outils qui *mesurent* sans écrire et des outils qui *écrivent* sans mesurer ni vérifier. Aucun ne referme la boucle « analyser → écrire → compiler → mesurer → corriger → faire valider » sur une source de vérité persistante. C'est précisément l'espace occupé par Wellsuited.
 
 ### II.3. Solution proposée
 
-ApplyFlow articule cinq principes de conception :
+Wellsuited articule cinq principes de conception :
 
 1. **Profil maître unique.** Un enregistrement relationnel par utilisateur concentre les faits : expériences (employeur, intitulé, dates, réalisations, technologies effectivement utilisées), projets, compétences, formations, langues. Rien d'autre ne peut devenir un fait dans un CV.
 2. **Spécialisation multi-agents.** Un orchestrateur pilote le déroulé ; un analyste d'offre fait de l'extraction structurée ; un rédacteur produit le CV. Chaque rôle reçoit un modèle dimensionné pour sa tâche, ce qui améliore à la fois la fiabilité et le coût.
@@ -292,7 +292,7 @@ ApplyFlow articule cinq principes de conception :
 ```mermaid
 graph LR
     U(("Candidat"))
-    subgraph ApplyFlow
+    subgraph Wellsuited
       UC1["S'authentifier"]
       UC2["Gérer le profil maître"]
       UC3["Importer un CV existant"]
@@ -820,7 +820,7 @@ La réalisation confirme la pertinence de la ligne directrice adoptée : la robu
 
 Ce projet de fin d'études a répondu à une question simple à énoncer et difficile à traiter : comment automatiser l'adaptation d'un CV à une offre d'emploi sans céder ni sur la véracité, ni sur la mesure, ni sur le contrôle de l'utilisateur.
 
-La réponse apportée est **ApplyFlow**, une application web complète adossée à un système multi-agents. Un profil maître relationnel fait office de source de vérité ; un analyste d'offre en extrait sémantiquement les attendus ; un rédacteur produit un CV par langue cible ; un garde-fou déterministe rejette toute fabrication factuelle ; un moteur de scoring hybride note le document tel qu'un analyseur le lira réellement ; une boucle bornée fait converger le résultat vers le meilleur score que le profil permet honnêtement d'atteindre ; et une validation humaine obligatoire conclut le parcours.
+La réponse apportée est **Wellsuited**, une application web complète adossée à un système multi-agents. Un profil maître relationnel fait office de source de vérité ; un analyste d'offre en extrait sémantiquement les attendus ; un rédacteur produit un CV par langue cible ; un garde-fou déterministe rejette toute fabrication factuelle ; un moteur de scoring hybride note le document tel qu'un analyseur le lira réellement ; une boucle bornée fait converger le résultat vers le meilleur score que le profil permet honnêtement d'atteindre ; et une validation humaine obligatoire conclut le parcours.
 
 L'ensemble des objectifs spécifiques fixés au chapitre I a été atteint : modélisation et persistance du profil, import de CV existant, analyse structurée des offres, rédaction multilingue sans fabrication, compilation PDF compatible ATS, scoring déterministe explicable, boucle d'auto-correction à terminaison garantie, validation humaine, suivi des candidatures et cloisonnement des données par utilisateur.
 

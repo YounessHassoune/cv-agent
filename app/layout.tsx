@@ -22,8 +22,9 @@ const mono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ApplyFlow",
-  description: "Tailor an ATS-optimized CV to any job description, from your master profile.",
+  title: "Wellsuited",
+  description:
+    "Tailor an ATS-optimized CV to any job description, from your master profile. Every claim checked against what you actually did.",
 };
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {

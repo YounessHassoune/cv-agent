@@ -16,7 +16,7 @@ const db = new PrismaClient({
  * password so a fresh clone — or a forgotten dev password — never blocks you
  * out of the app. Override with SEED_EMAIL / SEED_PASSWORD.
  */
-const SEED_EMAIL = process.env.SEED_EMAIL ?? "demo@applyflow.local";
+const SEED_EMAIL = process.env.SEED_EMAIL ?? "demo@wellsuited.local";
 const SEED_PASSWORD = process.env.SEED_PASSWORD ?? "demo1234";
 
 /**

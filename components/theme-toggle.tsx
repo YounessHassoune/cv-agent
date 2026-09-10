@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 export type Theme = "light" | "dark" | "system";
 
 /** Passed to the provider in the root layout as `storageKey`. */
+/** Unchanged by the rename: a new key would reset everyone's chosen theme. */
 export const THEME_STORAGE_KEY = "applyflow-theme";
 
 /**

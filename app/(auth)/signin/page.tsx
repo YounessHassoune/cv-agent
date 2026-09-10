@@ -8,7 +8,7 @@ import { AuthError } from "../_components/auth-error";
 import { AuthForm, Field, PasswordInput } from "../_components/auth-fields";
 import { GoogleButton } from "../_components/google-button";
 
-export const metadata: Metadata = { title: "Sign in · ApplyFlow" };
+export const metadata: Metadata = { title: "Sign in · Wellsuited" };
 export const dynamic = "force-dynamic";
 
 export default async function SignInPage({

@@ -9,7 +9,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { brandIcon as BrandIcon, isActive, primaryNav, secondaryNav } from "./nav-config";
+import { isActive, primaryNav, secondaryNav } from "./nav-config";
 
 const COLLAPSE_STORAGE_KEY = "applyflow-sidebar-collapsed";
 
@@ -136,13 +136,28 @@ function SidebarBody({
         href="/"
         onClick={onNavigate}
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <BrandIcon className="size-4" />
-        </span>
+        {/* Painted through its own alpha channel rather than shown as an
+            image: the one asset is then ink on white and white on ink, instead
+            of a near-black PNG sitting on a dark panel. */}
+        <span
+          aria-hidden="true"
+          className="size-7 shrink-0"
+          style={{
+            backgroundColor: "currentColor",
+            maskImage: "url(/logo-mark.png)",
+            maskPosition: "center",
+            maskRepeat: "no-repeat",
+            maskSize: "contain",
+            WebkitMaskImage: "url(/logo-mark.png)",
+            WebkitMaskPosition: "center",
+            WebkitMaskRepeat: "no-repeat",
+            WebkitMaskSize: "contain",
+          }}
+        />
         {collapsed ? (
-          <span className="sr-only">ApplyFlow</span>
+          <span className="sr-only">Wellsuited</span>
         ) : (
-          <span className="font-semibold text-[0.95rem] tracking-tight">ApplyFlow</span>
+          <span className="font-semibold text-[0.95rem] tracking-tight">Wellsuited</span>
         )}
       </Link>
 

@@ -49,6 +49,11 @@ export function uploadBuffer(
 }
 
 /** Where profile photos live, so they are easy to find and purge per user. */
+/**
+ * Still "applyflow" after the rename to Wellsuited: every photo already
+ * uploaded lives under this prefix, and renaming the folder would point every
+ * existing profile at an asset that is not there.
+ */
 export const PHOTO_FOLDER = "applyflow/profile-photos";
 
 /**

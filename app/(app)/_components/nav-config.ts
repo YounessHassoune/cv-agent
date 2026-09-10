@@ -45,8 +45,6 @@ export const secondaryNav: NavItem[] = [
   },
 ];
 
-export const brandIcon = FileTextIcon;
-
 /** `/applications/abc` should light up the Applications entry, but `/` only matches itself. */
 export function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
