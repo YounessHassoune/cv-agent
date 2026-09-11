@@ -3,9 +3,10 @@
 import type { ClientSessionState, MessageStreamEvent } from "eve/client";
 import { BriefcaseIcon, GaugeIcon, MessageSquareIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import type { AtsReport } from "@/agent/lib/ats.ts";
-import { ResumableAgentChat } from "@/features/chat";
+import { ResumableAgentChat, StatusDot } from "@/features/chat";
 import { ChatLockedNotice } from "@/components/chat-locked-notice";
 import { usePlan } from "@/components/plan-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,6 +49,12 @@ export function ReviewPanel({
 }) {
   const plan = usePlan();
   const router = useRouter();
+  /*
+   * The chat is behind a tab, and a run started on the landing page keeps
+   * going here after navigation. With nothing on the tab itself the user had
+   * no way to tell a working agent from a finished one without opening it.
+   */
+  const [chatBusy, setChatBusy] = useState(false);
 
   const resetThread = async () => {
     await fetch(`/api/applications/${applicationId}/chat`, { method: "DELETE" });
@@ -72,6 +79,7 @@ export function ReviewPanel({
             <TabsTrigger className="gap-1.5 py-2" key={tab.id} value={tab.id}>
               <tab.icon className="size-3.5" />
               {tab.label}
+              {tab.id === "chat" && chatBusy ? <StatusDot hasError={false} isBusy /> : null}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -98,6 +106,7 @@ export function ReviewPanel({
           initialEvents={chatEvents}
           initialSession={chatSession}
           key={chatSession?.sessionId ?? "fresh"}
+          onActivityChange={setChatBusy}
           lockedNotice={
             !plan.can("applicationChat") ? (
               <ChatLockedNotice reason="applicationChat" />

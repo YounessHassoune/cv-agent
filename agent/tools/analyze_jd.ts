@@ -5,7 +5,7 @@ import { sanitizeKeywords } from "../lib/ats";
 import { resolveUserId } from "../lib/auth";
 import { billingState, consumeApplication, refundApplication } from "../lib/billing";
 import { db } from "../lib/db";
-import { ExtractionSchema } from "../lib/extraction-schema";
+import { analyzeJob } from "../lib/jd-analysis";
 import { cvLoop } from "../lib/state";
 
 /**
@@ -51,7 +51,7 @@ function isUniqueViolation(error: unknown): boolean {
 
 export default defineTool({
   description:
-    "Create the single Application draft row for this job. Call this exactly once per job — no matter how many target languages — after jd-analyst has analyzed the JD, passing its extraction through. Returns the applicationId used by compile_pdf and score_ats for every language.",
+    "Analyze the job description (role, seniority, domain, weighted keywords) and create the single application for it. Call exactly once per job, listing every target language. Returns the applicationId that write_cv, compile_pdf and score_ats take for every language. Nothing else needs to be called first.",
   inputSchema: z.object({
     jdText: z.string().min(50).describe("The full job description text"),
     targetLanguages: z
@@ -59,11 +59,8 @@ export default defineTool({
       .min(1)
       .default(["en"])
       .describe("ISO codes of every language the CV should be written in, e.g. ['en','fr']"),
-    extraction: ExtractionSchema.describe(
-      "The jd-analyst subagent's result, passed through unchanged. Required: without it there is no role, no seniority and no weighted keywords, so the CV cannot be tailored and the score would be meaningless. If jd-analyst fails, retry it — never call this tool without its result.",
-    ),
   }),
-  async execute({ jdText, targetLanguages, extraction }, ctx) {
+  async execute({ jdText, targetLanguages }, ctx) {
     const userId = resolveUserId(ctx);
     /*
      * The row stores a truncated JD, so the truncated text — not the argument
@@ -73,6 +70,15 @@ export default defineTool({
      */
     const storedJd = jdText.slice(0, MAX_JD_CHARS);
     const jdHash = jobFingerprint(storedJd);
+
+    // Cached by fingerprint: the same job is analysed once, ever, per user.
+    const { extraction, cached: analysisCached } = await analyzeJob({
+      abortSignal: ctx.abortSignal,
+      jdHash,
+      jdText: storedJd,
+      sessionId: ctx.session.id,
+      userId,
+    });
 
     /*
      * The analyst is a language model, so its keyword list is a suggestion.
@@ -139,11 +145,9 @@ export default defineTool({
           role: extraction.role,
           seniority: extraction.seniority,
           jdLanguage: extraction.language,
-          domain: extraction.domain,
-          targetProfile: extraction.targetProfile,
-          responsibilities: extraction.responsibilities,
           targetLanguages: open.languages,
-          keywords,
+          mustHaves: keywords.filter((k) => k.weight >= 3).map((k) => k.term),
+          keywordCount: keywords.length,
           unchanged: true,
           note: "This job already has an application — reusing it. Do not create another.",
         };
@@ -187,6 +191,7 @@ export default defineTool({
           jdKeywords: keywords,
           jdRole: extraction.role,
           jdSeniority: extraction.seniority,
+          jdExtraction: extraction,
           status: "DRAFT",
           sessionId: ctx.session.id,
           jdHash,
@@ -241,11 +246,10 @@ export default defineTool({
       role: extraction.role,
       seniority: extraction.seniority,
       jdLanguage: extraction.language,
-      domain: extraction.domain,
-      targetProfile: extraction.targetProfile,
-      responsibilities: extraction.responsibilities,
       targetLanguages: languages,
-      keywords,
+      mustHaves: keywords.filter((k) => k.weight >= 3).map((k) => k.term),
+      keywordCount: keywords.length,
+      analysisCached,
       ...(droppedLanguages.length > 0
         ? {
             droppedLanguages,

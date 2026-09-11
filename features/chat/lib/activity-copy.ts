@@ -15,7 +15,20 @@ export const TOOL_PROGRESS: Record<string, readonly string[]> = {
     "Weighing what this employer cares about most…",
     "Still reading the offer closely…",
   ],
-  analyzejd: ["Setting up your application…", "Saving the job analysis…"],
+  analyzejd: [
+    "Analyzing the job offer…",
+    "Pulling out the must-have skills…",
+    "Weighing what this employer cares about most…",
+    "Setting up your application…",
+  ],
+  writecv: [
+    "Tailoring your CV…",
+    "Matching your experience to the job's wording…",
+    "Rewriting your summary and top bullets…",
+    "Ordering skills the way this employer reads them…",
+    "Checking every claim against your profile…",
+    "Still writing — a good draft is worth the wait…",
+  ],
   cvwriter: [
     "Tailoring your CV…",
     "Matching your experience to the job's wording…",
@@ -52,6 +65,26 @@ export const THINKING_PROGRESS: readonly string[] = [
   "Working through it…",
   "Still on it…",
 ];
+
+/**
+ * The same gap, when the last thing that finished is known. After the score
+ * lands the model is reading the report and writing the recap, and saying so
+ * is what stops "Match check — 62/100" from reading as the end of the run.
+ */
+export const AFTER_TOOL_PROGRESS: Record<string, readonly string[]> = {
+  scoreats: [
+    "Reading the match report…",
+    "Deciding whether one more pass would help…",
+    "Writing your recap…",
+    "Almost there…",
+  ],
+  compilepdf: ["Reading the compiled draft…", "Checking the match with the job next…", "Still on it…"],
+  writecv: ["Draft stored…", "Sending it to be compiled…", "Still on it…"],
+  cvwriter: ["Reading the draft…", "Sending it to be compiled…", "Still on it…"],
+  analyzejd: ["Job offer analyzed…", "Briefing the CV writer…", "Still on it…"],
+  jdanalyst: ["Job offer analyzed…", "Setting up your application…", "Still on it…"],
+  getprofile: ["Profile loaded…", "Reading the job offer next…", "Still on it…"],
+};
 
 /** How long each line holds before the next one takes over. */
 export const PROGRESS_STEP_MS = 3500;

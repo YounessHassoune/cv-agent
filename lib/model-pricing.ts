@@ -29,6 +29,9 @@ const RATES: Record<string, Rate> = {
   "openai/gpt-5": { input: 1.25, output: 10.0, cachedInput: 0.125 },
   "openai/gpt-5-mini": { input: 0.25, output: 2.0, cachedInput: 0.025 },
   "openai/gpt-5-nano": { input: 0.05, output: 0.4, cachedInput: 0.005 },
+  "openai/gpt-4.1": { input: 2.0, output: 8.0, cachedInput: 0.5 },
+  "openai/gpt-4.1-mini": { input: 0.4, output: 1.6, cachedInput: 0.1 },
+  "openai/gpt-4.1-nano": { input: 0.1, output: 0.4, cachedInput: 0.025 },
   "openai/text-embedding-3-small": { input: 0.02, output: 0, cachedInput: 0.02 },
   "openai/text-embedding-3-large": { input: 0.13, output: 0, cachedInput: 0.13 },
 };

@@ -49,6 +49,13 @@ export type AgentChatProps = {
    */
   readonly onBusyChange?: (isBusy: boolean) => void;
   /**
+   * Reports whether the agent is working on this thread at all — a turn this
+   * chat started, or one it is following from another page. The application
+   * page hides the chat behind a tab, so this is what lets the tab say the
+   * run is still going.
+   */
+  readonly onActivityChange?: (isBusy: boolean) => void;
+  /**
    * Transcript of a turn this component does not own — one started on another
    * page and still running. While set, the chat renders these instead of its
    * own store and refuses to send, because a second turn on a busy session is

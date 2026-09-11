@@ -28,7 +28,6 @@ import {
   MessageResponse,
 } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
-import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCyclingMessage } from "../hooks/use-cycling-message";
@@ -271,12 +270,10 @@ function AgentMessagePart({
         </MessageResponse>
       );
     case "reasoning":
-      return (
-        <Reasoning isStreaming={part.state === "streaming"}>
-          <ReasoningTrigger />
-          <ReasoningContent>{part.text}</ReasoningContent>
-        </Reasoning>
-      );
+      // The model thinking is not something the user asked to read. The
+      // cycling status line above the composer already says the run is alive;
+      // the thoughts themselves are internals, like tool names and JSON.
+      return null;
     case "file":
       return <AttachmentPart part={part} />;
     case "authorization":
@@ -321,7 +318,12 @@ const TOOL_ACTIVITY: Record<
 > = {
   getprofile: { running: "Reading your profile…", done: "Profile loaded" },
   jdanalyst: { running: "Analyzing the job offer…", done: "Job offer analyzed", failed: "Analyzing the job offer" },
-  analyzejd: { running: "Setting up your application…", done: "Application created" },
+  analyzejd: { running: "Analyzing the job offer…", done: "Job offer analyzed", failed: "Analyzing the job offer" },
+  writecv: {
+    running: "Tailoring your CV…",
+    done: "CV draft ready",
+    failed: "Writing your CV",
+  },
   cvwriter: {
     running: "Tailoring your CV…",
     done: "CV draft ready",

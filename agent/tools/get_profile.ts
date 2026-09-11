@@ -29,7 +29,8 @@ export default defineTool({
     return {
       profile: JSON.parse(JSON.stringify(profile)),
       // The exact vocabulary compile_pdf will accept in skill groups and stack
-      // arrays. Pass this to cv-writer verbatim — anything else is rejected.
+      // arrays. write_cv reads it from the database itself; shown here so the
+      // agent can answer "what can my CV claim" without guessing.
       allowedTerms: allowedTerms(profile),
     };
   },

@@ -80,7 +80,7 @@ function decide(
     target,
     iterationsRemaining,
     action: "revise" as const,
-    reason: `${report.total}/100 against a target of ${target}. Send cv-writer the previous CV plus the gaps it can truthfully close: the missing keywords the candidate's real work supports, named in the JD's own words, and transferable framing in the summary and bullets for the rest${report.unclaimable.length > 0 ? ` (the profile does not spell out ${report.unclaimable.join(", ")})` : ""}. ${iterationsRemaining} compile(s) left.`,
+    reason: `${report.total}/100 against a target of ${target}. Call write_cv for this language with the gaps it can truthfully close: the missing keywords the candidate's real work supports as missingKeywords, and feedback asking for transferable framing in the summary and bullets for the rest${report.unclaimable.length > 0 ? ` (the profile does not spell out ${report.unclaimable.join(", ")})` : ""}. ${iterationsRemaining} compile(s) left.`,
   };
 }
 
@@ -195,6 +195,14 @@ export default defineTool({
       scores: { ...state.scores, [lang]: history },
     }));
 
-    return { language: lang, ...report, ...decide(report, history, loopState, lang) };
+    /*
+     * The whole report is stored above for the insights panel. What goes back
+     * to the model is the part it acts on: the total, what is missing, what it
+     * can never claim, and the stop decision. The matched-keyword lists are
+     * the longest fields and drive nothing — and they sat in the context of
+     * every later step, so each one paid for them again.
+     */
+    const { matched: _matched, listedOnly: _listedOnly, ...forModel } = report;
+    return { language: lang, ...forModel, ...decide(report, history, loopState, lang) };
   },
 });

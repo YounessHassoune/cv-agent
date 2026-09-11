@@ -79,6 +79,22 @@ export function ApplicationWorkspace({
   const theme =
     (selected ? themeByLanguage[selected.language] : undefined) ?? selected?.theme ?? DEFAULT_THEME;
 
+  /*
+   * Saved the moment it is picked. The preview restyles from state alone, but
+   * the header's Download link is rendered by the server and reads the stored
+   * skin — without this it handed out the document in whatever layout the
+   * agent compiled, not the one on screen. Fire-and-forget: a failed save
+   * leaves the preview right and only the download stale, which is where it
+   * was before.
+   */
+  const rememberSkin = (language: string, skin: { template?: string; theme?: string }) => {
+    void fetch(`/api/applications/${applicationId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ language, ...skin }),
+    });
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       {/* Language is a property of which document you are looking at, so it sits
@@ -128,11 +144,13 @@ export function ApplicationWorkspace({
             onTemplateChange={(next) => {
               if (selected) {
                 setTemplateByLanguage((current) => ({ ...current, [selected.language]: next }));
+                rememberSkin(selected.language, { template: next });
               }
             }}
             onThemeChange={(next) => {
               if (selected) {
                 setThemeByLanguage((current) => ({ ...current, [selected.language]: next }));
+                rememberSkin(selected.language, { theme: next });
               }
             }}
             template={template}

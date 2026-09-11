@@ -15,11 +15,16 @@ export const PATIENT_STREAM_RECONNECT = {
 
 /**
  * How long a running turn may deliver nothing before we treat the connection
- * as gone. The longest genuine gap is a subagent writing a CV — around forty
- * seconds — so this leaves plenty of room while still catching a stream that
- * has quietly stopped without erroring.
+ * as gone.
+ *
+ * The longest genuine gap is no longer a subagent writing a CV. A reasoning
+ * model deciding what to do after a tool result streams nothing at all while
+ * it thinks — the recap after the score ran past the old 75s limit — and
+ * every time it did, this watchdog declared the run dead, unlocked the
+ * composer, and reattached to a session that then sat silent. Four minutes
+ * still catches a stream that has quietly stopped without erroring.
  */
-export const STALL_MS = 75_000;
+export const STALL_MS = 240_000;
 
 /** How often the stall watchdog looks. */
 export const STALL_CHECK_MS = 10_000;

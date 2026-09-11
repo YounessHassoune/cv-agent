@@ -26,6 +26,7 @@ type Options = Pick<
   | "initialEvents"
   | "initialSession"
   | "liveMessages"
+  | "onActivityChange"
   | "onBusyChange"
   | "onSessionId"
   | "onStreamDropped"
@@ -66,6 +67,7 @@ export function useAgentChat({
   initialEvents,
   initialSession,
   liveMessages,
+  onActivityChange,
   onBusyChange,
   onSessionId,
   onStreamDropped,
@@ -204,6 +206,11 @@ export function useAgentChat({
   useEffect(() => {
     onBusyChange?.(ownsTurn);
   }, [onBusyChange, ownsTurn]);
+  // Cleared on unmount too, or the owner keeps a stale "busy" across remounts.
+  useEffect(() => {
+    onActivityChange?.(isBusy);
+    return () => onActivityChange?.(false);
+  }, [onActivityChange, isBusy]);
   /*
    * The agent goes quiet for tens of seconds at a time — before its first
    * event, and again between steps while it decides what to do next. Both gaps
@@ -325,7 +332,7 @@ export function useAgentChat({
    * stops delivering. Nothing errors, so the store sits in `streaming` and the
    * transcript freezes mid-run — the last few steps of a finished job only
    * appearing on a manual reload. The longest real gap in a run is a subagent
-   * writing a CV, well under a minute, so silence past `STALL_MS` means the
+   * writing a CV or a reasoning model composing the recap, so silence past `STALL_MS` means the
    * connection is gone and re-attaching is the only way to see the rest.
    */
   useEffect(() => {

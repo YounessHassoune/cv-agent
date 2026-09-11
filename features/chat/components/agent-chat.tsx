@@ -22,6 +22,7 @@ export function AgentChat({
   initialSession,
   persistUrl,
   lockedNotice,
+  onActivityChange,
   onResetThread,
   onSessionId,
   liveMessages,
@@ -32,6 +33,7 @@ export function AgentChat({
     initialEvents,
     initialSession,
     liveMessages,
+    onActivityChange,
     onSessionId,
     persistUrl,
   });

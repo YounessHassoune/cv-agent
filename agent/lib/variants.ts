@@ -27,6 +27,15 @@ export type CvVariant = {
 
 export type VariantMap = Record<string, CvVariant>;
 
+/**
+ * Drafts `write_cv` has stored and `compile_pdf` has not yet rendered, keyed
+ * by ISO language code. Kept apart from `variants` because a draft is not a
+ * CV the user can see: it has no PDF, no text, no score.
+ */
+export function readDrafts(value: unknown): Record<string, Cv> {
+  return value && typeof value === "object" ? (value as Record<string, Cv>) : {};
+}
+
 export function readVariants(value: unknown): VariantMap {
   return value && typeof value === "object" ? (value as VariantMap) : {};
 }

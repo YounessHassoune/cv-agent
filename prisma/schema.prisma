@@ -170,6 +170,15 @@ model Application {
   /// the same thread has a different `jdHash`, so it still gets its own row.
   sessionId   String?
   jdHash      String?
+  /// The analyst's full role analysis for this job (`ExtractionSchema`).
+  /// Reused by every later application with the same `jdHash` so the same job
+  /// is always scored against the same must-haves, and read by `write_cv` so
+  /// the orchestrator never has to relay it.
+  jdExtraction Json?
+  /// Per-language CV drafts written by `write_cv` and waiting for
+  /// `compile_pdf`: { [lang]: Cv }. A draft is not a variant — no PDF, no
+  /// text, no score — so it does not live in `variants`.
+  drafts      Json?
   status      Status   @default(DRAFT)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

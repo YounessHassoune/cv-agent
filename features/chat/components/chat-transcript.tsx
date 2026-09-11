@@ -11,8 +11,9 @@ import { Message, MessageContent } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { cn } from "@/lib/utils";
 import { useCyclingMessage } from "../hooks/use-cycling-message";
-import { THINKING_PROGRESS } from "../lib/activity-copy";
+import { AFTER_TOOL_PROGRESS, THINKING_PROGRESS } from "../lib/activity-copy";
 import type { StoredAnswers } from "../lib/answers";
+import { lastFinishedTool } from "../lib/messages";
 import { AgentMessage } from "./agent-message";
 
 type Props = {
@@ -58,7 +59,9 @@ export function ChatTranscript({
           />
         ))}
 
-        {awaitingFirstToken ? <ThinkingMessage /> : null}
+        {awaitingFirstToken ? (
+          <ThinkingMessage after={lastFinishedTool(messages[messages.length - 1])} />
+        ) : null}
       </ConversationContent>
       <ConversationScrollButton />
     </Conversation>
@@ -69,8 +72,9 @@ export function ChatTranscript({
  * The silence between steps. The line moves on while the wait lasts, because a
  * frozen "Thinking…" is the part of a long run that reads as a hung app.
  */
-function ThinkingMessage() {
-  const label = useCyclingMessage(THINKING_PROGRESS);
+function ThinkingMessage({ after }: { readonly after: string | undefined }) {
+  const steps = (after !== undefined && AFTER_TOOL_PROGRESS[after]) || THINKING_PROGRESS;
+  const label = useCyclingMessage(steps);
 
   return (
     <Message from="assistant">

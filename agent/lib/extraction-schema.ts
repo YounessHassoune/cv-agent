@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 /**
- * Structured JD analysis produced by the `jd-analyst` subagent (its task-mode
- * `outputSchema`) and consumed by the root `analyze_jd` tool, which validates
- * it again before persisting.
+ * Structured JD analysis. `analyze_jd` produces it through a tool-side model
+ * call (see `lib/jd-analysis.ts`), stores it on the application as
+ * `jdExtraction`, and `write_cv` reads it back from there.
  *
  * **Every field is required — never add `.default()` here.** A default makes
  * the property optional in the generated JSON Schema, and OpenAI structured

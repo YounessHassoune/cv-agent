@@ -1,5 +1,21 @@
 import type { EveMessage } from "eve/react";
 import { isToolRunning } from "../components/agent-message";
+import { progressKey } from "./activity-copy";
+
+/**
+ * The last step that came back with a result, as a copy-table key. Read from
+ * the end so the answer is the step the model is reacting to right now.
+ */
+export function lastFinishedTool(message: EveMessage | undefined): string | undefined {
+  if (message === undefined || message.role !== "assistant") return undefined;
+  for (let index = message.parts.length - 1; index >= 0; index--) {
+    const part = message.parts[index];
+    if (part?.type === "dynamic-tool" && part.state === "output-available") {
+      return progressKey(part.toolMetadata?.eve?.name ?? part.toolName);
+    }
+  }
+  return undefined;
+}
 
 /**
  * Whether the agent is thinking rather than doing: no assistant message yet,

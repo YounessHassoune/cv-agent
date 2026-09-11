@@ -13,7 +13,7 @@ import { screenAssertedTerms } from "../lib/asserted";
 import { allowedTerms, findFabrications, unsupportedClaims } from "../lib/guard";
 import { extractPdfText, renderCvPdf } from "../lib/pdf";
 import { cvLoop } from "../lib/state";
-import { readVariants, sameCv } from "../lib/variants";
+import { readDrafts, readVariants, sameCv } from "../lib/variants";
 
 /**
  * How many terms a CV may claim that the profile does not list. The job's
@@ -43,14 +43,13 @@ function rankByJdWeight(terms: string[], keywords: JdKeyword[]): string[] {
 
 export default defineTool({
   description:
-    "Validate one language variant of the tailored CV against the master profile, render it as an ATS-friendly single-column PDF, and store it on the application. Call once per language. Rejects any skill, stack term, or employer not present in the profile — fix the CV and retry if that happens.",
+    "Validate the draft write_cv stored for one language against the master profile, render it as an ATS-friendly single-column PDF, and store it on the application. Call once per language, after write_cv. Rejects any skill, stack term, or employer not present in the profile — call write_cv with the rejection as feedback, then compile again.",
   inputSchema: z.object({
     applicationId: z.string(),
     language: z
       .string()
       .min(2)
       .describe("ISO code of the variant being compiled — must be one of the application's target languages"),
-    cv: CvSchema,
     template: z
       .enum(CV_TEMPLATE_IDS)
       .optional()
@@ -61,13 +60,12 @@ export default defineTool({
       .array(z.string())
       .optional()
       .describe(
-        "Terms the user has explicitly told you to put on the CV even though their profile does not list them. Pass them exactly as the user named them. They are exempt from the borrow budget and from the fabrication check, and are still reported back for confirmation. Only ever the user's own words — never a term you or cv-writer decided to add.",
+        "Terms the user has explicitly told you to put on the CV even though their profile does not list them. Pass them exactly as the user named them. They are exempt from the borrow budget and from the fabrication check, and are still reported back for confirmation. Only ever the user's own words — never a term you or the writer decided to add.",
       ),
   }),
-  async *execute({ applicationId, language, cv: draft, template, userAssertedTerms }, ctx) {
+  async *execute({ applicationId, language, template, userAssertedTerms }, ctx) {
     const userId = resolveUserId(ctx);
     const lang = language.toLowerCase();
-    const cv = withDisplayDates(draft, lang);
 
     const loop = cvLoop.get();
     const iteration = (loop.iterations[lang] ?? 0) + 1;
@@ -88,6 +86,14 @@ export default defineTool({
         `"${lang}" is not a target language of this application (${application.languages.join(", ")}).`,
       );
     }
+
+    // The draft comes from the database, where write_cv put it — never from
+    // the orchestrator, which would have to re-type five thousand tokens.
+    const stored = readDrafts(application.drafts)[lang];
+    if (stored === undefined) {
+      throw new Error(`No draft for "${lang}" on this application — call write_cv for that language first.`);
+    }
+    const cv = withDisplayDates(CvSchema.parse(stored), lang);
 
     /*
      * Idempotence. The orchestrator sometimes asks for the same language twice
@@ -123,7 +129,7 @@ export default defineTool({
       where: { userId },
       include: { skills: true, experiences: true, projects: true },
     });
-    if (!profile) throw new Error("No master profile for this user — call get_profile first.");
+    if (!profile) throw new Error("The user has no master profile yet. Tell them to fill it in first, and stop.");
 
     // The job's own vocabulary widens what the CV may say — see findFabrications.
     const jdVocabulary = ((application.jdKeywords ?? []) as JdKeyword[]).flatMap((keyword) => [
@@ -185,7 +191,7 @@ export default defineTool({
               : "") +
             `Keep these ${keep.length} (this job weights them highest, and the candidate's work must genuinely support each one): ${keep.join(", ")}\n` +
             `Remove these from skills[].items and the stack arrays: ${drop.join(", ")}\n` +
-            `Keep the ones you keep — a draft that borrows nothing is not tailored, and dropping a must-have costs more than any padding gains. Cover what you removed with transferable framing in the prose, then call compile_pdf again. ${loop.rejectionCap - rejections} attempt(s) left for this language.`,
+            `Keep the ones you keep — a draft that borrows nothing is not tailored, and dropping a must-have costs more than any padding gains. Cover what you removed with transferable framing in the prose. Call write_cv with this message as feedback, then compile_pdf again. ${loop.rejectionCap - rejections} attempt(s) left for this language.`,
         );
       }
       // Out of attempts: compiling a padded CV still beats no CV, and the
@@ -202,13 +208,13 @@ export default defineTool({
       if (rejections >= loop.rejectionCap) {
         throw new Error(
           `CV rejected ${rejections}× for the "${lang}" variant — these terms are not in the profile and never will be:\n- ${violations.join("\n- ")}\n` +
-            "Stop trying to include them. Ask cv-writer for a draft whose skill groups and stack arrays contain ONLY terms from the profile's allowedTerms list, and report these as unclaimable in the staging summary.",
+            "Stop trying to include them. Call write_cv with feedback asking for a draft whose skill groups and stack arrays contain ONLY terms from the profile's allowedTerms list, and report these as unclaimable in the staging summary.",
         );
       }
 
       throw new Error(
         `CV rejected — unsupported content detected:\n- ${violations.join("\n- ")}\n` +
-          `Entries in skills[].items, experiences[].stack and projects[].stack must come from the profile's allowedTerms or from this job's own keywords. These match neither, so nothing justifies them. Remove them, then call compile_pdf again. ${loop.rejectionCap - rejections} attempt(s) left for this language.`,
+          `Entries in skills[].items, experiences[].stack and projects[].stack must come from the profile's allowedTerms or from this job's own keywords. These match neither, so nothing justifies them. Call write_cv with this message as feedback, then compile_pdf again. ${loop.rejectionCap - rejections} attempt(s) left for this language.`,
       );
     }
 
@@ -305,7 +311,7 @@ export default defineTool({
       missingMustHaves,
       mustHaveNote:
         missingMustHaves.length > 0 && borrowed.length < MAX_UNSUPPORTED_CLAIMS
-          ? `This draft claims ${borrowed.length} of the ${MAX_UNSUPPORTED_CLAIMS} terms it is allowed to borrow, and these must-haves are still absent: ${missingMustHaves.join(", ")}. Each one the candidate's real work genuinely supports must be named in the CV — a missing must-have cuts the whole score. Send them to cv-writer with the previous CV, and leave out only the ones that would be untrue.`
+          ? `This draft claims ${borrowed.length} of the ${MAX_UNSUPPORTED_CLAIMS} terms it is allowed to borrow, and these must-haves are still absent: ${missingMustHaves.join(", ")}. Each one the candidate's real work genuinely supports must be named in the CV — a missing must-have cuts the whole score. Pass them to write_cv as missingKeywords, and leave out only the ones that would be untrue.`
           : undefined,
       unsupportedNote:
         borrowed.length > 0
