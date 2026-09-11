@@ -19,6 +19,13 @@ import {
  */
 const PENDING_TTL_MS = 24 * 60 * 60 * 1000;
 
+/*
+ * The extraction runs in `after()`, so it is still this function's wall clock
+ * even though the response has already gone. At the platform default the model
+ * call is cut off mid-parse and the row stays `running` forever.
+ */
+export const maxDuration = 60;
+
 /**
  * The photo is the one thing an import commits straight away, exactly as
  * picking one in the photo field does: Cloudinary keeps one asset per user, so

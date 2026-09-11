@@ -1,3 +1,4 @@
+import { appUrl } from "../../lib/app-url.ts";
 import { entitlements, type PlanId } from "../../lib/entitlements.ts";
 import { db } from "./db.ts";
 import { emailConfigured, logo, renderEmail, sendEmail } from "./email.ts";
@@ -13,11 +14,6 @@ import { emailConfigured, logo, renderEmail, sendEmail } from "./email.ts";
  * Without `RESEND_API_KEY` nothing here does anything, which is the same
  * contract the rest of the app's email has.
  */
-
-function appUrl(path: string): string {
-  const base = process.env.APP_URL ?? "http://localhost:3000";
-  return new URL(path, base).toString();
-}
 
 type Recipient = { email: string; name: string | null };
 
