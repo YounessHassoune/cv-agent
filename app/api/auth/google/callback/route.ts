@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/agent/lib/db.ts";
 import { exchangeCode, OAUTH_STATE_COOKIE, verifyState } from "@/agent/lib/google-oauth.ts";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/agent/lib/session.ts";
+import { landingPath } from "@/app/lib/profile-completeness";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -37,6 +38,9 @@ export async function GET(request: Request) {
     (await db.user.findUnique({ where: { googleId: profile.sub } })) ??
     (await db.user.findUnique({ where: { email: profile.email } }));
 
+  // Google only gets here with `email_verified`, so the address is proven —
+  // an account still waiting on its own verification link is cleared too, and
+  // the pending link is dropped because it has nothing left to confirm.
   const user = existing
     ? await db.user.update({
         where: { id: existing.id },
@@ -44,6 +48,7 @@ export async function GET(request: Request) {
           googleId: profile.sub,
           name: existing.name ?? profile.name ?? null,
           image: profile.picture ?? existing.image,
+          emailVerified: existing.emailVerified ?? new Date(),
         },
       })
     : await db.user.create({
@@ -52,8 +57,13 @@ export async function GET(request: Request) {
           googleId: profile.sub,
           name: profile.name ?? null,
           image: profile.picture ?? null,
+          emailVerified: new Date(),
         },
       });
+
+  if (existing && !existing.emailVerified) {
+    await db.verificationToken.deleteMany({ where: { userId: user.id } });
+  }
 
   const isNew = !existing;
   if (isNew) {
@@ -67,7 +77,8 @@ export async function GET(request: Request) {
   }
 
   const { token, maxAge } = signSession(user.id, user.email);
-  const response = NextResponse.redirect(new URL(isNew ? "/profile" : "/", request.url), 303);
+  const destination = isNew ? "/profile?complete=1" : await landingPath(user.id);
+  const response = NextResponse.redirect(new URL(destination, request.url), 303);
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
   response.cookies.set(OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0 });
   return response;

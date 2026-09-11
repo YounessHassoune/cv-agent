@@ -7,6 +7,7 @@ import {
   passwordProblem,
 } from "@/agent/lib/password.ts";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/agent/lib/session.ts";
+import { issueVerification } from "@/agent/lib/verification.ts";
 
 export async function POST(request: Request) {
   const form = await request.formData();
@@ -23,6 +24,23 @@ export async function POST(request: Request) {
       303,
     );
 
+  /** Signing up does not sign you in — the verification link does that. */
+  const pending = (error?: string) =>
+    NextResponse.redirect(
+      new URL(
+        `/verify-email?email=${encodeURIComponent(email)}${error ? `&error=${error}` : ""}`,
+        request.url,
+      ),
+      303,
+    );
+
+  const signedIn = (user: { id: string; email: string }) => {
+    const { token, maxAge } = signSession(user.id, user.email);
+    const response = NextResponse.redirect(new URL("/profile", request.url), 303);
+    response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
+    return response;
+  };
+
   if (!EMAIL_PATTERN.test(email)) return fail("email");
   if (passwordProblem(password)) return fail("password");
 
@@ -31,14 +49,16 @@ export async function POST(request: Request) {
     // A Google-first account can claim its password here; a password account
     // already exists and should sign in instead.
     if (existing.passwordHash) return fail("exists");
-    await db.user.update({
+    const user = await db.user.update({
       where: { id: existing.id },
       data: { passwordHash: await hashPassword(password), name: existing.name ?? (name || null) },
     });
-    const { token, maxAge } = signSession(existing.id, existing.email);
-    const response = NextResponse.redirect(new URL("/profile", request.url), 303);
-    response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
-    return response;
+    // Its address is already proven by Google, so no second round trip.
+    if (user.emailVerified) return signedIn(user);
+    const result = await issueVerification(request, user);
+    return result.status === "auto_verified"
+      ? signedIn(user)
+      : pending(result.status === "failed" ? "send_failed" : undefined);
   }
 
   const user = await db.user.create({
@@ -54,8 +74,7 @@ export async function POST(request: Request) {
     },
   });
 
-  const { token, maxAge } = signSession(user.id, user.email);
-  const response = NextResponse.redirect(new URL("/profile", request.url), 303);
-  response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
-  return response;
+  const result = await issueVerification(request, user);
+  if (result.status === "auto_verified") return signedIn(user);
+  return pending(result.status === "failed" ? "send_failed" : undefined);
 }

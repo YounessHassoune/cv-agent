@@ -26,7 +26,7 @@ export default function AuthLayout({ children }: { readonly children: ReactNode 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
       {/* Brand panel, hidden on small screens where the form is the whole page. */}
-      <aside className="brand-glow relative hidden overflow-hidden border-r bg-card lg:flex lg:flex-col lg:justify-between lg:p-12">
+      <aside className="brand-glow relative hidden overflow-hidden border-r bg-card lg:flex lg:flex-col lg:p-12">
         <div className="grid-texture pointer-events-none absolute inset-0 opacity-40" />
 
         <Link className="relative flex items-center gap-2.5" href="/">
@@ -48,35 +48,33 @@ export default function AuthLayout({ children }: { readonly children: ReactNode 
           <span className="font-medium text-[0.95rem] tracking-tight">Wellsuited</span>
         </Link>
 
-        <div className="relative max-w-md space-y-10">
-          <div className="space-y-4">
-            <h2 className="font-medium text-4xl leading-[1.1] tracking-tighter">
-              Every application deserves its own CV.
-            </h2>
-            <p className="text-muted-foreground leading-relaxed">
-              Keep one master profile. Let the agent tailor, score and compile a new PDF for each
-              role you go after.
-            </p>
+        <div className="relative flex flex-1 flex-col justify-center">
+          <div className="max-w-md space-y-10">
+            <div className="space-y-4">
+              <h2 className="font-medium text-4xl leading-[1.1] tracking-tighter">
+                Every application deserves its own CV.
+              </h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Keep one master profile. Let the agent tailor, score and compile a new PDF for each
+                role you go after.
+              </p>
+            </div>
+
+            <ul className="space-y-6">
+              {highlights.map((item) => (
+                <li className="flex gap-4" key={item.title}>
+                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background/60 text-primary">
+                    <item.icon className="size-4" />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="font-medium text-sm">{item.title}</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{item.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
-
-          <ul className="space-y-6">
-            {highlights.map((item) => (
-              <li className="flex gap-4" key={item.title}>
-                <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background/60 text-primary">
-                  <item.icon className="size-4" />
-                </span>
-                <div className="space-y-1">
-                  <p className="font-medium text-sm">{item.title}</p>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{item.body}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
         </div>
-
-        <p className="relative text-muted-foreground text-xs">
-          Your profile data stays in your own database.
-        </p>
       </aside>
 
       <main className="relative flex flex-col">

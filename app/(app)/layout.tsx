@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 
 import { initialsOf, requireUser } from "@/app/lib/current-user";
+import { profileCompleteness } from "@/app/lib/profile-completeness";
+import { ProfileNudge } from "./_components/profile-nudge";
 import { Sidebar, SidebarProvider } from "./_components/sidebar";
 import { Topbar } from "./_components/topbar";
 
 export default async function AppLayout({ children }: { readonly children: ReactNode }) {
   const user = await requireUser();
+  const completeness = await profileCompleteness(user.userId);
 
   return (
     <SidebarProvider>
@@ -18,6 +21,9 @@ export default async function AppLayout({ children }: { readonly children: React
             initials={initialsOf(user)}
             name={user.name}
           />
+          {completeness.complete ? null : (
+            <ProfileNudge missing={completeness.missing} percent={completeness.percent} />
+          )}
           <div className="scrollbar-slim min-h-0 flex-1 overflow-y-auto">{children}</div>
         </div>
       </div>

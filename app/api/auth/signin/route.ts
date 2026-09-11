@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/agent/lib/db.ts";
 import { EMAIL_PATTERN, normalizeEmail, verifyPassword } from "@/agent/lib/password.ts";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/agent/lib/session.ts";
+import { landingPath } from "@/app/lib/profile-completeness";
 
 /**
  * Email + password sign-in. The signed cookie carries the `User.id`, which is
@@ -28,8 +29,22 @@ export async function POST(request: Request) {
     return fail("credentials");
   }
 
+  // The password is right, so naming the account here reveals nothing the
+  // caller does not already know. Send them where a new link can be requested.
+  if (!user.emailVerified) {
+    return NextResponse.redirect(
+      new URL(`/verify-email?email=${encodeURIComponent(email)}&error=unverified`, request.url),
+      303,
+    );
+  }
+
   const { token, maxAge } = signSession(user.id, user.email);
-  const response = NextResponse.redirect(new URL("/", request.url), 303);
+  // A thin master profile is the one thing that makes every tailored CV worse,
+  // so sign-in lands on the builder until it is filled in.
+  const response = NextResponse.redirect(
+    new URL(await landingPath(user.id), request.url),
+    303,
+  );
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
   return response;
 }

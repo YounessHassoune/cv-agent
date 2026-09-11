@@ -12,6 +12,11 @@ const messages: Record<string, string> = {
   google_code: "Google didn't return an authorization code. Please try again.",
   google_failed: "Couldn't complete Google sign-in. Please try again.",
   google_unverified: "Your Google email address isn't verified.",
+  unverified: "Confirm your email address before signing in.",
+  expired: "That confirmation link has expired. Request a new one below.",
+  bad_token: "That confirmation link is no longer valid. Request a new one below.",
+  send_failed:
+    "Your account was created, but the confirmation email couldn't be sent. Try again below.",
 };
 
 export function AuthError({ code }: { readonly code?: string }) {

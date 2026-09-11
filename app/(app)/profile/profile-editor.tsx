@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   BriefcaseIcon,
   CheckIcon,
@@ -37,6 +38,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CV_TEMPLATE_LIST, DEFAULT_TEMPLATE, DEFAULT_THEME } from "@/lib/cv-templates";
+import { scoreProfileForm } from "@/lib/profile-completeness";
 import { cn } from "@/lib/utils";
 import { CvImportDialog } from "./cv-import-dialog";
 import { ProfilePdfView } from "./profile-pdf-view";
@@ -328,6 +330,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
   const [previewView, setPreviewView] = useState<"preview" | "pdf">("preview");
   const [status, setStatus] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState<string>();
+  const router = useRouter();
 
   const patch = (values: Partial<ProfileForm>) => {
     setForm((f) => ({ ...f, ...values }));
@@ -359,9 +362,10 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
     [form],
   );
 
-  const completion = Math.round(
-    (sections.filter((s) => filled[s.id]).length / sections.length) * 100,
-  );
+  // Same scorer the app-wide banner uses, so one profile never reads as two
+  // different numbers. `filled` above still drives the per-section ticks, which
+  // answer a different question: has this section been touched at all.
+  const completion = useMemo(() => scoreProfileForm(form).percent, [form]);
   const preview = useMemo(() => toPreview(form), [form]);
 
   /**
@@ -437,6 +441,9 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
 
     if (response.ok) {
       setStatus("saved");
+      // The completeness banner lives in the server layout and reads the saved
+      // row, so it only notices this save after a refresh.
+      router.refresh();
       return;
     }
     setStatus("error");

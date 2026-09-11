@@ -20,8 +20,29 @@ model User {
   /// Null for Google-only accounts until the user sets a password.
   passwordHash String?
   googleId     String?  @unique
+  /// Set the moment the address is proven: the verification link is clicked, or
+  /// Google hands back an already-verified email. Null means the account exists
+  /// but cannot sign in yet.
+  emailVerified DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  verificationTokens VerificationToken[]
+}
+
+/// A pending email-verification link. Only the SHA-256 of the token is stored,
+/// so a leaked database row cannot be replayed as a sign-in. One live row per
+/// user: asking for a new link deletes the previous one, which kills it.
+model VerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  /// SHA-256 hex of the token that travels in the link.
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Profile {
