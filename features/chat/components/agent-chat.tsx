@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useAgentChat } from "../hooks/use-agent-chat";
 import { AGENT_NAME, type AgentChatProps, DEFAULT_SUBHEADING } from "../types";
-import { ChatComposer } from "./chat-composer";
+import { ApplicationLink, ChatComposer } from "./chat-composer";
 import { ChatError } from "./chat-error";
 import { ChatTranscript } from "./chat-transcript";
 import { StatusDot } from "./status-dot";
@@ -44,18 +44,23 @@ export function AgentChat({
    * composer that silently refuses every message is the worst of the options:
    * the user types, presses send, and the app appears to be broken.
    */
-  const composer = lockedNotice ?? (
-    <ChatComposer
-      activityNote={chat.activityNote}
-      /* Only the unscoped chat needs the link: inside an application panel the
-         user is already looking at the thing it would point to. */
-      applicationId={isPanel ? undefined : chat.applicationId}
-      isBusy={chat.isBusy}
-      onStop={chat.requestCancellation}
-      onSubmit={chat.handleSubmit}
-      placeholder={placeholder}
-      status={chat.submitStatus}
-    />
+  const composer = (
+    <div className="space-y-2">
+      {/* Only the unscoped chat needs the link: inside an application panel the
+          user is already looking at the thing it would point to. */}
+      {isPanel || chat.applicationId === undefined ? null : (
+        <ApplicationLink id={chat.applicationId} isBusy={chat.isBusy} />
+      )}
+      {lockedNotice ?? (
+        <ChatComposer
+          activityNote={chat.activityNote}
+          onStop={chat.requestCancellation}
+          onSubmit={chat.handleSubmit}
+          placeholder={placeholder}
+          status={chat.submitStatus}
+        />
+      )}
+    </div>
   );
 
   const chips = (

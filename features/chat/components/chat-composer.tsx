@@ -15,25 +15,13 @@ type Props = {
   readonly status: AgentStatus;
   /** Set while the chat is stopping a run or holding a queued message. */
   readonly activityNote?: string;
-  /** The application this conversation produced; omitted inside a panel. */
-  readonly applicationId?: string;
-  readonly isBusy: boolean;
   readonly onSubmit: (message: PromptInputMessage) => void;
   readonly onStop: () => void;
 };
 
-export function ChatComposer({
-  activityNote,
-  applicationId,
-  isBusy,
-  onStop,
-  onSubmit,
-  placeholder,
-  status,
-}: Props) {
+export function ChatComposer({ activityNote, onStop, onSubmit, placeholder, status }: Props) {
   return (
     <div className="space-y-2">
-      {applicationId ? <ApplicationLink id={applicationId} isBusy={isBusy} /> : null}
       {activityNote ? (
         <p className="flex items-center gap-2 px-1 text-muted-foreground text-xs">
           <SquareIcon className="size-3 shrink-0 animate-pulse fill-current" />
@@ -48,11 +36,22 @@ export function ChatComposer({
   );
 }
 
-function ApplicationLink({ id, isBusy }: { readonly id: string; readonly isBusy: boolean }) {
+/**
+ * The way back to the application this conversation produced.
+ *
+ * It is rendered beside the composer rather than inside it, because the link
+ * has to outlive the input. A thread that has spent its allowance loses the
+ * composer to a lock notice, and losing the only pointer to the CV that same
+ * run just made is the one thing that must not happen at that moment.
+ *
+ * The tab is named in the URL: the line under the link promises a conversation
+ * about the CV, and the panel opens on the score otherwise.
+ */
+export function ApplicationLink({ id, isBusy }: { readonly id: string; readonly isBusy: boolean }) {
   return (
     <Link
       className="flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5 text-sm transition-colors hover:border-foreground/25 hover:bg-secondary"
-      href={`/applications/${id}`}
+      href={`/dashboard/applications/${id}?tab=chat`}
     >
       <span className="min-w-0">
         <span className="block font-medium">

@@ -38,7 +38,7 @@ export async function RecentWork() {
           <li key={row.id}>
             <Link
               className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-secondary"
-              href={`/applications/${row.id}`}
+              href={`/dashboard/applications/${row.id}`}
             >
               <span className="min-w-0 flex-1 truncate text-sm">{row.title}</span>
               <span

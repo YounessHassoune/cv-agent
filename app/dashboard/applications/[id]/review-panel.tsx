@@ -2,8 +2,8 @@
 
 import type { ClientSessionState, MessageStreamEvent } from "eve/client";
 import { BriefcaseIcon, GaugeIcon, MessageSquareIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import type { AtsReport } from "@/agent/lib/ats.ts";
 import { ChatLockedNotice } from "@/components/chat-locked-notice";
@@ -12,9 +12,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResumableAgentChat, StatusDot } from "@/features/chat";
 import { gapSuggestions, InsightsPanel, LockedInsights, type ScoreSummary } from "./insights-panel";
 
+const TABS = [
+  { id: "insights", label: "Score", icon: GaugeIcon },
+  { id: "chat", label: "Chat", icon: MessageSquareIcon },
+  { id: "jd", label: "Job", icon: BriefcaseIcon },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
+const DEFAULT_TAB: TabId = "insights";
+
+/** Anything unknown in the URL falls back rather than showing a blank rail. */
+function toTab(value: string | null): TabId {
+  return TABS.some((tab) => tab.id === value) ? (value as TabId) : DEFAULT_TAB;
+}
+
 /**
  * The rail beside the document: what the score says, the conversation about
  * fixing it, and the job description it is all measured against.
+ *
+ * Which panel is open is read from `?tab=`, so a link can land the user on the
+ * one it was talking about — the chat link the landing page shows after a run
+ * points here, and opening on the score instead made that link look broken.
  *
  * Chat used to be a peer tab of the CV itself, so asking for a change hid the
  * change. Here the document holds its own column and this rail sits next to it,
@@ -56,26 +75,44 @@ export function ReviewPanel({
    */
   const [chatBusy, setChatBusy] = useState(false);
 
+  /*
+   * The URL is the source of truth, but the selection is still held in state:
+   * the panels stay mounted and a router navigation to change tabs would
+   * re-run this dynamic page and cost a round trip for a local move. So the
+   * state follows the URL when the URL changes, and a click writes the URL
+   * back through the History API — the address stays shareable, the in-flight
+   * chat below is untouched.
+   */
+  const searchParams = useSearchParams();
+  const urlTab = toTab(searchParams.get("tab"));
+  const [tab, setTab] = useState<TabId>(urlTab);
+  useEffect(() => {
+    setTab(urlTab);
+  }, [urlTab]);
+
+  const selectTab = (next: string) => {
+    const value = toTab(next);
+    setTab(value);
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", value);
+    window.history.replaceState(null, "", `?${params.toString()}`);
+  };
+
   const resetThread = async () => {
     await fetch(`/api/applications/${applicationId}/chat`, { method: "DELETE" });
     // Re-renders with no stored session, so the next message opens a fresh one.
     router.refresh();
   };
 
-  const tabs = [
-    { id: "insights", label: "Score", icon: GaugeIcon },
-    { id: "chat", label: "Chat", icon: MessageSquareIcon },
-    { id: "jd", label: "Job", icon: BriefcaseIcon },
-  ];
-
   return (
     <Tabs
       className="flex h-full min-h-0 flex-col gap-0 overflow-hidden rounded-xl border bg-card"
-      defaultValue="insights"
+      onValueChange={(next) => selectTab(String(next))}
+      value={tab}
     >
       <div className="shrink-0 border-b p-2">
         <TabsList className="w-full gap-1 bg-transparent p-0">
-          {tabs.map((tab) => (
+          {TABS.map((tab) => (
             <TabsTrigger className="gap-1.5 py-2" key={tab.id} value={tab.id}>
               <tab.icon className="size-3.5" />
               {tab.label}
