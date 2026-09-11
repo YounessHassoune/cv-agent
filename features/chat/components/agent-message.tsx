@@ -31,6 +31,8 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useCyclingMessage } from "../hooks/use-cycling-message";
+import { progressFor } from "../lib/activity-copy";
 import type { StoredAnswers } from "../lib/answers";
 
 export type AgentInputResponse = {
@@ -344,10 +346,26 @@ function activityFor(toolName: string) {
   return TOOL_ACTIVITY[toolName.toLowerCase().replace(/[^a-z0-9]/g, "")];
 }
 
-/** The ATS score, when the step that just finished is the one that computes it. */
+/**
+ * The ATS score, when the step that just finished is the one that computes it —
+ * named by language, because two variants score separately and "62/100" on its
+ * own leaves the user guessing which CV it belongs to.
+ */
 function readScore(part: EveDynamicToolPart): string | undefined {
-  const output = part.output as { total?: unknown } | null | undefined;
-  return typeof output?.total === "number" ? `${output.total}/100` : undefined;
+  const output = part.output as { language?: unknown; total?: unknown } | null | undefined;
+  if (typeof output?.total !== "number") return undefined;
+
+  const language = typeof output.language === "string" ? languageName(output.language) : undefined;
+  return language === undefined ? `${output.total}/100` : `${language} ${output.total}/100`;
+}
+
+/** "en" → "English", falling back to the code itself where Intl has no name. */
+function languageName(code: string): string | undefined {
+  try {
+    return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
 }
 
 /**
@@ -356,8 +374,23 @@ function readScore(part: EveDynamicToolPart): string | undefined {
  * actually waiting to hear.
  */
 function describeResult(activity: { done: string }, part: EveDynamicToolPart): string {
+  const blocked = readBlocked(part);
+  if (blocked !== undefined) return blocked;
+
   const score = readScore(part);
   return score === undefined ? activity.done : `${activity.done} — ${score}`;
+}
+
+/**
+ * Tools report a refusal as a result rather than an error, so the agent can
+ * read it and stop cleanly. The line has to say so too — a deleted application
+ * reported as "PDF ready" is the app lying about work it did not do.
+ */
+function readBlocked(part: EveDynamicToolPart): string | undefined {
+  const blocked = (part.output as { blocked?: unknown } | null | undefined)?.blocked;
+  if (blocked === "deleted") return "Stopped — you deleted this application";
+  if (blocked === "quota") return "Stopped — your plan's applications are used up";
+  return undefined;
 }
 
 /** Groups a tool's parts so repeated failures of the *same* step are counted. */
@@ -391,7 +424,8 @@ function ToolActivity({
   readonly part: EveDynamicToolPart;
   readonly turnActive: boolean;
 }) {
-  const activity = activityFor(part.toolMetadata?.eve?.name ?? part.toolName);
+  const toolLabel = part.toolMetadata?.eve?.name ?? part.toolName;
+  const activity = activityFor(toolLabel);
   const hasInputRequest = part.toolMetadata?.eve?.inputRequest !== undefined;
 
   /*
@@ -422,13 +456,7 @@ function ToolActivity({
   switch (part.state) {
     case "input-streaming":
     case "input-available":
-      statusLine = (
-        <ActivityLine
-          icon={<Loader2Icon className="size-3.5 animate-spin" />}
-          label={activity?.running ?? "Working…"}
-          running
-        />
-      );
+      statusLine = <RunningLine steps={progressFor(toolLabel, activity?.running ?? "Working…")} />;
       break;
     case "output-available":
       statusLine = activity ? (
@@ -509,6 +537,18 @@ function ActivityLine({
       {icon}
       {running ? <Shimmer as="span">{label}</Shimmer> : <span>{label}</span>}
     </div>
+  );
+}
+
+/**
+ * A step in flight, narrating itself. The cycling lives in its own component
+ * so a finished step never mounts a timer.
+ */
+function RunningLine({ steps }: { readonly steps: readonly string[] }) {
+  const label = useCyclingMessage(steps);
+
+  return (
+    <ActivityLine icon={<Loader2Icon className="size-3.5 animate-spin" />} label={label} running />
   );
 }
 

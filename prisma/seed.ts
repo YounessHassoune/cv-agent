@@ -210,6 +210,23 @@ async function main() {
     data: buildApplicationRows(userId),
   });
 
+  /*
+   * The seeded account is on Pro, and its usage counters are wiped with the
+   * applications it just re-created.
+   *
+   * Development is not the place to be rate-limited by the free tier: the
+   * sample data alone is three applications, so a free dev account starts every
+   * session already over quota and nothing downstream of the paywall can be
+   * worked on at all. Check the free path by setting `plan` to "free" here, or
+   * by editing the `Billing` row directly.
+   */
+  await db.usageEvent.deleteMany({ where: { userId } });
+  await db.billing.upsert({
+    where: { userId },
+    create: { userId, plan: "pro", status: "active" },
+    update: { plan: "pro", status: "active", credits: 0 },
+  });
+
 
   const account = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
   if (account) {

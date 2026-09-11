@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   const signedIn = (user: { id: string; email: string }) => {
     const { token, maxAge } = signSession(user.id, user.email);
-    const response = NextResponse.redirect(new URL("/profile", request.url), 303);
+    const response = NextResponse.redirect(new URL("/dashboard/profile", request.url), 303);
     response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
     return response;
   };

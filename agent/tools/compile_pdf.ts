@@ -1,11 +1,14 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { CV_TEMPLATE_IDS } from "../../lib/cv-templates";
+import { CV_TEMPLATE_IDS, DEFAULT_TEMPLATE, DEFAULT_THEME } from "../../lib/cv-templates";
+import { templateAllowed, themeAllowed } from "../../lib/entitlements";
 import { resolveUserId } from "../lib/auth";
+import { planFor } from "../lib/billing";
 import { type JdKeyword, keywordScore } from "../lib/ats";
 import { withDisplayDates } from "../lib/cv-dates";
 import { CvSchema } from "../lib/cv-schema";
 import { db } from "../lib/db";
+import { applicationGone } from "../lib/gone";
 import { screenAssertedTerms } from "../lib/asserted";
 import { allowedTerms, findFabrications, unsupportedClaims } from "../lib/guard";
 import { extractPdfText, renderCvPdf } from "../lib/pdf";
@@ -79,7 +82,7 @@ export default defineTool({
     const application = await db.application.findFirst({
       where: { id: applicationId, userId },
     });
-    if (!application) throw new Error(`No application ${applicationId} for this user.`);
+    if (!application) return applicationGone(applicationId);
     if (!application.languages.includes(lang)) {
       throw new Error(
         `"${lang}" is not a target language of this application (${application.languages.join(", ")}).`,
@@ -216,10 +219,22 @@ export default defineTool({
     yield { phase: "rendering", applicationId, language: lang, iteration };
 
     // Explicit choice wins, then the application's template, then the profile default.
-    const templateId = template ?? application.template ?? profile.template;
+    const requestedTemplate = template ?? application.template ?? profile.template;
     // Colour is the user's presentation choice, never the agent's: it takes the
     // one already on the application, or the profile default.
-    const themeId = application.theme ?? profile.theme;
+    const requestedTheme = application.theme ?? profile.theme;
+
+    /*
+     * Plan check, and a fallback rather than a refusal. A locked layout is a
+     * presentation choice the user has not paid for — not a reason to fail a
+     * compile they are waiting on and leave them with no PDF at all. They get
+     * the safe default, and the lock in the UI is what does the selling.
+     */
+    const plan = await planFor(userId);
+    const templateId = templateAllowed(plan, requestedTemplate)
+      ? requestedTemplate
+      : DEFAULT_TEMPLATE;
+    const themeId = themeAllowed(plan, requestedTheme) ? requestedTheme : DEFAULT_THEME;
 
     const pdfBytes = await renderCvPdf(cv, templateId, undefined, themeId);
     const { text, pageCount } = await extractPdfText(pdfBytes);

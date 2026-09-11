@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { clampSkin } from "@/agent/lib/billing.ts";
 import { db } from "@/agent/lib/db.ts";
 import { isCloudinaryUrl } from "@/app/lib/cloudinary";
 import { getCurrentUser } from "@/app/lib/current-user";
@@ -101,6 +102,10 @@ export async function PUT(request: Request) {
   }
   const input = parsed.data;
 
+  // The default layout is stored on the profile and inherited by every future
+  // application, so a locked one saved here would outlive the request.
+  const skin = await clampSkin(user.userId, input.template, input.theme);
+
   // Skills/experiences/projects are fully replaced — the editor always submits
   // the complete profile, and stale rows would otherwise stay claimable.
   const data = {
@@ -108,8 +113,8 @@ export async function PUT(request: Request) {
     headline: input.headline ?? null,
     summary: input.summary ?? null,
     photoUrl: input.photoUrl ?? null,
-    template: input.template ?? DEFAULT_TEMPLATE,
-    theme: input.theme ?? DEFAULT_THEME,
+    template: skin.template,
+    theme: skin.theme,
     contact: input.contact,
     languages: input.languages,
     education: input.education,

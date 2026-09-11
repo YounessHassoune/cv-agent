@@ -1,3 +1,4 @@
+import { clampSkin } from "@/agent/lib/billing.ts";
 import { EditedCvSchema } from "@/agent/lib/cv-schema.ts";
 import { db } from "@/agent/lib/db.ts";
 import { renderCvPdf } from "@/agent/lib/pdf.ts";
@@ -36,10 +37,14 @@ export async function POST(request: Request) {
   const parsed = EditedCvSchema.safeParse(body?.cv);
   if (!parsed.success) return new Response("Invalid CV", { status: 400 });
 
-  const template = CV_TEMPLATE_IDS.includes(body?.template as CvTemplateId)
-    ? (body?.template as CvTemplateId)
-    : DEFAULT_TEMPLATE;
-  const theme = normalizeTheme(body?.theme) ?? DEFAULT_THEME;
+  // Clamped to the plan, same as every other surface that renders a CV.
+  const { template, theme } = await clampSkin(
+    user.userId,
+    CV_TEMPLATE_IDS.includes(body?.template as CvTemplateId)
+      ? (body?.template as CvTemplateId)
+      : DEFAULT_TEMPLATE,
+    normalizeTheme(body?.theme) ?? DEFAULT_THEME,
+  );
 
   const profile = body?.photo
     ? await db.profile.findUnique({

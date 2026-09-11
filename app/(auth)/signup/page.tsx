@@ -16,7 +16,7 @@ export default async function SignUpPage({
 }: {
   readonly searchParams: Promise<{ error?: string; email?: string; name?: string }>;
 }) {
-  if (await getCurrentUser()) redirect("/");
+  if (await getCurrentUser()) redirect("/dashboard");
   const { error, email, name } = await searchParams;
 
   return (

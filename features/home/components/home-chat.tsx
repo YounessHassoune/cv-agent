@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { ChatLockedNotice } from "@/components/chat-locked-notice";
+import { usePlan } from "@/components/plan-provider";
 import { ResumableAgentChat } from "@/features/chat";
 
 type Props = {
@@ -36,6 +38,7 @@ function readStored(key: string): string | undefined {
  * all, exactly where it stopped.
  */
 export function HomeChat({ footer, heading, storageKey, subheading, suggestions }: Props) {
+  const plan = usePlan();
   const [sessionId, setSessionId] = useState<string>();
   /** Storage is client-only, so the first paint must wait for it. */
   const [loaded, setLoaded] = useState(false);
@@ -84,6 +87,23 @@ export function HomeChat({ footer, heading, storageKey, subheading, suggestions 
   return (
     <ResumableAgentChat
       footer={footer}
+      /* Checked here as well as on the server: the proxy refuses the turn
+         either way, and this is what stops the user finding that out by
+         watching nothing happen. */
+      /*
+       * The second case is the one that actually bit. Once a free account has
+       * spent its application, this thread is attached to that application, so
+       * every follow-up is refused as paid chat — and a brand new thread would
+       * only reach the agent to be told the allowance is gone. Either way the
+       * composer was accepting messages that could not go anywhere.
+       */
+      lockedNotice={
+        plan.usage.agentTurns >= plan.limits.agentTurns ? (
+          <ChatLockedNotice reason="turns" />
+        ) : !plan.can("applicationChat") && plan.usage.applications >= plan.limits.applications ? (
+          <ChatLockedNotice reason="applications" />
+        ) : undefined
+      }
       heading={heading}
       key={`${sessionId ?? "fresh"}:${generation}`}
       onResetThread={startFresh}

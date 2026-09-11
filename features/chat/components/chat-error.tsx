@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertCircleIcon } from "lucide-react";
-import { isStuckThread } from "../lib/errors";
+import Link from "next/link";
+import { AlertCircleIcon, SparklesIcon } from "lucide-react";
+import { isPaywall, isStuckThread } from "../lib/errors";
 
 type Props = {
   readonly message: string;
@@ -10,6 +11,32 @@ type Props = {
 };
 
 export function ChatError({ message, onResetThread }: Props) {
+  /*
+   * A refused turn is not a failure, and dressing it in a red box with
+   * "Request failed" tells the user their app is broken when in fact they have
+   * run out of something they can buy more of.
+   */
+  if (isPaywall(message)) {
+    return (
+      <div className="flex items-start gap-3 rounded-lg border bg-card px-3 py-2.5 text-sm">
+        <SparklesIcon className="mt-0.5 size-4 shrink-0" />
+        <div className="min-w-0">
+          <p className="font-medium">That is as far as the free plan goes</p>
+          <p className="mt-0.5 text-muted-foreground">
+            You have used the agent messages included with your plan. Everything you have made so
+            far stays exactly where it is.
+          </p>
+          <Link
+            className="mt-2 inline-block font-medium text-xs underline underline-offset-2"
+            href="/dashboard/pricing"
+          >
+            See plans
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm">
       <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />

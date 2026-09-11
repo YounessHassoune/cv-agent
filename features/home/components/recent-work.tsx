@@ -26,7 +26,7 @@ export async function RecentWork() {
         <h2 className="font-medium text-muted-foreground text-xs">Pick up where you left off</h2>
         <Link
           className="flex items-center gap-1 text-muted-foreground text-xs transition-colors hover:text-foreground"
-          href="/applications"
+          href="/dashboard/applications"
         >
           All applications
           <ArrowRightIcon className="size-3" />

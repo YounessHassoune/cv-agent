@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useAgentChat } from "../hooks/use-agent-chat";
-import { AGENT_NAME, type AgentChatProps, type AgentStatus, DEFAULT_SUBHEADING } from "../types";
+import { AGENT_NAME, type AgentChatProps, DEFAULT_SUBHEADING } from "../types";
 import { ChatComposer } from "./chat-composer";
 import { ChatError } from "./chat-error";
 import { ChatTranscript } from "./chat-transcript";
@@ -21,6 +21,7 @@ export function AgentChat({
   initialEvents,
   initialSession,
   persistUrl,
+  lockedNotice,
   onResetThread,
   onSessionId,
   liveMessages,
@@ -36,7 +37,12 @@ export function AgentChat({
   });
   const { isEmpty } = chat;
 
-  const composer = (
+  /*
+   * A locked thread keeps its transcript and loses its input. Leaving a live
+   * composer that silently refuses every message is the worst of the options:
+   * the user types, presses send, and the app appears to be broken.
+   */
+  const composer = lockedNotice ?? (
     <ChatComposer
       activityNote={chat.activityNote}
       /* Only the unscoped chat needs the link: inside an application panel the
@@ -57,7 +63,7 @@ export function AgentChat({
       onSelect={chat.sendSuggestion}
       /* Starters belong to the blank thread only. Emptying the list rather
          than unmounting keeps the slot in place, so nothing below it moves. */
-      suggestions={isEmpty ? suggestions : []}
+      suggestions={isEmpty && !lockedNotice ? suggestions : []}
     />
   );
 
@@ -69,10 +75,11 @@ export function AgentChat({
       )}
     >
       <ChatHeader
+        hasError={chat.errorMessage !== undefined}
         heading={heading}
+        isBusy={chat.isBusy}
         onResetThread={onResetThread}
         show={!(isPanel || isEmpty)}
-        status={chat.status}
       />
 
       <ErrorBanner isPanel={isPanel} message={chat.errorMessage} onResetThread={onResetThread} />
@@ -116,15 +123,17 @@ export function AgentChat({
 
 /** Only the page variant labels itself, and only once there is a thread. */
 function ChatHeader({
+  hasError,
   heading,
+  isBusy,
   onResetThread,
   show,
-  status,
 }: {
+  readonly hasError: boolean;
   readonly heading: string;
+  readonly isBusy: boolean;
   readonly onResetThread?: () => void | Promise<void>;
   readonly show: boolean;
-  readonly status: AgentStatus;
 }) {
   if (!show) return null;
 
@@ -133,7 +142,7 @@ function ChatHeader({
       <span aria-hidden className="min-w-0" />
       <span className="flex min-w-0 items-center gap-2">
         <span className="truncate text-muted-foreground text-sm">{heading}</span>
-        <StatusDot status={status} />
+        <StatusDot hasError={hasError} isBusy={isBusy} />
       </span>
       {/* A thread that is remembered across reloads needs a way out of it. */}
       <span className="flex justify-end">

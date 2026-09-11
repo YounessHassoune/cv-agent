@@ -1,3 +1,4 @@
+import { clampSkin } from "@/agent/lib/billing.ts";
 import { db } from "@/agent/lib/db.ts";
 import { renderCvPdf } from "@/agent/lib/pdf.ts";
 import { readVariants } from "@/agent/lib/variants.ts";
@@ -74,13 +75,17 @@ export async function GET(
       : null;
     const photo = await loadPdfPhoto(profile?.photoUrl);
 
+    // Query strings are typed by hand as easily as they are generated. A plan
+    // that cannot compile a layout cannot preview it either, or the lock is
+    // one URL edit deep.
+    const skin = await clampSkin(
+      user.userId,
+      template ?? variant.template,
+      theme ?? variant.theme,
+    );
+
     return new Response(
-      await renderCvPdf(
-        variant.cvJson,
-        template ?? variant.template,
-        photo,
-        theme ?? variant.theme,
-      ),
+      await renderCvPdf(variant.cvJson, skin.template, photo, skin.theme),
       { headers },
     );
   }

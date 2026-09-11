@@ -10,6 +10,8 @@ import {
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { cn } from "@/lib/utils";
+import { useCyclingMessage } from "../hooks/use-cycling-message";
+import { THINKING_PROGRESS } from "../lib/activity-copy";
 import type { StoredAnswers } from "../lib/answers";
 import { AgentMessage } from "./agent-message";
 
@@ -56,17 +58,27 @@ export function ChatTranscript({
           />
         ))}
 
-        {awaitingFirstToken ? (
-          <Message from="assistant">
-            <MessageContent>
-              <Shimmer as="span" className="text-sm">
-                Thinking…
-              </Shimmer>
-            </MessageContent>
-          </Message>
-        ) : null}
+        {awaitingFirstToken ? <ThinkingMessage /> : null}
       </ConversationContent>
       <ConversationScrollButton />
     </Conversation>
+  );
+}
+
+/**
+ * The silence between steps. The line moves on while the wait lasts, because a
+ * frozen "Thinking…" is the part of a long run that reads as a hung app.
+ */
+function ThinkingMessage() {
+  const label = useCyclingMessage(THINKING_PROGRESS);
+
+  return (
+    <Message from="assistant">
+      <MessageContent>
+        <Shimmer as="span" className="text-sm">
+          {label}
+        </Shimmer>
+      </MessageContent>
+    </Message>
   );
 }

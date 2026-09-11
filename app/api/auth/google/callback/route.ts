@@ -77,7 +77,7 @@ export async function GET(request: Request) {
   }
 
   const { token, maxAge } = signSession(user.id, user.email);
-  const destination = isNew ? "/profile?complete=1" : await landingPath(user.id);
+  const destination = isNew ? "/dashboard/profile?complete=1" : await landingPath(user.id);
   const response = NextResponse.redirect(new URL(destination, request.url), 303);
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
   response.cookies.set(OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0 });

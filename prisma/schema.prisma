@@ -159,11 +159,23 @@ model Application {
   /// same durable session. Null until the first turn settles.
   chatEvents  Json?
   chatSession Json?
+  /// The eve session that created this application, and a fingerprint of the
+  /// job ad it was created from. They exist to carry the unique constraint
+  /// below: two `analyze_jd` calls dispatched at the same moment both read an
+  /// empty table and both created a row, and no application-level check can
+  /// close that race — only the database can refuse the second write.
+  ///
+  /// Nullable, and Postgres treats NULLs as distinct, so rows that predate the
+  /// column are exempt rather than in conflict. A *different* job pasted into
+  /// the same thread has a different `jdHash`, so it still gets its own row.
+  sessionId   String?
+  jdHash      String?
   status      Status   @default(DRAFT)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   pdfs        CvPdf[]
 
+  @@unique([userId, sessionId, jdHash])
   @@index([userId, status])
 }
 
@@ -185,4 +197,100 @@ enum Status {
   APPROVED
   APPLIED
   REJECTED
+}
+
+/// Everything about what this user is allowed to do and what they pay for.
+/// One row per user, created lazily on first read — existing accounts need no
+/// backfill, they simply resolve to the `free` defaults until a row exists.
+///
+/// `plan` is written by the Stripe webhook and by nothing else. A checkout
+/// `success_url` can be typed by hand, so the redirect is never evidence that
+/// money moved.
+model Billing {
+  userId               String    @id
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  /// The exact Price object the subscription is on. Stripe prices are
+  /// immutable: raising the price means creating a new one, and without this
+  /// there is no way to tell a grandfathered subscriber from a new one.
+  stripePriceId        String?
+  plan                 String    @default("free")
+  /// Which revision of the plan's limits this subscriber bought. Cutting an
+  /// allowance later must not retroactively shrink what someone already paid
+  /// for, so entitlements resolve by (plan, planVersion).
+  planVersion          Int       @default(1)
+  /// Stripe's subscription status: active | trialing | past_due | canceled.
+  status               String?
+  /// The paid period the allowance is counted over. Deliberately Stripe's own
+  /// period rather than the calendar month — someone who subscribes on the
+  /// 28th would otherwise get two allowances in four days.
+  periodStart          DateTime?
+  periodEnd            DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  /// Purchased top-up applications, spent only once the period allowance is
+  /// gone. Never expires.
+  credits              Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+/// One row per billable action. Quotas count these, not `Application` rows:
+/// an application the user deletes still cost a model call, and counting rows
+/// would let anyone refill the free tier with the delete button.
+model UsageEvent {
+  id            String   @id @default(cuid())
+  userId        String
+  /// "application" | "chat_turn" | "cv_import"
+  kind          String
+  applicationId String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, kind, createdAt])
+}
+
+/// What a model step actually cost. Written by the `usage` hook on every
+/// `step.completed`, and by the CV import on finish.
+///
+/// This is the only honest input to pricing: the per-application estimates in
+/// the plan were arithmetic, and arithmetic does not know about retries,
+/// reasoning tokens or a user who pastes a forty-page job ad.
+model LlmUsage {
+  id              String   @id @default(cuid())
+  /// Null when the step ran before any tool identified the principal. The eve
+  /// hook context carries no auth, so this is stamped from session state that
+  /// the first tool call fills in — a turn that never calls a tool has nobody
+  /// to bill, and guessing would be worse than leaving it open.
+  userId          String?
+  /// The eve session the step belongs to. Always known, so it is the fallback
+  /// way back to a user: an application records the session that created it.
+  sessionId       String?
+  applicationId   String?
+  /// "application" | "chat" | "import"
+  kind            String
+  model           String
+  inputTokens     Int
+  outputTokens    Int
+  /// Cached prompt prefix reads, billed at a fraction of the input rate. The
+  /// system prompt and tool schemas are identical on every step, so this being
+  /// zero means caching is not working and the input bill is several times
+  /// what it should be.
+  cacheReadTokens Int      @default(0)
+  /// What the step cost. The AI Gateway reports this per request and that
+  /// figure wins; the local price table only fills in when it does not.
+  costUsd         Decimal  @db.Decimal(12, 8)
+  /// Whether `costUsd` came from the gateway or from the local price table.
+  costSource      String   @default("estimate")
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([sessionId])
+  @@index([applicationId])
+}
+
+/// Webhook idempotency. Stripe retries a failed delivery for up to three days,
+/// and a retried `checkout.session.completed` must not grant a second month.
+model StripeEvent {
+  id         String   @id
+  type       String
+  receivedAt DateTime @default(now())
 }

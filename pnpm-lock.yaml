@@ -100,6 +100,9 @@ importers:
       streamdown:
         specifier: 2.5.0
         version: 2.5.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      stripe:
+        specifier: ^22.6.2
+        version: 22.6.2(@types/node@26.2.0)
       tailwind-merge:
         specifier: 3.6.0
         version: 3.6.0
@@ -3156,6 +3159,15 @@ packages:
   strip-json-comments@2.0.1:
     resolution: {integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==}
     engines: {node: '>=0.10.0'}
+
+  stripe@22.6.2:
+    resolution: {integrity: sha512-PwRE2scocvXqDKPiskMa5vRJEAEkq46W69XyUYmAwrNSLr675lQnfqLwnsndAWizwgihOWw/irLmoFRo3ez7ew==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/node': '>=18'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   strnum@2.4.2:
     resolution: {integrity: sha512-rDG3Ah4TV0k1hWvLSzkZtMmLN9+eS+h3knq4MP6A42Y3Yh5qGNnOUs1jJkoSr8FG5dsL28c7KgkIBzSEykqtuw==}
@@ -6915,6 +6927,10 @@ snapshots:
 
   strip-json-comments@2.0.1:
     optional: true
+
+  stripe@22.6.2(@types/node@26.2.0):
+    optionalDependencies:
+      '@types/node': 26.2.0
 
   strnum@2.4.2:
     dependencies:

@@ -23,6 +23,12 @@ export type AgentChatProps = {
   readonly initialSession?: ClientSessionState;
   /** Endpoint that stores the snapshot after every settled turn. */
   readonly persistUrl?: string;
+  /**
+   * Shown in place of the composer when the thread cannot accept another
+   * message — an exhausted plan, most often. Passing it is what turns a dead
+   * Send button into something that explains itself and offers a way on.
+   */
+  readonly lockedNotice?: ReactNode;
   /** Called to abandon a broken thread and begin a fresh session. */
   readonly onResetThread?: () => void | Promise<void>;
   /**

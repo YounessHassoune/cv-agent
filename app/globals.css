@@ -255,18 +255,29 @@ select {
   }
 
   /* Faint wash behind the auth panel. Now that the accent is ink this reads as
-     a soft vignette rather than a coloured glow, which is the intent. */
+     a soft vignette rather than a coloured glow, which is the intent.
+
+     The strengths are custom properties so one class can serve both the narrow
+     auth panel, where it sits directly behind text and has to stay quiet, and a
+     full-width hero, where the same values disappear into the background. Set
+     `--glow-a` / `--glow-b` on the element to push it. */
   .brand-glow {
+    --glow-a: 7%;
+    --glow-b: 5%;
     background-image:
-      radial-gradient(65% 55% at 12% 0%, color-mix(in oklab, var(--foreground) 7%, transparent), transparent 70%),
-      radial-gradient(55% 50% at 100% 12%, color-mix(in oklab, var(--foreground) 5%, transparent), transparent 70%);
+      radial-gradient(65% 55% at 12% 0%, color-mix(in oklab, var(--foreground) var(--glow-a), transparent), transparent 70%),
+      radial-gradient(55% 50% at 100% 12%, color-mix(in oklab, var(--foreground) var(--glow-b), transparent), transparent 70%);
   }
 
+  /* Same story: `--grid-line` is the ink in each rule and `--grid-size` the
+     spacing. The defaults are the quiet ones the auth panel was tuned with. */
   .grid-texture {
+    --grid-line: 6%;
+    --grid-size: 48px;
     background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px);
-    background-size: 48px 48px;
+      linear-gradient(to right, color-mix(in oklab, var(--foreground) var(--grid-line), transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) var(--grid-line), transparent) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
   }
 
   .scrollbar-slim {

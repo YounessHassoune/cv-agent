@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   // Fresh accounts have an empty profile, so this is the builder in practice —
   // but a user who verifies late keeps whatever they already filled in.
   const { complete } = await profileCompleteness(result.user.id);
-  const destination = complete ? "/?verified=1" : "/profile?verified=1";
+  const destination = complete ? "/dashboard?verified=1" : "/dashboard/profile?verified=1";
   const response = NextResponse.redirect(new URL(destination, request.url), 303);
   response.cookies.set(SESSION_COOKIE, session, sessionCookieOptions(maxAge));
   return response;

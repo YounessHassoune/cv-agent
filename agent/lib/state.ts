@@ -13,6 +13,12 @@ import { defineState } from "eve/context";
  */
 export const cvLoop = defineState("cv-agent.loop", () => ({
   applicationId: null as string | null,
+  /**
+   * The principal this session belongs to, stamped by `resolveUserId` on the
+   * first tool call. The usage hook reads it: hook context carries no auth, so
+   * without this a recorded step has no one to bill.
+   */
+  userId: null as string | null,
   /** Successful compile count per ISO language code, this turn. */
   iterations: {} as Record<string, number>,
   /*

@@ -63,5 +63,5 @@ export async function profileCompleteness(userId: string): Promise<ProfileComple
 /** Where to land a user after sign-in: the builder while the profile is thin. */
 export async function landingPath(userId: string): Promise<string> {
   const { complete } = await profileCompleteness(userId);
-  return complete ? "/" : "/profile?complete=1";
+  return complete ? "/dashboard" : "/dashboard/profile?complete=1";
 }

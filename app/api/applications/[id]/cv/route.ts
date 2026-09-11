@@ -7,6 +7,7 @@ import {
   scoreAts,
   totalYears,
 } from "@/agent/lib/ats.ts";
+import { clampSkin } from "@/agent/lib/billing.ts";
 import { EditedCvSchema } from "@/agent/lib/cv-schema.ts";
 import { db } from "@/agent/lib/db.ts";
 import { unsupportedClaims } from "@/agent/lib/guard.ts";
@@ -78,8 +79,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     );
   }
 
-  const template = parsed.data.template ?? variant.template ?? application.template;
-  const theme = parsed.data.theme ?? variant.theme ?? application.theme;
+  // The layout travels as a string on the wire, so it is clamped to the plan
+  // here rather than trusted — the picker in the UI is a lock, not a gate.
+  const { template, theme } = await clampSkin(
+    user.userId,
+    parsed.data.template ?? variant.template ?? application.template,
+    parsed.data.theme ?? variant.theme ?? application.theme,
+  );
 
   // Nothing changed — a Save on a document the user opened and closed again.
   // Re-rendering and re-embedding it would cost a model call for no difference.

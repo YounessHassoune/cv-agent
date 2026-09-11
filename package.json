@@ -20,7 +20,8 @@
     "db:seed": "node prisma/seed.ts",
     "db:studio": "prisma studio",
     "verify": "node scripts/verify-pipeline.ts",
-    "check:templates": "node scripts/check-templates.ts"
+    "check:templates": "node scripts/check-templates.ts",
+    "stripe:seed": "node --env-file=.env scripts/stripe-seed.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -53,6 +54,7 @@
     "resend": "^6.27.0",
     "shiki": "4.1.0",
     "streamdown": "2.5.0",
+    "stripe": "^22.6.2",
     "tailwind-merge": "3.6.0",
     "tailwindcss": "4.3.0",
     "unpdf": "^1.8.0",

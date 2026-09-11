@@ -11,6 +11,7 @@ import {
 } from "../lib/ats";
 import { resolveUserId } from "../lib/auth";
 import { db } from "../lib/db";
+import { applicationGone } from "../lib/gone";
 import { cvLoop } from "../lib/state";
 import { readVariants } from "../lib/variants";
 
@@ -97,7 +98,7 @@ export default defineTool({
     const application = await db.application.findFirst({
       where: { id: applicationId, userId },
     });
-    if (!application) throw new Error(`No application ${applicationId} for this user.`);
+    if (!application) return applicationGone(applicationId);
 
     const variants = readVariants(application.variants);
     const variant = variants[lang];

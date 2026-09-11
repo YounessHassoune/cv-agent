@@ -1,5 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { ImportedProfileSchema } from "@/agent/lib/cv-import-schema.ts";
+import { canImportCv, recordCvImport } from "@/agent/lib/billing.ts";
 import { db } from "@/agent/lib/db.ts";
 import { cloudinaryConfigured, photoPublicId, uploadBuffer } from "@/app/lib/cloudinary";
 import { type CvPhoto, type Found, MAX_IMPORT_BYTES, CvImportError, importCv } from "@/app/lib/cv-import";
@@ -63,6 +64,19 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  /*
+   * Server-side gate, not decoration. The Upload button is a lock in the UI,
+   * but a lock in the UI is a suggestion — this route is a model call behind a
+   * `fetch` anyone can issue by hand.
+   *
+   * Counted, not a flag: every plan may import, and what runs out is the
+   * allowance. Free gets one, so the best thing the product does is visible
+   * before anybody pays for it.
+   */
+  if (!(await canImportCv(user.userId))) {
+    return NextResponse.json({ error: "paywall", capability: "cvImport" }, { status: 402 });
+  }
+
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) {
@@ -123,6 +137,19 @@ export async function POST(request: Request) {
       await db.cvImport.update({
         where: { userId },
         data: { status: "done", profile, photoUrl, error: null },
+      });
+
+      /*
+       * The allowance is spent here, and only here.
+       *
+       * Not at the top of the route: a PDF the model cannot read costs the
+       * user nothing, and burning somebody's single free import on a failed
+       * parse is indefensible. The catch below deliberately records nothing,
+       * which is what lets a failed upload be retried.
+       */
+      await recordCvImport(userId).catch((cause) => {
+        // Metering must not undo an import that has already succeeded.
+        console.warn("cv-import: usage not recorded", cause);
       });
     } catch (error) {
       const message =

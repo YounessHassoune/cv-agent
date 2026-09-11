@@ -219,6 +219,9 @@ export function useAgentChat({
   }, [resetCancellation]);
   const requestCancellation = () => cancellation.request(isBusy);
 
+  /** A send the server refused outright, kept so the transcript can say so. */
+  const [sendError, setSendError] = useState<string>();
+
   /** In a panel the first message carries the application context. */
   const withContext = (text: string) =>
     contextPrefix && isEmpty ? `${contextPrefix}\n\n${text}` : text;
@@ -229,6 +232,7 @@ export function useAgentChat({
    * the user staring at their own text for the length of the run.
    */
   const dispatch = (payload: UserContent | string) => {
+    setSendError(undefined);
     prepareTurn();
     /*
      * Claim the turn before the request leaves, not after the first event
@@ -236,7 +240,19 @@ export function useAgentChat({
      * our own `turn.started` first and remount this chat mid-send.
      */
     onBusyChange?.(true);
-    void agent.send(payload, STREAM_OPTIONS);
+    /*
+     * Caught, not merely un-awaited.
+     *
+     * A refused turn — the proxy answering 402 when a plan is out of messages
+     * — rejects here, and an unhandled rejection is invisible: the composer
+     * clears, nothing streams, and the app looks broken at the exact moment it
+     * is trying to sell something. The message is kept so the transcript can
+     * say what happened.
+     */
+    void agent.send(payload, STREAM_OPTIONS).catch((cause: unknown) => {
+      onBusyChange?.(false);
+      setSendError(cause instanceof Error ? cause.message : "That message was not accepted.");
+    });
   };
 
   const sendSuggestion = (text: string) => {
@@ -357,7 +373,7 @@ export function useAgentChat({
      * it. Only a turn owned by another page is off limits.
      */
     canRespond: !isFollowing,
-    errorMessage: cancellation.error ?? agent.error?.message,
+    errorMessage: cancellation.error ?? agent.error?.message ?? sendError,
     handleSubmit,
     isBusy,
     isEmpty,

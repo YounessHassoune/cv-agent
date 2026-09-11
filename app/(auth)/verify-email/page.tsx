@@ -22,7 +22,7 @@ export default async function VerifyEmailPage({
 }: {
   readonly searchParams: Promise<{ email?: string; error?: string; sent?: string }>;
 }) {
-  if (await getCurrentUser()) redirect("/");
+  if (await getCurrentUser()) redirect("/dashboard");
   const { email, error, sent } = await searchParams;
 
   return (
