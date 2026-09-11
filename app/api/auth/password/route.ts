@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/agent/lib/db.ts";
 import { hashPassword, passwordProblem, verifyPassword } from "@/agent/lib/password.ts";
 import { getCurrentUser } from "@/app/lib/current-user";
+import { CREDENTIAL_LIMIT, hit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -11,6 +12,12 @@ export async function POST(request: Request) {
     currentPassword?: string;
     newPassword?: string;
   } | null;
+
+  // Changing a password proves the old one, so this route can be used to guess
+  // it from a stolen session. Counted per account rather than per IP.
+  if (!hit(`password:user:${user.userId}`, CREDENTIAL_LIMIT).ok) {
+    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+  }
 
   const newPassword = body?.newPassword ?? "";
   const problem = passwordProblem(newPassword);

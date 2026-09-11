@@ -21,6 +21,18 @@ export function resolveUserId(ctx: { session: { auth: unknown } }): string {
       : (current?.principalId ?? "local-dev");
 
   /*
+   * The fallback is a development convenience: `localDev()` only issues the
+   * `local-dev` principal on a dev server, and eve's route auth returns 401
+   * before a tool runs when nothing authenticates. Both of those would have to
+   * fail at once for this to be reached in production — and if they ever did,
+   * every unauthenticated caller would land on one shared profile. Refusing is
+   * the only safe answer to a request whose owner is unknown.
+   */
+  if (userId === "local-dev" && process.env.NODE_ENV === "production") {
+    throw new Error("No authenticated principal on this session.");
+  }
+
+  /*
    * Remembered on the session, for the usage meter's benefit.
    *
    * A hook's context is `{ agent, channel, session: { id } }` — no auth — so

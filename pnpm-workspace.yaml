@@ -1,3 +1,9 @@
+overrides:
+  # Pinned past GHSA-rgj7-g3m4-5g8c and GHSA-c22k-c4r6-9wqh: sharp before
+  # 0.35.4 bundles libheif and libvips builds with known CVEs, and Next pulls it
+  # in for image optimization. Same minor, so it stays API-compatible with the
+  # version Next asks for.
+  sharp: ">=0.35.4"
 minimumReleaseAgeExclude:
   - "@ai-sdk/*"
   - "@rolldown/*"

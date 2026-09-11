@@ -136,7 +136,18 @@ model CvImport {
 /// code) and the binary PDFs in `CvPdf` — JSON can't hold bytes, and base64
 /// would bloat every row read.
 model Application {
-  id          String   @id @default(cuid())
+  /// UUIDv7 rather than cuid, because this id is the one that travels: it is in
+  /// every `/dashboard/applications/:id` URL and every agent tool call. cuid
+  /// embeds a counter and a timestamp in a short string, so ids minted near each
+  /// other look near each other — guessable enough to enumerate, even though
+  /// every query is scoped by `userId` and a guessed id returns nothing. v7
+  /// keeps 74 random bits (not enumerable) while staying time-ordered, so
+  /// inserts still land at the right end of the index instead of scattering it.
+  ///
+  /// Prisma mints this client-side, so the column stays plain TEXT with no
+  /// database default, and rows created before this change keep their cuid ids.
+  /// Nothing parses the format.
+  id          String   @id @default(uuid(7))
   userId      String
   jdText      String
   jdKeywords  Json? // analyze_jd output, reused by score_ats and the review UI

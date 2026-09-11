@@ -3,6 +3,7 @@ import { db } from "@/agent/lib/db.ts";
 import { EMAIL_PATTERN, normalizeEmail, verifyPassword } from "@/agent/lib/password.ts";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/agent/lib/session.ts";
 import { landingPath } from "@/app/lib/profile-completeness";
+import { CREDENTIAL_LIMIT, clientIp, hit } from "@/lib/rate-limit";
 
 /**
  * Email + password sign-in. The signed cookie carries the `User.id`, which is
@@ -20,6 +21,16 @@ export async function POST(request: Request) {
     );
 
   if (!EMAIL_PATTERN.test(email) || password.length === 0) return fail("invalid");
+
+  /*
+   * Two counters, because the two attacks have different shapes: one host
+   * working through a list of addresses, and a botnet working through the
+   * passwords of one address. Both are counted before the hash is computed, so
+   * a flood costs no scrypt work either.
+   */
+  const ipAllowed = hit(`signin:ip:${clientIp(request)}`, CREDENTIAL_LIMIT).ok;
+  const emailAllowed = hit(`signin:email:${email}`, CREDENTIAL_LIMIT).ok;
+  if (!ipAllowed || !emailAllowed) return fail("throttled");
 
   const user = await db.user.findUnique({ where: { email } });
 

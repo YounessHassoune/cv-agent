@@ -15,6 +15,7 @@ const messages: Record<string, string> = {
   unverified: "Confirm your email address before signing in.",
   expired: "That confirmation link has expired. Request a new one below.",
   bad_token: "That confirmation link is no longer valid. Request a new one below.",
+  throttled: "Too many attempts. Wait a few minutes and try again.",
   send_failed:
     "Your account was created, but the confirmation email couldn't be sent. Try again below.",
 };

@@ -8,6 +8,7 @@ import {
 } from "@/agent/lib/password.ts";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/agent/lib/session.ts";
 import { issueVerification } from "@/agent/lib/verification.ts";
+import { clientIp, hit, SIGNUP_LIMIT } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   const form = await request.formData();
@@ -43,6 +44,10 @@ export async function POST(request: Request) {
 
   if (!EMAIL_PATTERN.test(email)) return fail("email");
   if (passwordProblem(password)) return fail("password");
+
+  // Every signup mints a verification email, so an unthrottled route is a mail
+  // relay pointed at whatever addresses the caller types.
+  if (!hit(`signup:ip:${clientIp(request)}`, SIGNUP_LIMIT).ok) return fail("throttled");
 
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
