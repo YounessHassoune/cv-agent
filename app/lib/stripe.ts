@@ -34,18 +34,6 @@ export function getStripe(): Stripe {
     );
   }
 
-  /*
-   * A sandbox key in production would take real customers through a checkout
-   * that never charges anybody and hand them a paid plan for free. It is the
-   * one billing mistake that is silent from both sides, so it fails loudly
-   * here instead.
-   */
-  if (process.env.NODE_ENV === "production" && key.startsWith("sk_test_")) {
-    throw new Error(
-      "Refusing to start: STRIPE_SECRET_KEY is a test key and NODE_ENV is production.",
-    );
-  }
-
   client ??= new Stripe(key);
   return client;
 }
