@@ -9,19 +9,23 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
  * moment traffic spreads across a few instances — the failure is P2037, and it
  * arrives all at once rather than gradually.
  *
- * A low ceiling per instance trades a little queueing inside one instance for
- * headroom across all of them, which is the right way round: a request waiting
- * 20ms for a free connection beats a request that cannot get one at all.
- * Idle connections are dropped quickly for the same reason — an instance that
- * has gone quiet should not be sitting on slots a busy one needs.
+ * The count that matters is processes, not requests: the proxy is its own
+ * function and the route handlers are grouped into others, so `max` is
+ * multiplied by however many are awake. Against a 20-slot server that leaves
+ * room for one connection each, and idle ones are returned quickly so a
+ * function that has gone quiet is not sitting on a slot a busy one needs.
+ *
+ * One connection per process serializes queries inside a process. That is the
+ * cost of fitting; a connection pooler in front of Postgres is what removes
+ * the constraint rather than rationing it.
  */
 export const db =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter: new PrismaPg({
       connectionString: process.env.DATABASE_URL,
-      max: 3,
-      idleTimeoutMillis: 10_000,
+      max: 1,
+      idleTimeoutMillis: 5_000,
       connectionTimeoutMillis: 10_000,
     }),
   });
