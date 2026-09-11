@@ -10,8 +10,8 @@ export type CurrentUser = AppSession & {
 
 /**
  * The signed-in user, or null. Set `CV_DEV_FALLBACK=1` to skip sign-in during
- * local development — that resolves to the `local-dev` principal the seed
- * script writes, and it is ignored in production.
+ * local development — that resolves to the `local-dev` principal, which is
+ * also what `agent/channels/eve.ts` falls back to. Ignored in production.
  */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const store = await cookies();

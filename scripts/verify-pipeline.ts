@@ -63,7 +63,10 @@ async function main() {
     where: { userId },
     include: { skills: true, experiences: { orderBy: { start: "desc" } }, projects: true },
   });
-  if (!profile) throw new Error(`No profile for "${userId}". Run: pnpm db:seed`);
+  if (!profile)
+    throw new Error(
+      `No profile for "${userId}". Create one in the app, or point DEV_USER_ID at a user that has one.`,
+    );
 
   const contact = profile.contact as {
     email: string;

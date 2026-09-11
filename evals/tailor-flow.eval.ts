@@ -16,7 +16,7 @@ Requirements:
 Nice to have: Terraform, Kubernetes, GraphQL.`;
 
 /**
- * Requires a seeded profile (`pnpm db:seed`) and a model provider.
+ * Requires a profile in the database for the target user, and a model provider.
  */
 export default defineEval({
   description: "The agent walks the full tailoring workflow and hands the result back.",

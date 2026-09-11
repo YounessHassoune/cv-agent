@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "vercel-build": "prisma generate && node scripts/deploy-migrate.mjs && next build",
     "start": "next start",
     "eve:dev": "eve dev",
     "eve:build": "eve build",
@@ -19,7 +20,6 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
-    "db:seed": "node prisma/seed.ts",
     "db:studio": "prisma studio",
     "verify": "node scripts/verify-pipeline.ts",
     "check:templates": "node scripts/check-templates.ts",
