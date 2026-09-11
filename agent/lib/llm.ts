@@ -51,7 +51,9 @@ export async function generateStructured<T extends z.ZodTypeAny>({
     prompt,
     system,
     // Only reasoning models take this; the others warn on every call.
-    ...(isReasoningModel(model) ? { providerOptions: { openai: { reasoningEffort: effort } } } : {}),
+    ...(isReasoningModel(model)
+      ? { providerOptions: { openai: { reasoningEffort: effort } } }
+      : {}),
   });
 
   const usage = result.totalUsage;

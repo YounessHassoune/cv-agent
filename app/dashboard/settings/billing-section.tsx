@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { AlertTriangleIcon } from "lucide-react";
+import Link from "next/link";
 
 import { usePlan } from "@/components/plan-provider";
 import { Badge } from "@/components/ui/badge";

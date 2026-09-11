@@ -28,9 +28,7 @@ export const ExtractionSchema = z.object({
   responsibilities: z
     .array(z.string())
     .max(10)
-    .describe(
-      "The role's core responsibilities in the JD's own terminology, most important first",
-    ),
+    .describe("The role's core responsibilities in the JD's own terminology, most important first"),
   keywords: z
     .array(
       z.object({
@@ -40,7 +38,7 @@ export const ExtractionSchema = z.object({
         aliases: z
           .array(z.string())
           .describe(
-            "Other names the SAME skill is written under, so a CV that spells it differently still matches: \"Golang\" for \"Go\", \"k8s\" for \"Kubernetes\", \"RN\" for \"Registered Nurse\". Never a related or broader skill. Empty array when the term has no common alternative spelling.",
+            'Other names the SAME skill is written under, so a CV that spells it differently still matches: "Golang" for "Go", "k8s" for "Kubernetes", "RN" for "Registered Nurse". Never a related or broader skill. Empty array when the term has no common alternative spelling.',
           ),
       }),
     )

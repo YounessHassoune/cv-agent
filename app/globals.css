@@ -265,8 +265,16 @@ select {
     --glow-a: 7%;
     --glow-b: 5%;
     background-image:
-      radial-gradient(65% 55% at 12% 0%, color-mix(in oklab, var(--foreground) var(--glow-a), transparent), transparent 70%),
-      radial-gradient(55% 50% at 100% 12%, color-mix(in oklab, var(--foreground) var(--glow-b), transparent), transparent 70%);
+      radial-gradient(
+        65% 55% at 12% 0%,
+        color-mix(in oklab, var(--foreground) var(--glow-a), transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        55% 50% at 100% 12%,
+        color-mix(in oklab, var(--foreground) var(--glow-b), transparent),
+        transparent 70%
+      );
   }
 
   /* Same story: `--grid-line` is the ink in each rule and `--grid-size` the
@@ -275,8 +283,16 @@ select {
     --grid-line: 6%;
     --grid-size: 48px;
     background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--foreground) var(--grid-line), transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) var(--grid-line), transparent) 1px, transparent 1px);
+      linear-gradient(
+        to right,
+        color-mix(in oklab, var(--foreground) var(--grid-line), transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklab, var(--foreground) var(--grid-line), transparent) 1px,
+        transparent 1px
+      );
     background-size: var(--grid-size) var(--grid-size);
   }
 
@@ -299,4 +315,3 @@ select {
     border-radius: 9999px;
   }
 }
-

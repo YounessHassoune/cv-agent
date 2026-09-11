@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 import { getCurrentUser } from "@/app/lib/current-user";
-import { buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
@@ -62,10 +62,7 @@ export async function SiteHeader() {
             </Link>
           ) : (
             <>
-              <Link
-                className={cn(buttonVariants({ size: "sm", variant: "ghost" }))}
-                href="/signin"
-              >
+              <Link className={cn(buttonVariants({ size: "sm", variant: "ghost" }))} href="/signin">
                 Sign in
               </Link>
               <Link className={cn(buttonVariants({ size: "sm" }))} href="/signup">

@@ -6,9 +6,9 @@ import { getCurrentUser } from "@/app/lib/current-user";
 import { loadPdfPhoto } from "@/app/lib/pdf-photo";
 import {
   CV_TEMPLATE_IDS,
+  type CvTemplateId,
   DEFAULT_TEMPLATE,
   DEFAULT_THEME,
-  type CvTemplateId,
   normalizeTheme,
 } from "@/lib/cv-templates";
 

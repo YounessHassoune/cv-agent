@@ -1,7 +1,7 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import type { ClientSessionState, MessageStreamEvent } from "eve/client";
 import { ArrowLeftIcon } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { readReport } from "@/agent/lib/ats.ts";
 import { userCan } from "@/agent/lib/billing.ts";
@@ -11,7 +11,7 @@ import { requireUser } from "@/app/lib/current-user";
 import type { CvPreviewData } from "@/components/cv-preview";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { type VariantView, ApplicationWorkspace } from "./application-workspace";
+import { ApplicationWorkspace, type VariantView } from "./application-workspace";
 import { StatusActions } from "./status-actions";
 
 export const dynamic = "force-dynamic";

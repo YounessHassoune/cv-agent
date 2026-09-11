@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import { KeyRoundIcon, MailIcon } from "lucide-react";
+import type { Metadata } from "next";
 
 import { db } from "@/agent/lib/db.ts";
 import { initialsOf, requireUser } from "@/app/lib/current-user";

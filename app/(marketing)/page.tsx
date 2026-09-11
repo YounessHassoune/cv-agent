@@ -1,5 +1,3 @@
-import Link from "next/link";
-import type { Metadata } from "next";
 import {
   ArrowRightIcon,
   ClipboardPasteIcon,
@@ -11,6 +9,8 @@ import {
   SparklesIcon,
   UserRoundIcon,
 } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
 
 import { planFor } from "@/agent/lib/billing.ts";
 import { getCurrentUser } from "@/app/lib/current-user";
@@ -72,10 +72,7 @@ const features: { icon: LucideIcon; title: string; body: string }[] = [
 
 export default async function LandingPage() {
   const user = await getCurrentUser();
-  const [plan, prices] = await Promise.all([
-    user ? planFor(user.userId) : null,
-    getPriceCatalog(),
-  ]);
+  const [plan, prices] = await Promise.all([user ? planFor(user.userId) : null, getPriceCatalog()]);
   const free = entitlements("free");
 
   const primaryHref = user ? "/dashboard" : "/signup";
@@ -112,9 +109,9 @@ export default async function LandingPage() {
             </h1>
 
             <p className="mx-auto max-w-xl text-balance text-lg text-muted-foreground leading-relaxed lg:mx-0">
-              Paste a job description. Get your own experience rewritten for that role, checked
-              line by line against what you have actually done, and scored against the screen it
-              has to get past.
+              Paste a job description. Get your own experience rewritten for that role, checked line
+              by line against what you have actually done, and scored against the screen it has to
+              get past.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2 lg:justify-start">
@@ -212,8 +209,8 @@ export default async function LandingPage() {
             Your next application deserves better than a template
           </h2>
           <p className="text-balance text-muted-foreground leading-relaxed">
-            Fill in your profile once, paste one job description, and see what comes back. The
-            first one is free.
+            Fill in your profile once, paste one job description, and see what comes back. The first
+            one is free.
           </p>
           <div className="flex justify-center">
             <Link className={cn(buttonVariants({ size: "lg" }))} href={primaryHref}>

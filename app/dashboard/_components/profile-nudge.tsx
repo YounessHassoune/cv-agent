@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SparklesIcon } from "lucide-react";
 
 import { Progress } from "@/components/ui/progress";
 
@@ -30,7 +29,9 @@ export function ProfileNudge({
         <p className="text-sm">
           <span className="font-medium">Your profile is {percent}% complete.</span>{" "}
           <span className="text-muted-foreground">
-            {gaps.length > 0 ? `Still missing ${listed(gaps)}.` : "Fill in the rest for sharper CVs."}
+            {gaps.length > 0
+              ? `Still missing ${listed(gaps)}.`
+              : "Fill in the rest for sharper CVs."}
           </span>
         </p>
         {/* The default `bg-muted` track all but disappears on this tinted

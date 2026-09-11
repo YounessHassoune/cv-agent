@@ -204,7 +204,6 @@ async function main() {
     include: { skills: true, experiences: true, projects: true },
   });
 
-
   await db.application.deleteMany({ where: { userId } });
   const applications = await db.application.createMany({
     data: buildApplicationRows(userId),
@@ -226,7 +225,6 @@ async function main() {
     create: { userId, plan: "pro", status: "active" },
     update: { plan: "pro", status: "active", credits: 0 },
   });
-
 
   const account = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
   if (account) {

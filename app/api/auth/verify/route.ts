@@ -14,7 +14,10 @@ export async function GET(request: Request) {
 
   if (result.status !== "ok") {
     return NextResponse.redirect(
-      new URL(`/verify-email?error=${result.status === "expired" ? "expired" : "bad_token"}`, request.url),
+      new URL(
+        `/verify-email?error=${result.status === "expired" ? "expired" : "bad_token"}`,
+        request.url,
+      ),
       303,
     );
   }

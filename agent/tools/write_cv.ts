@@ -33,7 +33,11 @@ const NOISE_KEYS = new Set([
   "theme",
 ]);
 
-const normalizeName = (value: string) => value.toLowerCase().replace(/[^p{L}p{N}]+/gu, " ").trim();
+const normalizeName = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^p{L}p{N}]+/gu, " ")
+    .trim();
 
 /** "2025-06-01T00:00:00.000Z" → "2025-06"; compile_pdf turns that into "Jun 2025". */
 const isoMonth = (date: Date | string | null | undefined) =>
@@ -50,7 +54,12 @@ const isoMonth = (date: Date | string | null | undefined) =>
  * An entry that matches nothing keeps the model's value — there is nothing
  * truer to replace it with.
  */
-function stampProfileDates<T extends { experiences: { company: string; role: string; start: string; end: string }[]; education: { institution: string; dates: string }[] }>(
+function stampProfileDates<
+  T extends {
+    experiences: { company: string; role: string; start: string; end: string }[];
+    education: { institution: string; dates: string }[];
+  },
+>(
   cv: T,
   profile: {
     experiences: { company: string; role: string; start: Date; end: Date | null }[];
@@ -60,11 +69,13 @@ function stampProfileDates<T extends { experiences: { company: string; role: str
   const unused = new Set(profile.experiences);
   const experiences = cv.experiences.map((entry) => {
     const sameCompany = profile.experiences.filter(
-      (candidate) => unused.has(candidate) && normalizeName(candidate.company) === normalizeName(entry.company),
+      (candidate) =>
+        unused.has(candidate) && normalizeName(candidate.company) === normalizeName(entry.company),
     );
     const match =
-      sameCompany.find((candidate) => normalizeName(candidate.role) === normalizeName(entry.role)) ??
-      sameCompany[0];
+      sameCompany.find(
+        (candidate) => normalizeName(candidate.role) === normalizeName(entry.role),
+      ) ?? sameCompany[0];
     if (match === undefined) return entry;
     unused.delete(match);
     return { ...entry, start: isoMonth(match.start), end: isoMonth(match.end) };
@@ -75,7 +86,9 @@ function stampProfileDates<T extends { experiences: { company: string; role: str
     : [];
   const education = cv.education.map((entry) => {
     const match = known.find(
-      (candidate) => candidate.institution !== undefined && normalizeName(candidate.institution) === normalizeName(entry.institution),
+      (candidate) =>
+        candidate.institution !== undefined &&
+        normalizeName(candidate.institution) === normalizeName(entry.institution),
     );
     if (match === undefined) return entry;
     const start = isoMonth(match.start || null);
@@ -146,7 +159,9 @@ export default defineTool({
       },
     });
     if (!profile) {
-      throw new Error("The user has no master profile yet. Tell them to fill it in first, and stop.");
+      throw new Error(
+        "The user has no master profile yet. Tell them to fill it in first, and stop.",
+      );
     }
 
     const keywords = (application.jdKeywords ?? []) as JdKeyword[];
@@ -194,8 +209,10 @@ export default defineTool({
 
     // The draft in progress wins over the last compiled copy: a revision of a
     // rejected draft has to start from the rejected draft.
-    const previous = readDrafts(application.drafts)[lang] ?? readVariants(application.variants)[lang]?.cvJson;
-    const revising = previous !== undefined && (feedback !== undefined || (missingKeywords?.length ?? 0) > 0);
+    const previous =
+      readDrafts(application.drafts)[lang] ?? readVariants(application.variants)[lang]?.cvJson;
+    const revising =
+      previous !== undefined && (feedback !== undefined || (missingKeywords?.length ?? 0) > 0);
 
     const sections = [
       `TARGET LANGUAGE (ISO code — set the CV's \`language\` field to it): ${lang}`,
@@ -204,9 +221,13 @@ export default defineTool({
         keywords.map((k) => ({ term: k.term, weight: k.weight, aliases: k.aliases ?? [] })),
       )}`,
       `allowedTerms (every skill the profile itself supports):\n${JSON.stringify(profileTerms)}`,
-      asserted.length > 0 ? `userAssertedTerms (the user insisted on these — include every one):\n${JSON.stringify(asserted)}` : null,
+      asserted.length > 0
+        ? `userAssertedTerms (the user insisted on these — include every one):\n${JSON.stringify(asserted)}`
+        : null,
       `MASTER PROFILE JSON (the only source of truth):\n${JSON.stringify(stripNoise(profile))}`,
-      revising ? `PREVIOUS CV JSON (revise this — change what the feedback asks for, keep the rest stable):\n${JSON.stringify(previous)}` : null,
+      revising
+        ? `PREVIOUS CV JSON (revise this — change what the feedback asks for, keep the rest stable):\n${JSON.stringify(previous)}`
+        : null,
       revising && feedback ? `FEEDBACK:\n${feedback}` : null,
       revising && missingKeywords?.length
         ? `MISSING KEYWORDS the profile truthfully supports — add each to the matching skill group and to one bullet where it was genuinely used:\n${JSON.stringify(missingKeywords)}`
@@ -253,7 +274,9 @@ export default defineTool({
     `;
 
     const isAsserted = new Set(asserted.map((term) => term.toLowerCase()));
-    const borrowed = unsupportedClaims(stamped, profile).filter((term) => !isAsserted.has(term.toLowerCase()));
+    const borrowed = unsupportedClaims(stamped, profile).filter(
+      (term) => !isAsserted.has(term.toLowerCase()),
+    );
 
     return {
       applicationId: application.id,

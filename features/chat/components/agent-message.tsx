@@ -136,23 +136,26 @@ export function AgentMessage({
       from={message.role}
     >
       <MessageContent>
-        {message.parts.map((part, index) => part.type === "dynamic-tool" && (phantoms.has(part.toolCallId) || supersededCalls.has(part.toolCallId)) ? null : (
-          <AgentMessagePart
-            answers={answers}
-            canRespond={canRespond}
-            failureCount={failuresByTool.get(toolKey(part)) ?? 0}
-            hadSiblingSuccess={succeeded.has(toolKey(part))}
-            // A question the run has already moved past is history, not a
-            // prompt — even though eve replays it looking brand new.
-            isPending={isLastMessage && index === message.parts.length - 1}
-            isUser={message.role === "user"}
-            key={partKey(part, index)}
-            onInputResponses={onInputResponses}
-            part={part}
-            showCaret={isStreaming && message.role === "assistant" && index === lastTextIndex}
-            turnActive={turnActive && index >= liveFrom}
-          />
-        ))}
+        {message.parts.map((part, index) =>
+          part.type === "dynamic-tool" &&
+          (phantoms.has(part.toolCallId) || supersededCalls.has(part.toolCallId)) ? null : (
+            <AgentMessagePart
+              answers={answers}
+              canRespond={canRespond}
+              failureCount={failuresByTool.get(toolKey(part)) ?? 0}
+              hadSiblingSuccess={succeeded.has(toolKey(part))}
+              // A question the run has already moved past is history, not a
+              // prompt — even though eve replays it looking brand new.
+              isPending={isLastMessage && index === message.parts.length - 1}
+              isUser={message.role === "user"}
+              key={partKey(part, index)}
+              onInputResponses={onInputResponses}
+              part={part}
+              showCaret={isStreaming && message.role === "assistant" && index === lastTextIndex}
+              turnActive={turnActive && index >= liveFrom}
+            />
+          ),
+        )}
       </MessageContent>
 
       {/* The answer's copy button stays put; the one on your own message is
@@ -317,8 +320,16 @@ const TOOL_ACTIVITY: Record<
   { running: string; done: string; failed?: string; retry?: string }
 > = {
   getprofile: { running: "Reading your profile…", done: "Profile loaded" },
-  jdanalyst: { running: "Analyzing the job offer…", done: "Job offer analyzed", failed: "Analyzing the job offer" },
-  analyzejd: { running: "Analyzing the job offer…", done: "Job offer analyzed", failed: "Analyzing the job offer" },
+  jdanalyst: {
+    running: "Analyzing the job offer…",
+    done: "Job offer analyzed",
+    failed: "Analyzing the job offer",
+  },
+  analyzejd: {
+    running: "Analyzing the job offer…",
+    done: "Job offer analyzed",
+    failed: "Analyzing the job offer",
+  },
   writecv: {
     running: "Tailoring your CV…",
     done: "CV draft ready",
@@ -334,7 +345,8 @@ const TOOL_ACTIVITY: Record<
     done: "PDF ready",
     failed: "Building the PDF",
     // A rejected draft is the fact check doing its job, not something going wrong.
-    retry: "Draft claimed something your profile doesn't back, so it is asking for a corrected draft.",
+    retry:
+      "Draft claimed something your profile doesn't back, so it is asking for a corrected draft.",
   },
   scoreats: {
     running: "Checking the match with the job…",
@@ -855,9 +867,7 @@ function InputRequestActions({
           canRespond={canRespond}
           onSubmit={(labels) => {
             setSent(true);
-            void onInputResponses([
-              { requestId: inputRequest.requestId, text: labels.join(", ") },
-            ]);
+            void onInputResponses([{ requestId: inputRequest.requestId, text: labels.join(", ") }]);
           }}
           options={options}
           sent={sent}

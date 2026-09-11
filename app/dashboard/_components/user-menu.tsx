@@ -1,8 +1,8 @@
 "use client";
 
+import { LogOutIcon, SettingsIcon, UserRoundIcon } from "lucide-react";
 import Link from "next/link";
 import { useRef } from "react";
-import { LogOutIcon, SettingsIcon, UserRoundIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {

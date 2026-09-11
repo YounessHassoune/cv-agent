@@ -18,9 +18,7 @@ export default function MarketingLayout({ children }: { readonly children: React
 
       <footer className="border-t">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-8 md:px-8">
-          <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} Wellsuited
-          </p>
+          <p className="text-muted-foreground text-sm">© {new Date().getFullYear()} Wellsuited</p>
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 md:ml-auto">
             <Link
               className="text-muted-foreground text-sm transition-colors hover:text-foreground"
@@ -32,7 +30,7 @@ export default function MarketingLayout({ children }: { readonly children: React
               className="text-muted-foreground text-sm transition-colors hover:text-foreground"
               href="/#how"
             >
-             How it works
+              How it works
             </Link>
           </nav>
         </div>

@@ -1,4 +1,4 @@
-import { type UploadApiOptions, type UploadApiResponse, v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary, type UploadApiOptions, type UploadApiResponse } from "cloudinary";
 
 /**
  * Cloudinary credentials come from env only — the secret must never reach the

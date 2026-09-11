@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 import {
   CheckCircle2Icon,
   DownloadIcon,
@@ -9,6 +7,8 @@ import {
   Trash2Icon,
   XCircleIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -95,7 +95,9 @@ export function StatusActions({
               }
             >
               <DownloadIcon className="size-4" />
-              {pdfLanguages.length > 1 ? `Download PDF (${language.toUpperCase()})` : "Download PDF"}
+              {pdfLanguages.length > 1
+                ? `Download PDF (${language.toUpperCase()})`
+                : "Download PDF"}
             </DropdownMenuItem>
           ))}
           {pdfLanguages.length > 0 ? <DropdownMenuSeparator /> : null}

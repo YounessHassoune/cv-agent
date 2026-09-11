@@ -48,11 +48,42 @@ export type AtsReport = {
  */
 const SPOKEN_LANGUAGES = new Set(
   [
-    "english", "german", "french", "spanish", "italian", "dutch", "portuguese", "arabic",
-    "russian", "polish", "turkish", "chinese", "mandarin", "japanese", "swedish", "danish",
-    "norwegian", "finnish", "czech", "romanian", "hungarian", "greek", "hebrew", "hindi",
-    "anglais", "allemand", "français", "francais", "espagnol", "arabe", "néerlandais",
-    "englisch", "deutsch", "französisch", "spanisch", "niederländisch",
+    "english",
+    "german",
+    "french",
+    "spanish",
+    "italian",
+    "dutch",
+    "portuguese",
+    "arabic",
+    "russian",
+    "polish",
+    "turkish",
+    "chinese",
+    "mandarin",
+    "japanese",
+    "swedish",
+    "danish",
+    "norwegian",
+    "finnish",
+    "czech",
+    "romanian",
+    "hungarian",
+    "greek",
+    "hebrew",
+    "hindi",
+    "anglais",
+    "allemand",
+    "français",
+    "francais",
+    "espagnol",
+    "arabe",
+    "néerlandais",
+    "englisch",
+    "deutsch",
+    "französisch",
+    "spanisch",
+    "niederländisch",
   ].map((name) => name.toLowerCase()),
 );
 
@@ -66,7 +97,8 @@ const MAX_MUST_HAVES = 5;
  * subtracts. The education section states the truth; the keyword list stays
  * about skills.
  */
-const QUALIFICATION_PHRASE = /\b(degree|diploma|bachelor|master|msc|bsc|phd|licence|licenciatura)\b/i;
+const QUALIFICATION_PHRASE =
+  /\b(degree|diploma|bachelor|master|msc|bsc|phd|licence|licenciatura)\b/i;
 
 /**
  * What the scorer will actually use, from what the analyst returned.
@@ -181,9 +213,7 @@ function glueSpacedHeadings(text: string): string {
     .split("\n")
     .map((line) => {
       const parts = line.trim().split(/\s+/);
-      return parts.length >= 3 && parts.every((part) => part.length <= 2)
-        ? parts.join("")
-        : line;
+      return parts.length >= 3 && parts.every((part) => part.length <= 2) ? parts.join("") : line;
     })
     .join("\n");
 }
@@ -425,7 +455,10 @@ export function structureScore(
   }
 
   // Quantified bullets (40 pts): share of lines carrying a real number
-  const lines = cvText.split(/\n+/).map((l) => l.trim()).filter((l) => l.length > 20);
+  const lines = cvText
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 20);
   const quantified = lines.filter(hasMetric).length;
   const metricRatio = lines.length === 0 ? 0 : quantified / lines.length;
   score += Math.round(Math.min(metricRatio / 0.4, 1) * 40); // 40 %+ quantified = full marks
@@ -492,7 +525,11 @@ export type FitInput = {
  * ponytail: three synonyms and a stop list, not a taxonomy. Extend when a
  * real JD title misfires.
  */
-const TITLE_SYNONYMS: Record<string, string> = { develop: "engin", programm: "engin", dev: "engin" };
+const TITLE_SYNONYMS: Record<string, string> = {
+  develop: "engin",
+  programm: "engin",
+  dev: "engin",
+};
 const TITLE_NOISE = new Set(["team", "the", "and", "of", "for", "m", "f", "d", "x", "h"]);
 
 function titleStems(text: string): string[] {
@@ -642,7 +679,8 @@ const MIN_SEMANTIC_SPAN = 0.05;
  * can actually produce.
  */
 export function semanticToScore(sim: number, anchors: SemanticAnchors): number {
-  const { floor, top } = anchors.top - anchors.floor >= MIN_SEMANTIC_SPAN ? anchors : SEMANTIC_FALLBACK;
+  const { floor, top } =
+    anchors.top - anchors.floor >= MIN_SEMANTIC_SPAN ? anchors : SEMANTIC_FALLBACK;
   const scaled = (sim - floor) / (top - floor);
   return Math.round(Math.max(0, Math.min(1, scaled)) * 100);
 }
@@ -671,8 +709,7 @@ export async function scoreAts(input: {
   ]);
   const fit = fitScore(input.fit);
 
-  const jdEmbedding =
-    input.cachedJdEmbedding ?? (await embedText(input.jdText, input.abortSignal));
+  const jdEmbedding = input.cachedJdEmbedding ?? (await embedText(input.jdText, input.abortSignal));
   const cvEmbedding = jdEmbedding ? await embedText(input.cvText, input.abortSignal) : null;
 
   /*
@@ -742,15 +779,13 @@ export async function scoreAts(input: {
      * was already finished and told the user this was the best their profile
      * could do. It was not.
      */
-    const claimable = (k: JdKeyword) =>
-      matchedTerms.has(k.term) || stemsContainTerm(claimStems, k);
+    const claimable = (k: JdKeyword) => matchedTerms.has(k.term) || stemsContainTerm(claimStems, k);
     unclaimable = input.keywords.filter((k) => !claimable(k)).map((k) => k.term);
 
     const totalWeight = input.keywords.reduce((sum, k) => sum + k.weight, 0);
-    const claimableWeight = input.keywords
-      .filter(claimable)
-      .reduce((sum, k) => sum + k.weight, 0);
-    const keywordCeiling = totalWeight === 0 ? 0 : Math.round((claimableWeight / totalWeight) * 100);
+    const claimableWeight = input.keywords.filter(claimable).reduce((sum, k) => sum + k.weight, 0);
+    const keywordCeiling =
+      totalWeight === 0 ? 0 : Math.round((claimableWeight / totalWeight) * 100);
     const gateCeiling =
       mustHaves.length === 0 ? 1 : mustHaves.filter(claimable).length / mustHaves.length;
 
@@ -783,7 +818,9 @@ export async function scoreAts(input: {
     );
   }
   if (input.keywords.length === 0) {
-    suggestions.push("No JD keywords were analysed — the keyword score is 0 by default, not earned.");
+    suggestions.push(
+      "No JD keywords were analysed — the keyword score is 0 by default, not earned.",
+    );
   }
   if (semantic === null) {
     suggestions.push("Semantic score unavailable (no embedding provider) — weights redistributed.");

@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import { UpgradeDialog } from "@/components/upgrade-ui";
 import {
+  CAPABILITY_COPY,
   type Capability,
   type PlanId,
   type PlanLimits,
-  CAPABILITY_COPY,
   proHighlights,
 } from "@/lib/entitlements";
-import { UpgradeDialog } from "@/components/upgrade-ui";
 
 /**
  * What the signed-in browser is allowed to do, and the one dialog that sells
@@ -79,7 +79,11 @@ export function PlanProvider({
   return (
     <PlanContext value={value}>
       {children}
-      <ConnectedUpgradeDialog gate={gate} onClose={() => setGate(null)} proPrice={snapshot.proPrice} />
+      <ConnectedUpgradeDialog
+        gate={gate}
+        onClose={() => setGate(null)}
+        proPrice={snapshot.proPrice}
+      />
     </PlanContext>
   );
 }

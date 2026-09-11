@@ -44,7 +44,8 @@ export function findFabrications(
   const knownTerms = new Set<string>();
   for (const skill of profile.skills) knownTerms.add(normalize(skill.name));
   for (const exp of profile.experiences) for (const t of exp.stack) knownTerms.add(normalize(t));
-  for (const project of profile.projects) for (const t of project.stack) knownTerms.add(normalize(t));
+  for (const project of profile.projects)
+    for (const t of project.stack) knownTerms.add(normalize(t));
 
   const knownCompanies = new Set(profile.experiences.map((e) => normalize(e.company)));
   const knownProjects = new Set(profile.projects.map((p) => normalize(p.title)));

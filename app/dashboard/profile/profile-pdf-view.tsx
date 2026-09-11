@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { type CvPreviewData } from "@/components/cv-preview";
+import type { CvPreviewData } from "@/components/cv-preview";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { Spinner } from "@/components/ui/spinner";
 import { previewToCv } from "@/lib/cv-data";

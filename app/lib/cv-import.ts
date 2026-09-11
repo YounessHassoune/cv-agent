@@ -107,7 +107,9 @@ PDF text arrives with columns and spacing flattened, so entries may be interleav
  * and mangles the next.
  */
 async function parse(
-  content: Array<{ type: "text"; text: string } | { type: "file"; data: Uint8Array; mediaType: string }>,
+  content: Array<
+    { type: "text"; text: string } | { type: "file"; data: Uint8Array; mediaType: string }
+  >,
   model: string,
   effort: "minimal" | "low",
   onFound: (found: Found) => void,
@@ -167,7 +169,9 @@ export async function importCv(
   try {
     ({ text, photo } = await readDocument(file, bytes));
   } catch {
-    throw new CvImportError("That file couldn't be opened — it may be corrupt or password-protected.");
+    throw new CvImportError(
+      "That file couldn't be opened — it may be corrupt or password-protected.",
+    );
   }
 
   const scanned = text.length < TEXT_LAYER_MIN_CHARS;

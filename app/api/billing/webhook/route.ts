@@ -13,7 +13,7 @@ import {
 } from "@/agent/lib/billing-email.ts";
 import { db } from "@/agent/lib/db.ts";
 import { getStripe, planForLookupKey, planFromMetadata } from "@/app/lib/stripe";
-import { type PlanId, CURRENT_PLAN_VERSION, isPlanId } from "@/lib/entitlements";
+import { CURRENT_PLAN_VERSION, isPlanId, type PlanId } from "@/lib/entitlements";
 
 /**
  * The only writer of `Billing.plan`.
@@ -87,7 +87,8 @@ async function applySubscription(subscription: Stripe.Subscription): Promise<voi
    * given a lookup key, or one made by hand in the dashboard.
    */
   const price = subscription.items.data[0]?.price ?? null;
-  const canceled = subscription.status === "canceled" || subscription.status === "incomplete_expired";
+  const canceled =
+    subscription.status === "canceled" || subscription.status === "incomplete_expired";
   const plan = canceled
     ? "free"
     : (planForLookupKey(price?.lookup_key) ?? planFromMetadata(subscription.metadata) ?? "free");
@@ -212,9 +213,11 @@ function subscriptionIdOf(invoice: InvoiceWithSubscription): string | null {
 }
 
 /** Who an invoice email goes to, and which plan it is about. */
-async function invoiceContext(
-  invoice: InvoiceWithSubscription,
-): Promise<{ to: NonNullable<Awaited<ReturnType<typeof recipientFor>>>; plan: PlanId; periodEnd: Date | null } | null> {
+async function invoiceContext(invoice: InvoiceWithSubscription): Promise<{
+  to: NonNullable<Awaited<ReturnType<typeof recipientFor>>>;
+  plan: PlanId;
+  periodEnd: Date | null;
+} | null> {
   const customerId =
     typeof invoice.customer === "string" ? invoice.customer : (invoice.customer?.id ?? null);
   if (!customerId) return null;

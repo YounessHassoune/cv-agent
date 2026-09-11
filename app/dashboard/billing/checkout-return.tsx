@@ -1,8 +1,8 @@
 "use client";
 
+import { CheckCircle2Icon, LoaderIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import { CheckCircle2Icon, LoaderIcon } from "lucide-react";
 
 /** How long to keep waiting for the webhook after a successful checkout. */
 const WEBHOOK_GRACE_MS = 15_000;

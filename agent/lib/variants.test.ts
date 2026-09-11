@@ -16,7 +16,7 @@ assert.ok(sameCv({ a: 1 }, { a: 1, b: undefined }));
 // Real differences must still register.
 assert.ok(!sameCv({ a: 1 }, { a: 2 }));
 assert.ok(!sameCv({ bullets: ["x", "y"] }, { bullets: ["y", "x"] }), "order matters in arrays");
-assert.ok(!sameCv({ a: 1 }, { a: "1" }), "1 is not \"1\"");
+assert.ok(!sameCv({ a: 1 }, { a: "1" }), '1 is not "1"');
 assert.ok(!sameCv({ a: 1 }, { a: 1, b: 2 }));
 assert.ok(!sameCv({ end: "" }, { end: "Mar 2024" }));
 

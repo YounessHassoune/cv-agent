@@ -10,11 +10,10 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-import { LockPill, usePlan } from "@/components/plan-provider";
-import { type CvPreviewData, CvPreview } from "@/components/cv-preview";
+import { CvPreview, type CvPreviewData } from "@/components/cv-preview";
 import { CvThemePicker } from "@/components/cv-theme-picker";
 import { PdfViewer } from "@/components/pdf-viewer";
+import { LockPill, usePlan } from "@/components/plan-provider";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {

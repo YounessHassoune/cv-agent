@@ -15,10 +15,7 @@ function requestedTheme(url: URL): string | undefined {
   return normalizeTheme(url.searchParams.get("theme"));
 }
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
 
@@ -78,16 +75,11 @@ export async function GET(
     // Query strings are typed by hand as easily as they are generated. A plan
     // that cannot compile a layout cannot preview it either, or the lock is
     // one URL edit deep.
-    const skin = await clampSkin(
-      user.userId,
-      template ?? variant.template,
-      theme ?? variant.theme,
-    );
+    const skin = await clampSkin(user.userId, template ?? variant.template, theme ?? variant.theme);
 
-    return new Response(
-      await renderCvPdf(variant.cvJson, skin.template, photo, skin.theme),
-      { headers },
-    );
+    return new Response(await renderCvPdf(variant.cvJson, skin.template, photo, skin.theme), {
+      headers,
+    });
   }
 
   // No CV JSON (a legacy row): the compiled bytes are all there is.

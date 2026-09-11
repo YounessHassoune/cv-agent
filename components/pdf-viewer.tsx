@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   DownloadIcon,
   ExternalLinkIcon,
@@ -10,6 +9,7 @@ import {
   RotateCcwIcon,
   XIcon,
 } from "lucide-react";
+import { useState } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -136,9 +136,7 @@ export function PdfViewer({
   const step = (direction: 1 | -1) => {
     setZoom((current) => {
       const from = current ?? 100;
-      const next = ZOOM_STOPS.filter((stop) =>
-        direction === 1 ? stop > from : stop < from,
-      );
+      const next = ZOOM_STOPS.filter((stop) => (direction === 1 ? stop > from : stop < from));
       if (next.length === 0) return current;
       return direction === 1 ? next[0] : next[next.length - 1];
     });

@@ -16,19 +16,19 @@ import { z } from "zod";
  * extraction prompt copies them verbatim instead of paraphrasing.
  */
 export const ImportedProfileSchema = z.object({
-  fullName: z.string().describe("The candidate's full name, or \"\" if absent"),
+  fullName: z.string().describe('The candidate\'s full name, or "" if absent'),
   headline: z
     .string()
-    .describe("Professional title as written on the CV, e.g. \"Full-Stack Engineer\". \"\" if absent"),
+    .describe('Professional title as written on the CV, e.g. "Full-Stack Engineer". "" if absent'),
   summary: z
     .string()
     .describe(
-      "The CV's own profile/summary/objective paragraph, copied verbatim. \"\" when the CV has none — never write one",
+      'The CV\'s own profile/summary/objective paragraph, copied verbatim. "" when the CV has none — never write one',
     ),
   contact: z.object({
-    email: z.string().describe("Email address, or \"\""),
-    phone: z.string().describe("Phone number as written, or \"\""),
-    location: z.string().describe("City / country, or \"\""),
+    email: z.string().describe('Email address, or ""'),
+    phone: z.string().describe('Phone number as written, or ""'),
+    location: z.string().describe('City / country, or ""'),
     links: z
       .array(z.string())
       .describe("Full URLs for LinkedIn, GitHub, portfolio, etc. Empty array if none"),
@@ -36,8 +36,8 @@ export const ImportedProfileSchema = z.object({
   languages: z
     .array(
       z.object({
-        name: z.string().describe("Spoken language, e.g. \"French\" — never a programming language"),
-        level: z.string().describe("Level as written, e.g. \"Native\", \"C1\". \"\" if absent"),
+        name: z.string().describe('Spoken language, e.g. "French" — never a programming language'),
+        level: z.string().describe('Level as written, e.g. "Native", "C1". "" if absent'),
       }),
     )
     .describe("Spoken languages only"),
@@ -45,8 +45,8 @@ export const ImportedProfileSchema = z.object({
     z.object({
       institution: z.string(),
       degree: z.string().describe("Degree or programme name"),
-      start: z.string().describe("YYYY-MM, or \"\" when the CV gives no start"),
-      end: z.string().describe("YYYY-MM, or \"\" when ongoing or absent"),
+      start: z.string().describe('YYYY-MM, or "" when the CV gives no start'),
+      end: z.string().describe('YYYY-MM, or "" when ongoing or absent'),
     }),
   ),
   skills: z
@@ -56,7 +56,7 @@ export const ImportedProfileSchema = z.object({
         category: z
           .string()
           .describe(
-            "The CV's own grouping heading for this skill (e.g. \"Languages\", \"Cloud\"). \"\" when the CV lists skills flat",
+            'The CV\'s own grouping heading for this skill (e.g. "Languages", "Cloud"). "" when the CV lists skills flat',
           ),
       }),
     )
@@ -65,9 +65,9 @@ export const ImportedProfileSchema = z.object({
     z.object({
       company: z.string(),
       role: z.string().describe("Job title held at this company"),
-      location: z.string().describe("City / country / \"Remote\", or \"\""),
-      start: z.string().describe("YYYY-MM. Use YYYY-01 when only a year is given, \"\" when absent"),
-      end: z.string().describe("YYYY-MM, or \"\" when this is the current role"),
+      location: z.string().describe('City / country / "Remote", or ""'),
+      start: z.string().describe('YYYY-MM. Use YYYY-01 when only a year is given, "" when absent'),
+      end: z.string().describe('YYYY-MM, or "" when this is the current role'),
       bullets: z
         .array(z.string())
         .describe(
@@ -75,14 +75,16 @@ export const ImportedProfileSchema = z.object({
         ),
       stack: z
         .array(z.string())
-        .describe("Only technologies explicitly named in this role's own text. Empty array if none"),
+        .describe(
+          "Only technologies explicitly named in this role's own text. Empty array if none",
+        ),
     }),
   ),
   projects: z.array(
     z.object({
       title: z.string(),
-      description: z.string().describe("One-line description as written, or \"\""),
-      link: z.string().describe("Project URL, or \"\""),
+      description: z.string().describe('One-line description as written, or ""'),
+      link: z.string().describe('Project URL, or ""'),
       bullets: z.array(z.string()).describe("Detail lines copied verbatim"),
       stack: z.array(z.string()).describe("Only technologies explicitly named for this project"),
     }),

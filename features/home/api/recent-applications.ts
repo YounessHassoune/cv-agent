@@ -15,7 +15,10 @@ export type RecentApplication = {
 /** Falls back to the first meaningful line of the JD when no CV exists yet. */
 function titleOf(headline: string | undefined, jdText: string): string {
   if (headline) return headline;
-  const firstLine = jdText.split("\n").map((line) => line.trim()).find(Boolean);
+  const firstLine = jdText
+    .split("\n")
+    .map((line) => line.trim())
+    .find(Boolean);
   return firstLine ? firstLine.slice(0, 60) : "Untitled draft";
 }
 
@@ -40,7 +43,8 @@ export async function readRecentApplications(): Promise<RecentApplication[]> {
     );
     const headline = Object.values(variants)
       .map(
-        (variant) => (variant.cvJson as { header?: { headline?: string } } | null)?.header?.headline,
+        (variant) =>
+          (variant.cvJson as { header?: { headline?: string } } | null)?.header?.headline,
       )
       .find(Boolean);
 

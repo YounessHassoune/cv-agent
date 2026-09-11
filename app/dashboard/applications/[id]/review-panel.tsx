@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { AtsReport } from "@/agent/lib/ats.ts";
-import { ResumableAgentChat, StatusDot } from "@/features/chat";
 import { ChatLockedNotice } from "@/components/chat-locked-notice";
 import { usePlan } from "@/components/plan-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type ScoreSummary, gapSuggestions, InsightsPanel, LockedInsights } from "./insights-panel";
+import { ResumableAgentChat, StatusDot } from "@/features/chat";
+import { gapSuggestions, InsightsPanel, LockedInsights, type ScoreSummary } from "./insights-panel";
 
 /**
  * The rail beside the document: what the score says, the conversation about

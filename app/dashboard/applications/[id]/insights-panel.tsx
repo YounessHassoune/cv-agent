@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { AlertTriangleIcon, CheckIcon, ChevronDownIcon } from "lucide-react";
+import { useState } from "react";
 
-import { type AtsReport, ATS_WEIGHTS } from "@/agent/lib/ats.ts";
+import { ATS_WEIGHTS, type AtsReport } from "@/agent/lib/ats.ts";
 import { LockedCard } from "@/components/plan-provider";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -164,11 +164,17 @@ export function LockedInsights({
             <div className="px-5 py-4" key={row.label}>
               <div className="flex items-baseline gap-2">
                 <span className="font-medium text-sm">{row.label}</span>
-                <span className={cn("ml-auto font-semibold text-sm tabular-nums", scoreTone(row.value))}>
+                <span
+                  className={cn("ml-auto font-semibold text-sm tabular-nums", scoreTone(row.value))}
+                >
                   {row.value}
                 </span>
               </div>
-              <Progress className="mt-2 h-1" indicatorClassName={scoreBar(row.value)} value={row.value} />
+              <Progress
+                className="mt-2 h-1"
+                indicatorClassName={scoreBar(row.value)}
+                value={row.value}
+              />
               <p className="mt-2 text-muted-foreground text-xs">
                 Add the terms this job names most often, in the roles where you used them.
               </p>
@@ -292,9 +298,7 @@ export function InsightsPanel({
   const unclaimable = new Set(report.unclaimable);
   const blocking = report.missingMustHaves.filter((term) => !unclaimable.has(term));
   const mustHaves = new Set(report.missingMustHaves);
-  const optional = report.missing.filter(
-    (term) => !mustHaves.has(term) && !unclaimable.has(term),
-  );
+  const optional = report.missing.filter((term) => !mustHaves.has(term) && !unclaimable.has(term));
 
   return (
     <div className="scrollbar-slim h-full overflow-y-auto">

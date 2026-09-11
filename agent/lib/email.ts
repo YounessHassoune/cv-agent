@@ -69,8 +69,7 @@ export async function logo(): Promise<Attachment | null> {
   return logoAttachment;
 }
 
-const FONT =
-  "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 export type EmailLayout = {
   /** The grey line under the subject in an inbox list. */

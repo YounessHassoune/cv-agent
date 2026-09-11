@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
 import { ImageUpIcon, Loader2Icon, Trash2Icon, UserRoundIcon } from "lucide-react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 

@@ -9,7 +9,10 @@ import { CV_TEMPLATE_IDS, normalizeTheme } from "@/lib/cv-templates";
 const Skin = z.object({
   language: z.string().min(2).optional(),
   template: z.enum(CV_TEMPLATE_IDS).optional(),
-  theme: z.string().refine((value) => normalizeTheme(value) !== undefined, "Unknown theme").optional(),
+  theme: z
+    .string()
+    .refine((value) => normalizeTheme(value) !== undefined, "Unknown theme")
+    .optional(),
 });
 
 /**
@@ -33,7 +36,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   const parsed = Skin.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid skin." }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid skin." },
+      { status: 400 },
+    );
   }
 
   const application = await db.application.findFirst({

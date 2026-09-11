@@ -5,11 +5,7 @@ import { Separator as SeparatorPrimitive } from "@base-ui/react/separator";
 import { cn } from "@/lib/utils";
 
 /** Base UI's separator is a single callable part, and it has no `decorative`. */
-function Separator({
-  className,
-  orientation = "horizontal",
-  ...props
-}: SeparatorPrimitive.Props) {
+function Separator({ className, orientation = "horizontal", ...props }: SeparatorPrimitive.Props) {
   return (
     <SeparatorPrimitive
       data-slot="separator"

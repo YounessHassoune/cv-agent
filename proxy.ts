@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 import { consumeAgentTurn, planFor } from "@/agent/lib/billing.ts";
 import { db } from "@/agent/lib/db.ts";
@@ -73,11 +73,9 @@ export async function proxy(request: NextRequest) {
       select: { id: true },
     });
     if (finished) {
-      return paywall(
-        "applicationChat",
-        "Follow-up chat on a tailored CV is part of Pro.",
-        { applicationId: finished.id },
-      );
+      return paywall("applicationChat", "Follow-up chat on a tailored CV is part of Pro.", {
+        applicationId: finished.id,
+      });
     }
   }
 

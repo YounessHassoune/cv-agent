@@ -4,7 +4,7 @@ import { clampSkin } from "@/agent/lib/billing.ts";
 import { db } from "@/agent/lib/db.ts";
 import { isCloudinaryUrl } from "@/app/lib/cloudinary";
 import { getCurrentUser } from "@/app/lib/current-user";
-import { CV_TEMPLATE_IDS, DEFAULT_TEMPLATE, DEFAULT_THEME, normalizeTheme } from "@/lib/cv-templates";
+import { CV_TEMPLATE_IDS, normalizeTheme } from "@/lib/cv-templates";
 
 /**
  * Photos now live on Cloudinary and the profile stores only the delivery URL.
@@ -24,7 +24,10 @@ const ProfileInput = z.object({
   summary: z.string().max(2000).optional(),
   template: z.enum(CV_TEMPLATE_IDS).optional(),
   // A preset id or a "#rrggbb" the user picked; anything else is dropped.
-  theme: z.string().refine((value) => normalizeTheme(value) !== undefined, "Unknown theme").optional(),
+  theme: z
+    .string()
+    .refine((value) => normalizeTheme(value) !== undefined, "Unknown theme")
+    .optional(),
   photoUrl: z
     .string()
     .max(MAX_PHOTO_CHARS, "Photo is too large — use an image under 1MB.")
@@ -54,7 +57,10 @@ const ProfileInput = z.object({
       company: z.string().min(1),
       role: z.string().min(1),
       location: z.string().optional(),
-      start: z.string().min(4).refine(isDate, "Start date isn't a date the CV builder understands."),
+      start: z
+        .string()
+        .min(4)
+        .refine(isDate, "Start date isn't a date the CV builder understands."),
       end: z
         .string()
         .optional()

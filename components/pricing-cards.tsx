@@ -1,12 +1,11 @@
 "use client";
 
+import { CheckIcon, LoaderIcon, MinusIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { CheckIcon, LoaderIcon, MinusIcon } from "lucide-react";
-
-import { type PlanId, type PlanLimits, PLAN_LIST } from "@/lib/entitlements";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { PLAN_LIST, type PlanId, type PlanLimits } from "@/lib/entitlements";
 import { cn } from "@/lib/utils";
 
 type Interval = "monthly" | "yearly";
@@ -56,7 +55,9 @@ function rowsFor(limits: PlanLimits): { label: string; included: boolean }[] {
     },
     { label: "Follow-up chat on every CV", included: limits.applicationChat },
     {
-      label: limits.atsScore ? "Keyword gaps and how to fix them" : "ATS score only, without the fixes",
+      label: limits.atsScore
+        ? "Keyword gaps and how to fix them"
+        : "ATS score only, without the fixes",
       included: limits.atsScore,
     },
     {

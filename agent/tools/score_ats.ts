@@ -41,16 +41,25 @@ function decide(
   const target = ATS_TARGET;
   const iterationsRemaining = loop.cap - (loop.iterations[lang] ?? 0);
   const gain =
-    history.length >= 2 ? report.total - (history[history.length - 2] as number) : Number.POSITIVE_INFINITY;
+    history.length >= 2
+      ? report.total - (history[history.length - 2] as number)
+      : Number.POSITIVE_INFINITY;
 
   if (report.total >= target) {
-    return { target, iterationsRemaining, action: "stop" as const, reason: `Target of ${ATS_TARGET} reached.` };
+    return {
+      target,
+      iterationsRemaining,
+      action: "stop" as const,
+      reason: `Target of ${ATS_TARGET} reached.`,
+    };
   }
 
   // Within touching distance of everything this profile can claim, after a
   // real attempt at it. Grinding further only invites padding.
   const atCeiling =
-    report.ceiling !== null && history.length >= 2 && report.total >= report.ceiling - CEILING_SLACK;
+    report.ceiling !== null &&
+    history.length >= 2 &&
+    report.total >= report.ceiling - CEILING_SLACK;
   if (atCeiling) {
     return {
       target,

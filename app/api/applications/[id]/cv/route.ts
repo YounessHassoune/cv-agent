@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import {
-  type JdKeyword,
-  requiredYearsFromJd,
-  scoreAts,
-  totalYears,
-} from "@/agent/lib/ats.ts";
+import { type JdKeyword, requiredYearsFromJd, scoreAts, totalYears } from "@/agent/lib/ats.ts";
 import { clampSkin } from "@/agent/lib/billing.ts";
 import { EditedCvSchema } from "@/agent/lib/cv-schema.ts";
 import { db } from "@/agent/lib/db.ts";
@@ -21,7 +16,10 @@ const Body = z.object({
   language: z.string().min(2),
   cv: EditedCvSchema,
   template: z.enum(CV_TEMPLATE_IDS).optional(),
-  theme: z.string().refine((value) => normalizeTheme(value) !== undefined, "Unknown theme").optional(),
+  theme: z
+    .string()
+    .refine((value) => normalizeTheme(value) !== undefined, "Unknown theme")
+    .optional(),
 });
 
 /**
@@ -115,7 +113,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         profile.summary ?? "",
         ...profile.skills.map((skill) => skill.name),
         ...profile.experiences.flatMap((e) => [e.role, e.company, ...e.stack, ...e.bullets]),
-        ...profile.projects.flatMap((p) => [p.title, p.description ?? "", ...p.stack, ...p.bullets]),
+        ...profile.projects.flatMap((p) => [
+          p.title,
+          p.description ?? "",
+          ...p.stack,
+          ...p.bullets,
+        ]),
         JSON.stringify(profile.languages),
         JSON.stringify(profile.education),
       ].join("\n")

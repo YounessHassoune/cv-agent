@@ -24,12 +24,7 @@ export function StatusDot({
    * through exactly the long runs it exists to report.
    */
   const isLive = isBusy;
-  const tone =
-    hasError
-      ? "bg-destructive"
-      : isLive
-        ? "bg-emerald-500"
-        : "bg-muted-foreground/60";
+  const tone = hasError ? "bg-destructive" : isLive ? "bg-emerald-500" : "bg-muted-foreground/60";
 
   return (
     <span
@@ -39,7 +34,10 @@ export function StatusDot({
     >
       {isLive ? (
         <span
-          className={cn("absolute inline-flex size-full animate-ping rounded-full opacity-75", tone)}
+          className={cn(
+            "absolute inline-flex size-full animate-ping rounded-full opacity-75",
+            tone,
+          )}
         />
       ) : null}
       <span

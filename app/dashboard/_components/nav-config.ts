@@ -1,11 +1,10 @@
 import {
   CreditCardIcon,
-  FileTextIcon,
   GemIcon,
   LayoutGridIcon,
   type LucideIcon,
-  SettingsIcon,
   MessagesSquare,
+  SettingsIcon,
   UserRoundIcon,
 } from "lucide-react";
 

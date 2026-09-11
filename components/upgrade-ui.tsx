@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { CheckIcon, GemIcon, LoaderIcon, LockIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {

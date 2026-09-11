@@ -1,14 +1,14 @@
-import React from "react";
 import {
   Document,
   type DocumentProps,
   Image,
   Page,
+  renderToBuffer,
+  StyleSheet,
   Text,
   View,
-  StyleSheet,
-  renderToBuffer,
 } from "@react-pdf/renderer";
+import React from "react";
 import { extractText, getDocumentProxy } from "unpdf";
 import { titlesFor } from "../../lib/cv-sections.ts";
 import {
@@ -16,13 +16,13 @@ import {
   CV_ACCENT_ALPHA,
   CV_ALPHA,
   CV_INK,
-  type CvTheme,
-  resolveTheme,
   CV_SEPARATOR,
   type CvTemplate,
+  type CvTheme,
   inkFlat,
   pt,
   resolveTemplate,
+  resolveTheme,
   shadeFlat,
 } from "../../lib/cv-templates.ts";
 import type { Cv } from "./cv-schema.ts";
@@ -177,7 +177,9 @@ function stylesFor(template: CvTemplate, theme: CvTheme) {
       borderBottomColor: hue ? accentFlat(hue, CV_ACCENT_ALPHA.rule) : shadeFlat(ruleAlpha),
       paddingBottom: ruled ? pt(0.25) : banded ? pt(0.22) : 0,
       backgroundColor: banded
-        ? (hue ? accentFlat(hue, CV_ACCENT_ALPHA.strip) : shadeFlat(CV_ALPHA.chip))
+        ? hue
+          ? accentFlat(hue, CV_ACCENT_ALPHA.strip)
+          : shadeFlat(CV_ALPHA.chip)
         : undefined,
       paddingTop: banded ? pt(0.22) : 0,
       paddingHorizontal: banded ? pt(0.4) : 0,
@@ -411,35 +413,35 @@ function CvDocument({
               // Multi-column layouts wrap the groups into a row; single-column
               // ones stack them exactly as before.
               wrapColumns(
-              cv.skills.map((group, i) =>
-                h(
-                  View,
-                  {
-                    style: spaced(
-                      styles.skillGroup,
-                      i,
-                      cv.skills.length,
-                      skillColumns > 1 ? styles.skillColumn : undefined,
-                    ),
-                    key: i,
-                    wrap: false,
-                  },
-                  h(Text, { style: styles.skillLabel }, group.category),
+                cv.skills.map((group, i) =>
                   h(
                     View,
-                    { style: styles.pillRow },
-                    ...group.items.map((item, j) =>
-                      h(
-                        View,
-                        { style: styles.pill, key: j },
-                        h(Text, { style: styles.pillText }, item),
+                    {
+                      style: spaced(
+                        styles.skillGroup,
+                        i,
+                        cv.skills.length,
+                        skillColumns > 1 ? styles.skillColumn : undefined,
+                      ),
+                      key: i,
+                      wrap: false,
+                    },
+                    h(Text, { style: styles.skillLabel }, group.category),
+                    h(
+                      View,
+                      { style: styles.pillRow },
+                      ...group.items.map((item, j) =>
+                        h(
+                          View,
+                          { style: styles.pill, key: j },
+                          h(Text, { style: styles.pillText }, item),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              styles,
-              skillColumns > 1,
+                styles,
+                skillColumns > 1,
               ),
             ),
           ]
@@ -575,7 +577,12 @@ export async function renderCvPdf(
   themeId?: string,
 ): Promise<Uint8Array<ArrayBuffer>> {
   const buffer = await renderToBuffer(
-    h(CvDocument, { cv, templateId, themeId, photo }) as unknown as React.ReactElement<DocumentProps>,
+    h(CvDocument, {
+      cv,
+      templateId,
+      themeId,
+      photo,
+    }) as unknown as React.ReactElement<DocumentProps>,
   );
   return Uint8Array.from(buffer);
 }
@@ -587,4 +594,3 @@ export async function extractPdfText(
   const { text, totalPages } = await extractText(doc, { mergePages: true });
   return { text, pageCount: totalPages };
 }
-

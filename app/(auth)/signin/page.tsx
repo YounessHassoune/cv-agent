@@ -54,7 +54,10 @@ export default async function SignInPage({
 
       <p className="text-center text-muted-foreground text-sm">
         New here?{" "}
-        <Link className="font-medium text-foreground underline-offset-4 hover:underline" href="/signup">
+        <Link
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+          href="/signup"
+        >
           Create an account
         </Link>
       </p>

@@ -51,8 +51,7 @@ export function CvThemePicker({
           key={option.id}
           onClick={() => onChange(option.id)}
           style={{
-            background:
-              option.accent ?? "linear-gradient(135deg, #ffffff 0 50%, #1f1f1f 50% 100%)",
+            background: option.accent ?? "linear-gradient(135deg, #ffffff 0 50%, #1f1f1f 50% 100%)",
           }}
           title={option.label}
           type="button"

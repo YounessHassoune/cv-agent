@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
 import {
   ArrowUpRightIcon,
   BuildingIcon,
@@ -9,6 +7,8 @@ import {
   SearchIcon,
   SparklesIcon,
 } from "lucide-react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";

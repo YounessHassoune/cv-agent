@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   BriefcaseIcon,
   CheckIcon,
@@ -21,8 +19,10 @@ import {
   UserRoundIcon,
   WrenchIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { type CvPreviewData, CvPreview } from "@/components/cv-preview";
+import { CvPreview, type CvPreviewData } from "@/components/cv-preview";
 import { CvThemePicker } from "@/components/cv-theme-picker";
 import { LockPill, usePlan } from "@/components/plan-provider";
 import { Button } from "@/components/ui/button";
@@ -43,9 +43,9 @@ import { templateAllowed, themeAllowed } from "@/lib/entitlements";
 import { scoreProfileForm } from "@/lib/profile-completeness";
 import { cn } from "@/lib/utils";
 import { CvImportDialog } from "./cv-import-dialog";
-import { ProfilePdfView } from "./profile-pdf-view";
 import { MonthField } from "./month-field";
 import { PhotoField } from "./photo-field";
+import { ProfilePdfView } from "./profile-pdf-view";
 import { SkillsField } from "./skills-field";
 import { TagsField } from "./tags-field";
 
@@ -82,8 +82,16 @@ type SectionId =
   | "links"
   | "languages";
 
-const lines = (value: string) => value.split("\n").map((v) => v.trim()).filter(Boolean);
-const commas = (value: string) => value.split(",").map((v) => v.trim()).filter(Boolean);
+const lines = (value: string) =>
+  value
+    .split("\n")
+    .map((v) => v.trim())
+    .filter(Boolean);
+const commas = (value: string) =>
+  value
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
 
 /** "2021-03-01" → "Mar 2021", which is how the CV renders dates. */
 function displayDate(value: string): string {
@@ -205,10 +213,19 @@ function LevelSelect({
     value && !LANGUAGE_LEVELS.includes(value) ? [value, ...LANGUAGE_LEVELS] : LANGUAGE_LEVELS;
 
   return (
-    <Select onValueChange={(next) => onChange(next === NO_LEVEL ? "" : (next as string))} value={value || NO_LEVEL}>
-      <SelectTrigger aria-label="Level" className="h-7 w-28 shrink-0 border-0 bg-secondary/70 px-2 text-xs shadow-none" size="sm">
+    <Select
+      onValueChange={(next) => onChange(next === NO_LEVEL ? "" : (next as string))}
+      value={value || NO_LEVEL}
+    >
+      <SelectTrigger
+        aria-label="Level"
+        className="h-7 w-28 shrink-0 border-0 bg-secondary/70 px-2 text-xs shadow-none"
+        size="sm"
+      >
         <SelectValue>
-          <span className={cn("truncate", !value && "text-muted-foreground")}>{value || "Level"}</span>
+          <span className={cn("truncate", !value && "text-muted-foreground")}>
+            {value || "Level"}
+          </span>
         </SelectValue>
       </SelectTrigger>
       <SelectContent align="end">
@@ -286,7 +303,10 @@ function CompletionRing({ value }: { readonly value: number }) {
   const tone = completionTone(value);
 
   return (
-    <div className="relative flex size-11 shrink-0 items-center justify-center" title={`${value}% complete`}>
+    <div
+      className="relative flex size-11 shrink-0 items-center justify-center"
+      title={`${value}% complete`}
+    >
       <svg aria-hidden="true" className="-rotate-90 absolute inset-0 size-full" viewBox="0 0 36 36">
         <circle
           className="text-secondary"
@@ -592,7 +612,15 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
               patch({
                 experiences: [
                   ...form.experiences,
-                  { company: "", role: "", location: "", start: "", end: "", bullets: "", stack: "" },
+                  {
+                    company: "",
+                    role: "",
+                    location: "",
+                    start: "",
+                    end: "",
+                    bullets: "",
+                    stack: "",
+                  },
                 ],
               })
             }
@@ -628,7 +656,10 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
                     />
                   </FieldRow>
                   <FieldRow label="Degree">
-                    <Input onChange={(e) => update({ degree: e.target.value })} value={entry.degree} />
+                    <Input
+                      onChange={(e) => update({ degree: e.target.value })}
+                      value={entry.degree}
+                    />
                   </FieldRow>
                   <FieldRow label="Start">
                     <MonthField onChange={(start) => update({ start })} value={entry.start} />
@@ -780,7 +811,9 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
           ))}
           <Button
             className="w-full border-dashed"
-            onClick={() => patch({ contact: { ...form.contact, links: [...form.contact.links, ""] } })}
+            onClick={() =>
+              patch({ contact: { ...form.contact, links: [...form.contact.links, ""] } })
+            }
             type="button"
             variant="outline"
           >
@@ -967,7 +1000,6 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
           theme={form.theme}
         />
       )}
-
     </div>
   );
 

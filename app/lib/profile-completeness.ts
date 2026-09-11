@@ -1,11 +1,8 @@
 import { db } from "@/agent/lib/db.ts";
-import {
-  type ProfileCompleteness,
-  scoreProfile,
-} from "@/lib/profile-completeness";
+import { type ProfileCompleteness, scoreProfile } from "@/lib/profile-completeness";
 
-export { COMPLETE_THRESHOLD } from "@/lib/profile-completeness";
 export type { ProfileCompleteness } from "@/lib/profile-completeness";
+export { COMPLETE_THRESHOLD } from "@/lib/profile-completeness";
 
 const EMPTY: ProfileCompleteness = {
   percent: 0,

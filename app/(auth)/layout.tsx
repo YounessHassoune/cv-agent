@@ -1,6 +1,6 @@
+import { CheckCircle2Icon, SparklesIcon, TargetIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CheckCircle2Icon, SparklesIcon, TargetIcon } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -80,7 +80,7 @@ export default function AuthLayout({ children }: { readonly children: ReactNode 
       <main className="relative flex flex-col">
         <div className="flex items-center justify-between p-4 sm:p-6">
           <Link className="flex items-center gap-2.5 lg:invisible" href="/">
-          <span
+            <span
               aria-hidden="true"
               className="size-7 shrink-0"
               style={{

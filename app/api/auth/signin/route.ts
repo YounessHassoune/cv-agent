@@ -41,10 +41,7 @@ export async function POST(request: Request) {
   const { token, maxAge } = signSession(user.id, user.email);
   // A thin master profile is the one thing that makes every tailored CV worse,
   // so sign-in lands on the builder until it is filled in.
-  const response = NextResponse.redirect(
-    new URL(await landingPath(user.id), request.url),
-    303,
-  );
+  const response = NextResponse.redirect(new URL(await landingPath(user.id), request.url), 303);
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(maxAge));
   return response;
 }

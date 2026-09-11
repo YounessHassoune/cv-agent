@@ -65,7 +65,12 @@ async function main() {
   });
   if (!profile) throw new Error(`No profile for "${userId}". Run: pnpm db:seed`);
 
-  const contact = profile.contact as { email: string; phone?: string; location?: string; links?: string[] };
+  const contact = profile.contact as {
+    email: string;
+    phone?: string;
+    location?: string;
+    links?: string[];
+  };
 
   // A CV built strictly from profile facts, the way the agent is instructed to.
   const cv: Cv = {
@@ -102,13 +107,13 @@ async function main() {
       bullets: project.bullets,
       stack: project.stack,
     })),
-    education: (profile.education as { institution: string; degree: string; start?: string; end?: string }[]).map(
-      (entry) => ({
-        institution: entry.institution,
-        degree: entry.degree,
-        dates: [entry.start, entry.end].filter(Boolean).join(" – "),
-      }),
-    ),
+    education: (
+      profile.education as { institution: string; degree: string; start?: string; end?: string }[]
+    ).map((entry) => ({
+      institution: entry.institution,
+      degree: entry.degree,
+      dates: [entry.start, entry.end].filter(Boolean).join(" – "),
+    })),
     languages: profile.languages as { name: string; level: string }[],
   };
 
@@ -176,8 +181,16 @@ async function main() {
     report.missing.includes("Kubernetes") && report.missing.includes("GraphQL"),
     report.missing.join(", "),
   );
-  check("structure score is healthy", report.breakdown.structure >= 70, `${report.breakdown.structure}`);
-  check("total lands in a plausible band", report.total > 0 && report.total <= 100, `${report.total}`);
+  check(
+    "structure score is healthy",
+    report.breakdown.structure >= 70,
+    `${report.breakdown.structure}`,
+  );
+  check(
+    "total lands in a plausible band",
+    report.total > 0 && report.total <= 100,
+    `${report.total}`,
+  );
 }
 
 main()

@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { type PlanId, isPlanId } from "@/lib/entitlements";
+import { isPlanId, type PlanId } from "@/lib/entitlements";
 
 /**
  * The Stripe client, and the catalogue of what each plan actually costs.
@@ -152,10 +152,7 @@ export async function getPriceCatalog(): Promise<PriceCatalog> {
  * The Price id to charge. Throws rather than guessing — a checkout against the
  * wrong price is worse than a checkout that does not open.
  */
-export async function priceIdFor(
-  plan: PaidPlanId,
-  interval: BillingInterval,
-): Promise<string> {
+export async function priceIdFor(plan: PaidPlanId, interval: BillingInterval): Promise<string> {
   const catalog = await getPriceCatalog();
   const price = catalog[plan]?.[interval];
   if (!price) {

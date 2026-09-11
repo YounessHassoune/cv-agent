@@ -25,7 +25,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     // A deleted account leaves a still-valid cookie behind; treat it as signed
     // out. So is an unverified one — no route mints a session before the link
     // is clicked, and this makes that hold even for a cookie issued earlier.
-    if (!account || !account.emailVerified) return null;
+    if (!account?.emailVerified) return null;
     return {
       ...session,
       email: account.email,

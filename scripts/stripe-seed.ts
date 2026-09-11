@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { PLAN_IDS, entitlements } from "../lib/entitlements.ts";
+import { entitlements, PLAN_IDS } from "../lib/entitlements.ts";
 
 /**
  * Makes this app's plans resolvable in Stripe, once.

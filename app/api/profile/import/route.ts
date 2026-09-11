@@ -1,10 +1,16 @@
 import { after, NextResponse } from "next/server";
-import { ImportedProfileSchema } from "@/agent/lib/cv-import-schema.ts";
 import { canImportCv, recordCvImport } from "@/agent/lib/billing.ts";
+import { ImportedProfileSchema } from "@/agent/lib/cv-import-schema.ts";
 import { db } from "@/agent/lib/db.ts";
 import { cloudinaryConfigured, photoPublicId, uploadBuffer } from "@/app/lib/cloudinary";
-import { type CvPhoto, type Found, MAX_IMPORT_BYTES, CvImportError, importCv } from "@/app/lib/cv-import";
 import { getCurrentUser } from "@/app/lib/current-user";
+import {
+  CvImportError,
+  type CvPhoto,
+  type Found,
+  importCv,
+  MAX_IMPORT_BYTES,
+} from "@/app/lib/cv-import";
 
 /**
  * How long a result nobody collected stays worth offering. Long enough to
@@ -125,9 +131,11 @@ export async function POST(request: Request) {
     const found = (progress: Found) => {
       if (Date.now() - wroteAt < FOUND_WRITE_MS) return;
       wroteAt = Date.now();
-      void db.cvImport.updateMany({ where: { userId }, data: { found: progress } }).catch((cause) => {
-        console.warn("cv-import: progress write failed", cause);
-      });
+      void db.cvImport
+        .updateMany({ where: { userId }, data: { found: progress } })
+        .catch((cause) => {
+          console.warn("cv-import: progress write failed", cause);
+        });
     };
 
     try {
@@ -194,7 +202,10 @@ export async function GET() {
     // Nothing is coming: the process that was parsing this is gone.
     await db.cvImport.deleteMany({ where: { userId: user.userId } });
     return NextResponse.json({
-      failed: { filename: row.filename, error: "That import stopped partway. Try uploading again." },
+      failed: {
+        filename: row.filename,
+        error: "That import stopped partway. Try uploading again.",
+      },
     });
   }
 

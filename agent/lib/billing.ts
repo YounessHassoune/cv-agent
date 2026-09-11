@@ -1,11 +1,11 @@
 import { DEFAULT_TEMPLATE, DEFAULT_THEME } from "../../lib/cv-templates.ts";
 import {
   type Capability,
-  type PlanId,
-  type PlanLimits,
   CURRENT_PLAN_VERSION,
   entitlements,
   isPlanId,
+  type PlanId,
+  type PlanLimits,
   templateAllowed,
   themeAllowed,
 } from "../../lib/entitlements.ts";
@@ -193,8 +193,7 @@ export async function clampSkin(
 ): Promise<{ template: string; theme: string }> {
   const plan = await planFor(userId);
   return {
-    template:
-      template && templateAllowed(plan, template) ? template : DEFAULT_TEMPLATE,
+    template: template && templateAllowed(plan, template) ? template : DEFAULT_TEMPLATE,
     theme: theme && themeAllowed(plan, theme) ? theme : DEFAULT_THEME,
   };
 }

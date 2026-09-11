@@ -9,8 +9,8 @@ import {
   keywordScore,
   requiredYearsFromJd,
   sanitizeKeywords,
-  semanticToScore,
   scoreAts,
+  semanticToScore,
   structureScore,
   totalYears,
 } from "./ats.ts";
@@ -119,7 +119,12 @@ assert.equal(fitted.report.breakdown.fit, 100);
 const misfit = await scoreAts({
   ...base,
   keywords: [kw("go", 3)],
-  fit: { role: "Machine Learning Researcher", cvTitles: ["Senior Backend Engineer"], requiredYears: 10, cvYears: 2 },
+  fit: {
+    role: "Machine Learning Researcher",
+    cvTitles: ["Senior Backend Engineer"],
+    requiredYears: 10,
+    cvYears: 2,
+  },
 });
 assert.ok(misfit.report.breakdown.fit !== null && misfit.report.breakdown.fit < 30);
 assert.ok(fitted.report.total > misfit.report.total);
@@ -164,7 +169,10 @@ const spelled = await scoreAts({
   keywords: [kw("go", 3)],
   fit: { role: "Fullstack Engineer - IAM Team", cvTitles: ["Full Stack Developer"] },
 });
-assert.ok(spelled.report.breakdown.fit !== null && spelled.report.breakdown.fit >= 60, `fit ${spelled.report.breakdown.fit}`);
+assert.ok(
+  spelled.report.breakdown.fit !== null && spelled.report.breakdown.fit >= 60,
+  `fit ${spelled.report.breakdown.fit}`,
+);
 
 // --- one requirement, three spellings: the biggest source of lost points ---
 assert.equal(keywordScore("Data analysis for retail clients", [kw("Data Analytics")]).score, 100);
@@ -199,11 +207,17 @@ assert.ok(
 const anchors = { floor: 0.17, top: 0.46 };
 assert.equal(semanticToScore(0.09, anchors), 0); // unrelated prose
 assert.equal(semanticToScore(0.19, anchors), 7); // another field's job ad
-assert.ok(semanticToScore(0.38, anchors) > 65, "a strong on-topic CV must not read as a poor match");
+assert.ok(
+  semanticToScore(0.38, anchors) > 65,
+  "a strong on-topic CV must not read as a poor match",
+);
 assert.equal(semanticToScore(0.46, anchors), 100); // the job's own requirements
 assert.equal(semanticToScore(0.9, anchors), 100); // clamped, never above 100
 // anchors too close to divide by → the measured fallback window, not a blow-up
-assert.equal(semanticToScore(0.38, { floor: 0.4, top: 0.41 }), semanticToScore(0.38, { floor: 0.15, top: 0.45 }));
+assert.equal(
+  semanticToScore(0.38, { floor: 0.4, top: 0.41 }),
+  semanticToScore(0.38, { floor: 0.15, top: 0.45 }),
+);
 
 // --- the keyword list the scorer sees is settled, not whatever came back ---
 const raw: JdKeyword[] = [
@@ -218,9 +232,11 @@ const raw: JdKeyword[] = [
 ];
 raw.push({ term: "Degree in a quantitative field", weight: 3, category: "hard" });
 const settled = sanitizeKeywords(raw);
-assert.deepEqual(settled.map((k) => k.term), ["Power BI", "SQL", "Python", "ETL", "Airflow", "dbt"]);
+assert.deepEqual(
+  settled.map((k) => k.term),
+  ["Power BI", "SQL", "Python", "ETL", "Airflow", "dbt"],
+);
 assert.equal(settled.filter((k) => k.weight === 3).length, 5);
 assert.equal(settled.at(-1)?.weight, 2);
 
 console.log("ats: all checks passed");
-

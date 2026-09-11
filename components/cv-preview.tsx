@@ -5,15 +5,15 @@ import { Children, useEffect, useRef, useState } from "react";
 
 import { titlesFor } from "@/lib/cv-sections";
 import {
+  accent,
   CV_ACCENT_ALPHA,
   CV_ALPHA,
   CV_SEPARATOR,
-  SHEET_REM,
-  accent,
+  type CvSkin,
   ink,
+  SHEET_REM,
   shade,
   skinFor,
-  type CvSkin,
 } from "@/lib/cv-templates";
 import { cn } from "@/lib/utils";
 
@@ -102,8 +102,7 @@ function dateRange(start?: string, end?: string) {
 const replaceAt = <T,>(list: readonly T[], index: number, value: T): T[] =>
   list.map((item, i) => (i === index ? value : item));
 
-const removeAt = <T,>(list: readonly T[], index: number): T[] =>
-  list.filter((_, i) => i !== index);
+const removeAt = <T,>(list: readonly T[], index: number): T[] => list.filter((_, i) => i !== index);
 
 /** `space-y-*` semantics: the gap goes on every item but the last. */
 const gapAfter = (i: number, length: number, gap: number) =>
@@ -264,7 +263,11 @@ function Section({
   // On a coloured theme the heading carries the accent and the rule follows it;
   // a band inverts that — accent ink on an accent wash. `stylesFor` in the PDF
   // draws exactly the same three cases.
-  const titleColor = l.accent ? accent(l.accent) : ruled || banded ? undefined : ink(CV_ALPHA.muted);
+  const titleColor = l.accent
+    ? accent(l.accent)
+    : ruled || banded
+      ? undefined
+      : ink(CV_ALPHA.muted);
   const ruleColor = l.accent ? accent(l.accent, CV_ACCENT_ALPHA.rule) : shade(ruleAlpha);
   const bandColor = l.accent ? accent(l.accent, CV_ACCENT_ALPHA.strip) : shade(CV_ALPHA.chip);
 
@@ -539,597 +542,614 @@ export function CvPreview({
             transformOrigin: "top left",
           }}
         >
-      {/* Contact strip above the identity block, as in the compiled PDF. */}
-      {contact.length > 0 || editing ? (
-        <div
-          className="flex flex-wrap"
-          style={{
-            background: l.accent
-              ? l.stripSolid
-                ? accent(l.accent)
-                : accent(l.accent, CV_ACCENT_ALPHA.strip)
-              : shade(CV_ALPHA.strip),
-            color: l.stripSolid ? "#fff" : ink(CV_ALPHA.muted),
-            fontSize: rem(l.meta),
-            lineHeight: 1.2,
-            padding: `${rem(0.3)} ${rem(l.padX)}`,
-            columnGap: rem(1),
-            rowGap: rem(0.15),
-            justifyContent: l.centered ? "center" : "flex-start",
-          }}
-        >
-          {/* Each item stays on one line so a narrow column wraps between
-              entries instead of breaking an email or URL across rows. */}
-          {editing ? (
-            <>
-              <InlineText
-                className="whitespace-nowrap"
-                onChange={(email) => set({ email })}
-                placeholder="you@example.com"
-                value={cv.email ?? ""}
-              />
-              <InlineText
-                className="whitespace-nowrap"
-                onChange={(phone) => set({ phone })}
-                placeholder="Phone"
-                value={cv.phone ?? ""}
-              />
-              <InlineText
-                className="whitespace-nowrap"
-                onChange={(location) => set({ location })}
-                placeholder="City, country"
-                value={cv.location ?? ""}
-              />
-              {links.map((link, i) => (
-                <span className="group flex items-center gap-0.5 whitespace-nowrap" key={i}>
-                  <InlineText
-                    onChange={(value) => set({ links: replaceAt(links, i, value) })}
-                    placeholder="https://"
-                    value={link}
-                  />
-                  <RemoveButton
-                    label="Remove link"
-                    onClick={() => set({ links: removeAt(links, i) })}
-                  />
-                </span>
-              ))}
-              <AddButton label="Link" onClick={() => set({ links: [...links, ""] })} />
-            </>
-          ) : (
-            contact.map((item, i) => (
-              <span className="whitespace-nowrap" key={`${item}-${i}`}>
-                {item}
-              </span>
-            ))
-          )}
-        </div>
-      ) : null}
-
-      <div style={{ padding: `${rem(l.padY)} ${rem(l.padX)}` }}>
-        <header
-          className={cn(photo && (l.centered ? "flex flex-col items-center" : "flex items-center"))}
-          style={{
-            marginBottom: rem(l.sectionGap),
-            gap: photo ? rem(l.photoGap) : undefined,
-            // A banded header is full-bleed: the sheet's padding is pulled back
-            // so the tint reaches the paper edge, as the contact strip does.
-            ...(l.headerBand
-              ? {
-                  background: l.accent
-                    ? accent(l.accent, CV_ACCENT_ALPHA.strip)
-                    : shade(CV_ALPHA.strip),
-                  marginLeft: rem(-l.padX),
-                  marginRight: rem(-l.padX),
-                  marginTop: rem(-l.padY),
-                  padding: `${rem(l.padY * 0.8)} ${rem(l.padX)}`,
-                }
-              : {}),
-          }}
-        >
-          {photo && cv.photoUrl ? (
-            // biome-ignore lint/performance/noImgElement: Cloudinary already
-            // delivers this pre-sized and format-negotiated; next/image would
-            // only add a second optimizer in front of it.
-            <img
-              alt=""
-              className="shrink-0 rounded-full object-cover ring-1 ring-black/10"
-              src={cv.photoUrl}
-              style={{ width: rem(l.photoSize), height: rem(l.photoSize) }}
-            />
-          ) : null}
-          {photo && !cv.photoUrl ? (
-            <span
-              aria-hidden="true"
-              className="flex shrink-0 items-center justify-center rounded-full border border-black/15 border-dashed bg-black/3 text-black/25"
-              style={{ width: rem(l.photoSize), height: rem(l.photoSize) }}
-            >
-              <UserRoundIcon className="size-7" />
-            </span>
-          ) : null}
-          <div className="min-w-0" style={{ textAlign: l.centered ? "center" : "left" }}>
-            <h2
-              className="font-semibold"
+          {/* Contact strip above the identity block, as in the compiled PDF. */}
+          {contact.length > 0 || editing ? (
+            <div
+              className="flex flex-wrap"
               style={{
-                fontSize: rem(l.name),
-                textTransform: l.nameCase === "upper" ? "uppercase" : undefined,
-                letterSpacing: l.nameCase === "upper" ? "0.08em" : "-0.02em",
-                lineHeight: 1.15,
-                color: l.accent ? accent(l.accent) : undefined,
+                background: l.accent
+                  ? l.stripSolid
+                    ? accent(l.accent)
+                    : accent(l.accent, CV_ACCENT_ALPHA.strip)
+                  : shade(CV_ALPHA.strip),
+                color: l.stripSolid ? "#fff" : ink(CV_ALPHA.muted),
+                fontSize: rem(l.meta),
+                lineHeight: 1.2,
+                padding: `${rem(0.3)} ${rem(l.padX)}`,
+                columnGap: rem(1),
+                rowGap: rem(0.15),
+                justifyContent: l.centered ? "center" : "flex-start",
               }}
             >
+              {/* Each item stays on one line so a narrow column wraps between
+              entries instead of breaking an email or URL across rows. */}
               {editing ? (
-                <InlineText
-                  onChange={(fullName) => set({ fullName })}
-                  placeholder="Your name"
-                  value={cv.fullName}
-                />
-              ) : (
-                cv.fullName || "Your name"
-              )}
-            </h2>
-            {cv.headline || editing ? (
-              <p
-                style={{
-                  fontSize: rem(l.headline),
-                  color: ink(CV_ALPHA.muted),
-                  marginTop: rem(l.headlineGap),
-                  lineHeight: 1.2,
-                }}
-              >
-                {editing ? (
+                <>
                   <InlineText
-                    onChange={(headline) => set({ headline })}
-                    placeholder="Target job title"
-                    value={cv.headline ?? ""}
+                    className="whitespace-nowrap"
+                    onChange={(email) => set({ email })}
+                    placeholder="you@example.com"
+                    value={cv.email ?? ""}
                   />
-                ) : (
-                  cv.headline
-                )}
+                  <InlineText
+                    className="whitespace-nowrap"
+                    onChange={(phone) => set({ phone })}
+                    placeholder="Phone"
+                    value={cv.phone ?? ""}
+                  />
+                  <InlineText
+                    className="whitespace-nowrap"
+                    onChange={(location) => set({ location })}
+                    placeholder="City, country"
+                    value={cv.location ?? ""}
+                  />
+                  {links.map((link, i) => (
+                    <span className="group flex items-center gap-0.5 whitespace-nowrap" key={i}>
+                      <InlineText
+                        onChange={(value) => set({ links: replaceAt(links, i, value) })}
+                        placeholder="https://"
+                        value={link}
+                      />
+                      <RemoveButton
+                        label="Remove link"
+                        onClick={() => set({ links: removeAt(links, i) })}
+                      />
+                    </span>
+                  ))}
+                  <AddButton label="Link" onClick={() => set({ links: [...links, ""] })} />
+                </>
+              ) : (
+                contact.map((item, i) => (
+                  <span className="whitespace-nowrap" key={`${item}-${i}`}>
+                    {item}
+                  </span>
+                ))
+              )}
+            </div>
+          ) : null}
+
+          <div style={{ padding: `${rem(l.padY)} ${rem(l.padX)}` }}>
+            <header
+              className={cn(
+                photo && (l.centered ? "flex flex-col items-center" : "flex items-center"),
+              )}
+              style={{
+                marginBottom: rem(l.sectionGap),
+                gap: photo ? rem(l.photoGap) : undefined,
+                // A banded header is full-bleed: the sheet's padding is pulled back
+                // so the tint reaches the paper edge, as the contact strip does.
+                ...(l.headerBand
+                  ? {
+                      background: l.accent
+                        ? accent(l.accent, CV_ACCENT_ALPHA.strip)
+                        : shade(CV_ALPHA.strip),
+                      marginLeft: rem(-l.padX),
+                      marginRight: rem(-l.padX),
+                      marginTop: rem(-l.padY),
+                      padding: `${rem(l.padY * 0.8)} ${rem(l.padX)}`,
+                    }
+                  : {}),
+              }}
+            >
+              {photo && cv.photoUrl ? (
+                // biome-ignore lint/performance/noImgElement: Cloudinary already delivers this pre-sized and format-negotiated; next/image would only add a second optimizer in front of it.
+                <img
+                  alt=""
+                  className="shrink-0 rounded-full object-cover ring-1 ring-black/10"
+                  src={cv.photoUrl}
+                  style={{ width: rem(l.photoSize), height: rem(l.photoSize) }}
+                />
+              ) : null}
+              {photo && !cv.photoUrl ? (
+                <span
+                  aria-hidden="true"
+                  className="flex shrink-0 items-center justify-center rounded-full border border-black/15 border-dashed bg-black/3 text-black/25"
+                  style={{ width: rem(l.photoSize), height: rem(l.photoSize) }}
+                >
+                  <UserRoundIcon className="size-7" />
+                </span>
+              ) : null}
+              <div className="min-w-0" style={{ textAlign: l.centered ? "center" : "left" }}>
+                <h2
+                  className="font-semibold"
+                  style={{
+                    fontSize: rem(l.name),
+                    textTransform: l.nameCase === "upper" ? "uppercase" : undefined,
+                    letterSpacing: l.nameCase === "upper" ? "0.08em" : "-0.02em",
+                    lineHeight: 1.15,
+                    color: l.accent ? accent(l.accent) : undefined,
+                  }}
+                >
+                  {editing ? (
+                    <InlineText
+                      onChange={(fullName) => set({ fullName })}
+                      placeholder="Your name"
+                      value={cv.fullName}
+                    />
+                  ) : (
+                    cv.fullName || "Your name"
+                  )}
+                </h2>
+                {cv.headline || editing ? (
+                  <p
+                    style={{
+                      fontSize: rem(l.headline),
+                      color: ink(CV_ALPHA.muted),
+                      marginTop: rem(l.headlineGap),
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {editing ? (
+                      <InlineText
+                        onChange={(headline) => set({ headline })}
+                        placeholder="Target job title"
+                        value={cv.headline ?? ""}
+                      />
+                    ) : (
+                      cv.headline
+                    )}
+                  </p>
+                ) : null}
+              </div>
+            </header>
+
+            {!hasBody && !editing ? (
+              <p className="py-10 text-center opacity-50" style={{ fontSize: rem(l.base) }}>
+                Fill in your profile to see the CV take shape here.
               </p>
             ) : null}
-          </div>
-        </header>
 
-        {!hasBody && !editing ? (
-          <p className="py-10 text-center opacity-50" style={{ fontSize: rem(l.base) }}>
-            Fill in your profile to see the CV take shape here.
-          </p>
-        ) : null}
+            {cv.summary || editing ? (
+              <Section l={l} title={t.summary}>
+                <p>
+                  {editing ? (
+                    <InlineText
+                      multiline
+                      onChange={(summary) => set({ summary })}
+                      placeholder="2-3 sentences on what you do and what you have shipped."
+                      value={cv.summary ?? ""}
+                    />
+                  ) : (
+                    cv.summary
+                  )}
+                </p>
+              </Section>
+            ) : null}
 
-        {cv.summary || editing ? (
-          <Section l={l} title={t.summary}>
-            <p>
-              {editing ? (
-                <InlineText
-                  multiline
-                  onChange={(summary) => set({ summary })}
-                  placeholder="2-3 sentences on what you do and what you have shipped."
-                  value={cv.summary ?? ""}
-                />
-              ) : (
-                cv.summary
-              )}
-            </p>
-          </Section>
-        ) : null}
-
-        {skills.length > 0 || editing ? (
-          <Section l={l} title={t.skills}>
-            {/* Columns are a CSS multi-column, not a grid: groups keep their
+            {skills.length > 0 || editing ? (
+              <Section l={l} title={t.skills}>
+                {/* Columns are a CSS multi-column, not a grid: groups keep their
                 order down each column and a long one flows rather than being
                 clipped to a cell. `breakInside` keeps a category and its skills
                 together — split across a column boundary they read as two
                 unrelated fragments. */}
-            <div
-              style={
-                l.skillColumns > 1
-                  ? { columnCount: l.skillColumns, columnGap: rem(1.25) }
-                  : undefined
-              }
-            >
-            {skills.map((group, i) => {
-              const setGroup = (next: (typeof skills)[number]) =>
-                set({ skills: replaceAt(skills, i, next) });
-
-              return (
                 <div
-                  className="group"
-                  key={i}
-                  style={{
-                    marginBottom: gapAfter(i, skills.length, 0.5),
-                    breakInside: l.skillColumns > 1 ? "avoid" : undefined,
-                  }}
+                  style={
+                    l.skillColumns > 1
+                      ? { columnCount: l.skillColumns, columnGap: rem(1.25) }
+                      : undefined
+                  }
                 >
-                  <p
-                    className="flex items-center gap-1 font-semibold"
-                    style={{
-                      fontSize: rem(l.label),
-                      color: ink(CV_ALPHA.soft),
-                      marginBottom: rem(0.2),
-                    }}
-                  >
-                    {editing ? (
-                      <>
-                        <InlineText
-                          onChange={(category) => setGroup({ ...group, category })}
-                          placeholder="Category"
-                          value={group.category}
-                        />
-                        <RemoveButton
-                          label="Remove skill group"
-                          onClick={() => set({ skills: removeAt(skills, i) })}
-                        />
-                      </>
-                    ) : (
-                      group.category
-                    )}
-                  </p>
-                  <div className="flex flex-wrap" style={{ columnGap: rem(0.25), rowGap: rem(0.2) }}>
-                    {group.items.map((item, index) => (
-                      <span
-                        className={cn(
-                          "rounded-full",
-                          editing && "group/pill inline-flex items-center gap-0.5",
-                        )}
-                        key={index}
+                  {skills.map((group, i) => {
+                    const setGroup = (next: (typeof skills)[number]) =>
+                      set({ skills: replaceAt(skills, i, next) });
+
+                    return (
+                      <div
+                        className="group"
+                        key={i}
                         style={{
-                          background: l.accent
-                            ? accent(l.accent, CV_ACCENT_ALPHA.chip)
-                            : shade(CV_ALPHA.pill),
-                          fontSize: rem(l.label),
-                          lineHeight: 1.2,
-                          padding: `${rem(0.125)} ${rem(0.375)}`,
+                          marginBottom: gapAfter(i, skills.length, 0.5),
+                          breakInside: l.skillColumns > 1 ? "avoid" : undefined,
                         }}
                       >
-                        {editing ? (
-                          <>
-                            <InlineText
-                              onChange={(value) =>
-                                setGroup({ ...group, items: replaceAt(group.items, index, value) })
-                              }
-                              placeholder="Skill"
-                              value={item}
+                        <p
+                          className="flex items-center gap-1 font-semibold"
+                          style={{
+                            fontSize: rem(l.label),
+                            color: ink(CV_ALPHA.soft),
+                            marginBottom: rem(0.2),
+                          }}
+                        >
+                          {editing ? (
+                            <>
+                              <InlineText
+                                onChange={(category) => setGroup({ ...group, category })}
+                                placeholder="Category"
+                                value={group.category}
+                              />
+                              <RemoveButton
+                                label="Remove skill group"
+                                onClick={() => set({ skills: removeAt(skills, i) })}
+                              />
+                            </>
+                          ) : (
+                            group.category
+                          )}
+                        </p>
+                        <div
+                          className="flex flex-wrap"
+                          style={{ columnGap: rem(0.25), rowGap: rem(0.2) }}
+                        >
+                          {group.items.map((item, index) => (
+                            <span
+                              className={cn(
+                                "rounded-full",
+                                editing && "group/pill inline-flex items-center gap-0.5",
+                              )}
+                              key={index}
+                              style={{
+                                background: l.accent
+                                  ? accent(l.accent, CV_ACCENT_ALPHA.chip)
+                                  : shade(CV_ALPHA.pill),
+                                fontSize: rem(l.label),
+                                lineHeight: 1.2,
+                                padding: `${rem(0.125)} ${rem(0.375)}`,
+                              }}
+                            >
+                              {editing ? (
+                                <>
+                                  <InlineText
+                                    onChange={(value) =>
+                                      setGroup({
+                                        ...group,
+                                        items: replaceAt(group.items, index, value),
+                                      })
+                                    }
+                                    placeholder="Skill"
+                                    value={item}
+                                  />
+                                  <RemoveButton
+                                    className="group-hover/pill:opacity-100"
+                                    label="Remove skill"
+                                    onClick={() =>
+                                      setGroup({ ...group, items: removeAt(group.items, index) })
+                                    }
+                                  />
+                                </>
+                              ) : (
+                                item
+                              )}
+                            </span>
+                          ))}
+                          {editing ? (
+                            <AddButton
+                              label="Skill"
+                              onClick={() => setGroup({ ...group, items: [...group.items, ""] })}
                             />
-                            <RemoveButton
-                              className="group-hover/pill:opacity-100"
-                              label="Remove skill"
-                              onClick={() =>
-                                setGroup({ ...group, items: removeAt(group.items, index) })
-                              }
-                            />
-                          </>
-                        ) : (
-                          item
-                        )}
-                      </span>
-                    ))}
-                    {editing ? (
-                      <AddButton
-                        label="Skill"
-                        onClick={() => setGroup({ ...group, items: [...group.items, ""] })}
-                      />
-                    ) : null}
-                  </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-            </div>
-            {editing ? (
-              <AddButton
-                className="mt-2"
-                label="Skill group"
-                onClick={() => set({ skills: [...skills, { category: "", items: [""] }] })}
-              />
-            ) : null}
-          </Section>
-        ) : null}
-
-        {experiences.length > 0 || editing ? (
-          <Section l={l} title={t.experience}>
-            {experiences.map((experience, i) => {
-              const setExperience = (next: (typeof experiences)[number]) =>
-                set({ experiences: replaceAt(experiences, i, next) });
-              const meta = [dateRange(experience.start, experience.end), experience.location];
-
-              return (
-                <div
-                  className="group"
-                  key={i}
-                  style={{ marginBottom: gapAfter(i, experiences.length, l.entryGap) }}
-                >
-                  <EntryHeader l={l}>
-                    <p className="min-w-0">
-                      {editing ? (
-                        <>
-                          <InlineText
-                            className="font-semibold"
-                            onChange={(role) => setExperience({ ...experience, role })}
-                            placeholder="Role"
-                            value={experience.role}
-                          />
-                          <span style={{ color: ink(CV_ALPHA.muted) }}>{CV_SEPARATOR}</span>
-                          <InlineText
-                            onChange={(company) => setExperience({ ...experience, company })}
-                            placeholder="Company"
-                            style={{ color: ink(CV_ALPHA.muted) }}
-                            value={experience.company}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <span className="font-semibold">{experience.role}</span>
-                          <span
-                            style={{ color: ink(CV_ALPHA.muted) }}
-                          >{`${CV_SEPARATOR}${experience.company}`}</span>
-                        </>
-                      )}
-                    </p>
-
-                    {editing ? (
-                      <span className="flex shrink-0 items-center gap-1">
-                        <Chip l={l}>
-                          <InlineText
-                            onChange={(start) => setExperience({ ...experience, start })}
-                            placeholder="Start"
-                            value={experience.start ?? ""}
-                          />
-                          {" - "}
-                          <InlineText
-                            onChange={(end) => setExperience({ ...experience, end })}
-                            placeholder="Present"
-                            value={experience.end ?? ""}
-                          />
-                          {CV_SEPARATOR}
-                          <InlineText
-                            onChange={(location) => setExperience({ ...experience, location })}
-                            placeholder="Location"
-                            value={experience.location ?? ""}
-                          />
-                        </Chip>
-                        <RemoveButton
-                          label="Remove experience"
-                          onClick={() => set({ experiences: removeAt(experiences, i) })}
-                        />
-                      </span>
-                    ) : meta.some(Boolean) ? (
-                      <EntryMeta l={l} parts={meta} />
-                    ) : null}
-                  </EntryHeader>
-
-                  <div style={entryBodyIndent(l)}>
-                  <Bullets
-                    items={experience.bullets}
-                    l={l}
-                    onChange={
-                      editing
-                        ? (bullets) => setExperience({ ...experience, bullets })
-                        : undefined
-                    }
+                {editing ? (
+                  <AddButton
+                    className="mt-2"
+                    label="Skill group"
+                    onClick={() => set({ skills: [...skills, { category: "", items: [""] }] })}
                   />
-                  <Stack
-                    items={experience.stack}
-                    l={l}
-                    onChange={
-                      editing ? (stack) => setExperience({ ...experience, stack }) : undefined
-                    }
-                  />
-                  </div>
-                </div>
-              );
-            })}
-            {editing ? (
-              <AddButton
-                className="mt-2"
-                label="Experience"
-                onClick={() =>
-                  set({
-                    experiences: [
-                      ...experiences,
-                      {
-                        company: "",
-                        role: "",
-                        location: "",
-                        start: "",
-                        end: "",
-                        bullets: [""],
-                        stack: [],
-                      },
-                    ],
-                  })
-                }
-              />
+                ) : null}
+              </Section>
             ) : null}
-          </Section>
-        ) : null}
 
-        {projects.length > 0 || editing ? (
-          <Section l={l} title={t.projects}>
-            {projects.map((project, i) => {
-              const setProject = (next: (typeof projects)[number]) =>
-                set({ projects: replaceAt(projects, i, next) });
-
-              return (
-                <div
-                  className="group"
-                  key={i}
-                  style={{ marginBottom: gapAfter(i, projects.length, l.entryGap) }}
-                >
-                  <EntryHeader l={l}>
-                    <p className="min-w-0 font-semibold">
-                      {editing ? (
-                        <InlineText
-                          onChange={(title) => setProject({ ...project, title })}
-                          placeholder="Project"
-                          value={project.title}
-                        />
-                      ) : (
-                        project.title
-                      )}
-                    </p>
-                    {editing ? (
-                      <span
-                        className="flex shrink-0 items-center gap-1 whitespace-nowrap"
-                        style={{ fontSize: rem(l.meta), color: ink(CV_ALPHA.soft) }}
-                      >
-                        <InlineText
-                          onChange={(link) => setProject({ ...project, link })}
-                          placeholder="Link"
-                          value={project.link ?? ""}
-                        />
-                        <RemoveButton
-                          label="Remove project"
-                          onClick={() => set({ projects: removeAt(projects, i) })}
-                        />
-                      </span>
-                    ) : project.link ? (
-                      <span
-                        className="shrink-0 whitespace-nowrap"
-                        style={{ fontSize: rem(l.meta), color: ink(CV_ALPHA.soft) }}
-                      >
-                        {project.link}
-                      </span>
-                    ) : null}
-                  </EntryHeader>
-                  <div style={entryBodyIndent(l)}>
-                  <Bullets
-                    items={project.bullets}
-                    l={l}
-                    onChange={editing ? (bullets) => setProject({ ...project, bullets }) : undefined}
-                  />
-                  <Stack
-                    items={project.stack}
-                    l={l}
-                    onChange={editing ? (stack) => setProject({ ...project, stack }) : undefined}
-                  />
-                  </div>
-                </div>
-              );
-            })}
-            {editing ? (
-              <AddButton
-                className="mt-2"
-                label="Project"
-                onClick={() =>
-                  set({ projects: [...projects, { title: "", link: "", bullets: [""], stack: [] }] })
-                }
-              />
-            ) : null}
-          </Section>
-        ) : null}
-
-        {education.length > 0 || editing ? (
-          <Section l={l} title={t.education}>
-            {education.map((entry, i) => {
-              const setEntry = (next: (typeof education)[number]) =>
-                set({ education: replaceAt(education, i, next) });
-
-              return (
-                <div
-                  className="group"
-                  key={i}
-                  style={{ marginBottom: gapAfter(i, education.length, 0.375) }}
-                >
-                  <EntryHeader l={l}>
-                    <p className="min-w-0">
-                      {editing ? (
-                        <>
-                          <InlineText
-                            className="font-semibold"
-                            onChange={(degree) => setEntry({ ...entry, degree })}
-                            placeholder="Degree"
-                            value={entry.degree}
-                          />
-                          <span style={{ color: ink(CV_ALPHA.muted) }}>{CV_SEPARATOR}</span>
-                          <InlineText
-                            onChange={(institution) => setEntry({ ...entry, institution })}
-                            placeholder="Institution"
-                            style={{ color: ink(CV_ALPHA.muted) }}
-                            value={entry.institution}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <span className="font-semibold">{entry.degree}</span>
-                          <span
-                            style={{ color: ink(CV_ALPHA.muted) }}
-                          >{`${CV_SEPARATOR}${entry.institution}`}</span>
-                        </>
-                      )}
-                    </p>
-                    {editing ? (
-                      <span className="flex shrink-0 items-center gap-1">
-                        <Chip l={l}>
-                          <InlineText
-                            onChange={(dates) => setEntry({ ...entry, dates })}
-                            placeholder="Dates"
-                            value={entry.dates ?? ""}
-                          />
-                        </Chip>
-                        <RemoveButton
-                          label="Remove education entry"
-                          onClick={() => set({ education: removeAt(education, i) })}
-                        />
-                      </span>
-                    ) : entry.dates ? (
-                      <Chip l={l}>{entry.dates}</Chip>
-                    ) : null}
-                  </EntryHeader>
-                </div>
-              );
-            })}
-            {editing ? (
-              <AddButton
-                className="mt-2"
-                label="Education"
-                onClick={() =>
-                  set({ education: [...education, { institution: "", degree: "", dates: "" }] })
-                }
-              />
-            ) : null}
-          </Section>
-        ) : null}
-
-        {languages.length > 0 || editing ? (
-          <Section l={l} title={t.languages}>
-            {editing ? (
-              <div className="flex flex-wrap items-center" style={{ columnGap: rem(0.5), rowGap: rem(0.25) }}>
-                {languages.map((entry, i) => {
-                  const setEntry = (next: (typeof languages)[number]) =>
-                    set({ languages: replaceAt(languages, i, next) });
+            {experiences.length > 0 || editing ? (
+              <Section l={l} title={t.experience}>
+                {experiences.map((experience, i) => {
+                  const setExperience = (next: (typeof experiences)[number]) =>
+                    set({ experiences: replaceAt(experiences, i, next) });
+                  const meta = [dateRange(experience.start, experience.end), experience.location];
 
                   return (
-                    <span className="group flex items-center" key={i}>
-                      <InlineText
-                        onChange={(name) => setEntry({ ...entry, name })}
-                        placeholder="Language"
-                        value={entry.name}
-                      />
-                      <span>{" ("}</span>
-                      <InlineText
-                        onChange={(level) => setEntry({ ...entry, level })}
-                        placeholder="Level"
-                        value={entry.level}
-                      />
-                      <span>{")"}</span>
-                      <RemoveButton
-                        label="Remove language"
-                        onClick={() => set({ languages: removeAt(languages, i) })}
-                      />
-                    </span>
+                    <div
+                      className="group"
+                      key={i}
+                      style={{ marginBottom: gapAfter(i, experiences.length, l.entryGap) }}
+                    >
+                      <EntryHeader l={l}>
+                        <p className="min-w-0">
+                          {editing ? (
+                            <>
+                              <InlineText
+                                className="font-semibold"
+                                onChange={(role) => setExperience({ ...experience, role })}
+                                placeholder="Role"
+                                value={experience.role}
+                              />
+                              <span style={{ color: ink(CV_ALPHA.muted) }}>{CV_SEPARATOR}</span>
+                              <InlineText
+                                onChange={(company) => setExperience({ ...experience, company })}
+                                placeholder="Company"
+                                style={{ color: ink(CV_ALPHA.muted) }}
+                                value={experience.company}
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-semibold">{experience.role}</span>
+                              <span
+                                style={{ color: ink(CV_ALPHA.muted) }}
+                              >{`${CV_SEPARATOR}${experience.company}`}</span>
+                            </>
+                          )}
+                        </p>
+
+                        {editing ? (
+                          <span className="flex shrink-0 items-center gap-1">
+                            <Chip l={l}>
+                              <InlineText
+                                onChange={(start) => setExperience({ ...experience, start })}
+                                placeholder="Start"
+                                value={experience.start ?? ""}
+                              />
+                              {" - "}
+                              <InlineText
+                                onChange={(end) => setExperience({ ...experience, end })}
+                                placeholder="Present"
+                                value={experience.end ?? ""}
+                              />
+                              {CV_SEPARATOR}
+                              <InlineText
+                                onChange={(location) => setExperience({ ...experience, location })}
+                                placeholder="Location"
+                                value={experience.location ?? ""}
+                              />
+                            </Chip>
+                            <RemoveButton
+                              label="Remove experience"
+                              onClick={() => set({ experiences: removeAt(experiences, i) })}
+                            />
+                          </span>
+                        ) : meta.some(Boolean) ? (
+                          <EntryMeta l={l} parts={meta} />
+                        ) : null}
+                      </EntryHeader>
+
+                      <div style={entryBodyIndent(l)}>
+                        <Bullets
+                          items={experience.bullets}
+                          l={l}
+                          onChange={
+                            editing
+                              ? (bullets) => setExperience({ ...experience, bullets })
+                              : undefined
+                          }
+                        />
+                        <Stack
+                          items={experience.stack}
+                          l={l}
+                          onChange={
+                            editing ? (stack) => setExperience({ ...experience, stack }) : undefined
+                          }
+                        />
+                      </div>
+                    </div>
                   );
                 })}
-                <AddButton
-                  label="Language"
-                  onClick={() => set({ languages: [...languages, { name: "", level: "" }] })}
-                />
-              </div>
-            ) : (
-              <p>{languages.map((entry) => `${entry.name} (${entry.level})`).join(CV_SEPARATOR)}</p>
-            )}
-          </Section>
-        ) : null}
-        </div>
-      </article>
+                {editing ? (
+                  <AddButton
+                    className="mt-2"
+                    label="Experience"
+                    onClick={() =>
+                      set({
+                        experiences: [
+                          ...experiences,
+                          {
+                            company: "",
+                            role: "",
+                            location: "",
+                            start: "",
+                            end: "",
+                            bullets: [""],
+                            stack: [],
+                          },
+                        ],
+                      })
+                    }
+                  />
+                ) : null}
+              </Section>
+            ) : null}
+
+            {projects.length > 0 || editing ? (
+              <Section l={l} title={t.projects}>
+                {projects.map((project, i) => {
+                  const setProject = (next: (typeof projects)[number]) =>
+                    set({ projects: replaceAt(projects, i, next) });
+
+                  return (
+                    <div
+                      className="group"
+                      key={i}
+                      style={{ marginBottom: gapAfter(i, projects.length, l.entryGap) }}
+                    >
+                      <EntryHeader l={l}>
+                        <p className="min-w-0 font-semibold">
+                          {editing ? (
+                            <InlineText
+                              onChange={(title) => setProject({ ...project, title })}
+                              placeholder="Project"
+                              value={project.title}
+                            />
+                          ) : (
+                            project.title
+                          )}
+                        </p>
+                        {editing ? (
+                          <span
+                            className="flex shrink-0 items-center gap-1 whitespace-nowrap"
+                            style={{ fontSize: rem(l.meta), color: ink(CV_ALPHA.soft) }}
+                          >
+                            <InlineText
+                              onChange={(link) => setProject({ ...project, link })}
+                              placeholder="Link"
+                              value={project.link ?? ""}
+                            />
+                            <RemoveButton
+                              label="Remove project"
+                              onClick={() => set({ projects: removeAt(projects, i) })}
+                            />
+                          </span>
+                        ) : project.link ? (
+                          <span
+                            className="shrink-0 whitespace-nowrap"
+                            style={{ fontSize: rem(l.meta), color: ink(CV_ALPHA.soft) }}
+                          >
+                            {project.link}
+                          </span>
+                        ) : null}
+                      </EntryHeader>
+                      <div style={entryBodyIndent(l)}>
+                        <Bullets
+                          items={project.bullets}
+                          l={l}
+                          onChange={
+                            editing ? (bullets) => setProject({ ...project, bullets }) : undefined
+                          }
+                        />
+                        <Stack
+                          items={project.stack}
+                          l={l}
+                          onChange={
+                            editing ? (stack) => setProject({ ...project, stack }) : undefined
+                          }
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                {editing ? (
+                  <AddButton
+                    className="mt-2"
+                    label="Project"
+                    onClick={() =>
+                      set({
+                        projects: [...projects, { title: "", link: "", bullets: [""], stack: [] }],
+                      })
+                    }
+                  />
+                ) : null}
+              </Section>
+            ) : null}
+
+            {education.length > 0 || editing ? (
+              <Section l={l} title={t.education}>
+                {education.map((entry, i) => {
+                  const setEntry = (next: (typeof education)[number]) =>
+                    set({ education: replaceAt(education, i, next) });
+
+                  return (
+                    <div
+                      className="group"
+                      key={i}
+                      style={{ marginBottom: gapAfter(i, education.length, 0.375) }}
+                    >
+                      <EntryHeader l={l}>
+                        <p className="min-w-0">
+                          {editing ? (
+                            <>
+                              <InlineText
+                                className="font-semibold"
+                                onChange={(degree) => setEntry({ ...entry, degree })}
+                                placeholder="Degree"
+                                value={entry.degree}
+                              />
+                              <span style={{ color: ink(CV_ALPHA.muted) }}>{CV_SEPARATOR}</span>
+                              <InlineText
+                                onChange={(institution) => setEntry({ ...entry, institution })}
+                                placeholder="Institution"
+                                style={{ color: ink(CV_ALPHA.muted) }}
+                                value={entry.institution}
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-semibold">{entry.degree}</span>
+                              <span
+                                style={{ color: ink(CV_ALPHA.muted) }}
+                              >{`${CV_SEPARATOR}${entry.institution}`}</span>
+                            </>
+                          )}
+                        </p>
+                        {editing ? (
+                          <span className="flex shrink-0 items-center gap-1">
+                            <Chip l={l}>
+                              <InlineText
+                                onChange={(dates) => setEntry({ ...entry, dates })}
+                                placeholder="Dates"
+                                value={entry.dates ?? ""}
+                              />
+                            </Chip>
+                            <RemoveButton
+                              label="Remove education entry"
+                              onClick={() => set({ education: removeAt(education, i) })}
+                            />
+                          </span>
+                        ) : entry.dates ? (
+                          <Chip l={l}>{entry.dates}</Chip>
+                        ) : null}
+                      </EntryHeader>
+                    </div>
+                  );
+                })}
+                {editing ? (
+                  <AddButton
+                    className="mt-2"
+                    label="Education"
+                    onClick={() =>
+                      set({ education: [...education, { institution: "", degree: "", dates: "" }] })
+                    }
+                  />
+                ) : null}
+              </Section>
+            ) : null}
+
+            {languages.length > 0 || editing ? (
+              <Section l={l} title={t.languages}>
+                {editing ? (
+                  <div
+                    className="flex flex-wrap items-center"
+                    style={{ columnGap: rem(0.5), rowGap: rem(0.25) }}
+                  >
+                    {languages.map((entry, i) => {
+                      const setEntry = (next: (typeof languages)[number]) =>
+                        set({ languages: replaceAt(languages, i, next) });
+
+                      return (
+                        <span className="group flex items-center" key={i}>
+                          <InlineText
+                            onChange={(name) => setEntry({ ...entry, name })}
+                            placeholder="Language"
+                            value={entry.name}
+                          />
+                          <span>{" ("}</span>
+                          <InlineText
+                            onChange={(level) => setEntry({ ...entry, level })}
+                            placeholder="Level"
+                            value={entry.level}
+                          />
+                          <span>{")"}</span>
+                          <RemoveButton
+                            label="Remove language"
+                            onClick={() => set({ languages: removeAt(languages, i) })}
+                          />
+                        </span>
+                      );
+                    })}
+                    <AddButton
+                      label="Language"
+                      onClick={() => set({ languages: [...languages, { name: "", level: "" }] })}
+                    />
+                  </div>
+                ) : (
+                  <p>
+                    {languages.map((entry) => `${entry.name} (${entry.level})`).join(CV_SEPARATOR)}
+                  </p>
+                )}
+              </Section>
+            ) : null}
+          </div>
+        </article>
       </div>
     </div>
   );

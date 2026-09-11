@@ -2,14 +2,14 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { CV_TEMPLATE_IDS, DEFAULT_TEMPLATE, DEFAULT_THEME } from "../../lib/cv-templates";
 import { templateAllowed, themeAllowed } from "../../lib/entitlements";
+import { screenAssertedTerms } from "../lib/asserted";
+import { type JdKeyword, keywordScore } from "../lib/ats";
 import { resolveUserId } from "../lib/auth";
 import { planFor } from "../lib/billing";
-import { type JdKeyword, keywordScore } from "../lib/ats";
 import { withDisplayDates } from "../lib/cv-dates";
 import { CvSchema } from "../lib/cv-schema";
 import { db } from "../lib/db";
 import { applicationGone } from "../lib/gone";
-import { screenAssertedTerms } from "../lib/asserted";
 import { allowedTerms, findFabrications, unsupportedClaims } from "../lib/guard";
 import { extractPdfText, renderCvPdf } from "../lib/pdf";
 import { cvLoop } from "../lib/state";
@@ -49,7 +49,9 @@ export default defineTool({
     language: z
       .string()
       .min(2)
-      .describe("ISO code of the variant being compiled — must be one of the application's target languages"),
+      .describe(
+        "ISO code of the variant being compiled — must be one of the application's target languages",
+      ),
     template: z
       .enum(CV_TEMPLATE_IDS)
       .optional()
@@ -91,7 +93,9 @@ export default defineTool({
     // the orchestrator, which would have to re-type five thousand tokens.
     const stored = readDrafts(application.drafts)[lang];
     if (stored === undefined) {
-      throw new Error(`No draft for "${lang}" on this application — call write_cv for that language first.`);
+      throw new Error(
+        `No draft for "${lang}" on this application — call write_cv for that language first.`,
+      );
     }
     const cv = withDisplayDates(CvSchema.parse(stored), lang);
 
@@ -129,7 +133,10 @@ export default defineTool({
       where: { userId },
       include: { skills: true, experiences: true, projects: true },
     });
-    if (!profile) throw new Error("The user has no master profile yet. Tell them to fill it in first, and stop.");
+    if (!profile)
+      throw new Error(
+        "The user has no master profile yet. Tell them to fill it in first, and stop.",
+      );
 
     // The job's own vocabulary widens what the CV may say — see findFabrications.
     const jdVocabulary = ((application.jdKeywords ?? []) as JdKeyword[]).flatMap((keyword) => [
@@ -283,7 +290,10 @@ export default defineTool({
      * cv-writer concrete instead of a warning to be cautious about.
      */
     const jdKeywords = (application.jdKeywords ?? []) as JdKeyword[];
-    const missingMustHaves = keywordScore(text, jdKeywords.filter((k) => k.weight >= 3)).missing;
+    const missingMustHaves = keywordScore(
+      text,
+      jdKeywords.filter((k) => k.weight >= 3),
+    ).missing;
 
     yield {
       phase: "complete",

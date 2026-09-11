@@ -1,7 +1,7 @@
-import Link from "next/link";
-import type { Metadata } from "next";
-import { Suspense } from "react";
 import { AlertTriangleIcon, FileTextIcon } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
 
 import { billingState } from "@/agent/lib/billing.ts";
 import { requireUser } from "@/app/lib/current-user";
@@ -103,7 +103,9 @@ export default async function BillingPage() {
               </Badge>
             ) : null}
             <Link
-              className={cn(buttonVariants({ variant: state.plan === "free" ? "default" : "outline" }))}
+              className={cn(
+                buttonVariants({ variant: state.plan === "free" ? "default" : "outline" }),
+              )}
               href="/dashboard/pricing"
             >
               {state.plan === "free" ? "Upgrade" : "Change plan"}
@@ -125,9 +127,7 @@ export default async function BillingPage() {
           </div>
           <Progress
             indicatorClassName={cn(spent && "bg-warning")}
-            value={
-              state.limits.applications === 0 ? 100 : (used / state.limits.applications) * 100
-            }
+            value={state.limits.applications === 0 ? 100 : (used / state.limits.applications) * 100}
           />
         </div>
 

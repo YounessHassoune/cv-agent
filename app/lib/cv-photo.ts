@@ -110,10 +110,7 @@ function encodePng(
   const raw = Buffer.alloc(height * (stride + 1));
   for (let y = 0; y < height; y++) {
     raw[y * (stride + 1)] = 0;
-    Buffer.from(data.buffer, data.byteOffset + y * stride, stride).copy(
-      raw,
-      y * (stride + 1) + 1,
-    );
+    Buffer.from(data.buffer, data.byteOffset + y * stride, stride).copy(raw, y * (stride + 1) + 1);
   }
 
   return Buffer.concat([
@@ -164,7 +161,9 @@ function isPageSized(candidate: Candidate, pageAspect: number): boolean {
 /** `pdf` is a pdf.js document proxy, already opened for the text pass. */
 export async function findPdfPhoto(pdf: unknown): Promise<CvPhoto | null> {
   const document = pdf as Parameters<typeof extractImages>[0] & {
-    getPage: (n: number) => Promise<{ getViewport: (o: { scale: number }) => { width: number; height: number } }>;
+    getPage: (
+      n: number,
+    ) => Promise<{ getViewport: (o: { scale: number }) => { width: number; height: number } }>;
   };
 
   const images = await extractImages(document, PHOTO_PAGE).catch(() => []);
@@ -201,18 +200,17 @@ export async function findDocxPhoto(bytes: Uint8Array): Promise<CvPhoto | null> 
     .convertToHtml(
       { buffer: Buffer.from(bytes) },
       {
-        convertImage: mammoth.images.imgElement(async (image: {
-          contentType?: string;
-          read: (encoding?: string) => Promise<Buffer>;
-        }) => {
-          const mediaType = image.contentType ?? "";
-          if (mediaType === "image/png" || mediaType === "image/jpeg") {
-            const buffer = await image.read();
-            const size = dimensionsOf(buffer);
-            if (size) found.push({ ...size, buffer, mediaType });
-          }
-          return { src: "" };
-        }),
+        convertImage: mammoth.images.imgElement(
+          async (image: { contentType?: string; read: (encoding?: string) => Promise<Buffer> }) => {
+            const mediaType = image.contentType ?? "";
+            if (mediaType === "image/png" || mediaType === "image/jpeg") {
+              const buffer = await image.read();
+              const size = dimensionsOf(buffer);
+              if (size) found.push({ ...size, buffer, mediaType });
+            }
+            return { src: "" };
+          },
+        ),
       },
     )
     .catch(() => undefined);

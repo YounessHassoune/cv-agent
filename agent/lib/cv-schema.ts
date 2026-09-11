@@ -12,22 +12,19 @@ import { z } from "zod";
  * empty string as absent.
  */
 export const CvSchema = z.object({
-  language: z
-    .string()
-    .min(2)
-    .describe("ISO language code the CV is written in, e.g. 'en' or 'fr'"),
+  language: z.string().min(2).describe("ISO language code the CV is written in, e.g. 'en' or 'fr'"),
   header: z.object({
     fullName: z.string().min(1),
     headline: z.string().min(1).describe("Tailored to the target role"),
     email: z.string().min(3),
-    phone: z.string().describe("Phone number, or \"\" when the profile has none"),
-    location: z.string().describe("City / country, or \"\""),
+    phone: z.string().describe('Phone number, or "" when the profile has none'),
+    location: z.string().describe('City / country, or ""'),
     links: z.array(z.string()).describe("Profile URLs; empty array when there are none"),
   }),
   summary: z
     .string()
     .max(600)
-    .describe("2-3 sentence professional summary tailored to the JD, or \"\" for none"),
+    .describe('2-3 sentence professional summary tailored to the JD, or "" for none'),
   skills: z
     .array(
       z.object({
@@ -41,9 +38,9 @@ export const CvSchema = z.object({
       z.object({
         company: z.string().min(1),
         role: z.string().min(1),
-        location: z.string().describe("City / country / \"Remote\", or \"\""),
+        location: z.string().describe('City / country / "Remote", or ""'),
         start: z.string().describe("Display date, e.g. 'Jan 2022'"),
-        end: z.string().describe("Display date; \"\" for a role still held"),
+        end: z.string().describe('Display date; "" for a role still held'),
         bullets: z.array(z.string().min(1)).min(1),
         stack: z.array(z.string()).describe("Tech used in this role; [] when none"),
       }),
@@ -53,7 +50,7 @@ export const CvSchema = z.object({
     .array(
       z.object({
         title: z.string().min(1),
-        link: z.string().describe("Project URL, or \"\""),
+        link: z.string().describe('Project URL, or ""'),
         bullets: z.array(z.string().min(1)).min(1),
         stack: z.array(z.string()).describe("Tech used; [] when none"),
       }),
@@ -64,7 +61,7 @@ export const CvSchema = z.object({
       z.object({
         institution: z.string().min(1),
         degree: z.string().min(1),
-        dates: z.string().describe("Display dates, or \"\""),
+        dates: z.string().describe('Display dates, or ""'),
       }),
     )
     .describe("Empty array when the profile lists no education"),
@@ -117,8 +114,6 @@ export const EditedCvSchema = z.object({
       stack: z.array(z.string()),
     }),
   ),
-  education: z.array(
-    z.object({ institution: z.string(), degree: z.string(), dates: z.string() }),
-  ),
+  education: z.array(z.object({ institution: z.string(), degree: z.string(), dates: z.string() })),
   languages: z.array(z.object({ name: z.string(), level: z.string() })),
 });

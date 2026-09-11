@@ -9,7 +9,10 @@ export const dynamic = "force-dynamic";
 /** Falls back to the first meaningful line of the JD when no CV exists yet. */
 function titleOf(headline: string | undefined, jdText: string): string {
   if (headline) return headline;
-  const firstLine = jdText.split("\n").map((line) => line.trim()).find(Boolean);
+  const firstLine = jdText
+    .split("\n")
+    .map((line) => line.trim())
+    .find(Boolean);
   if (!firstLine) return "Untitled draft";
   return firstLine.length > 70 ? `${firstLine.slice(0, 70)}…` : firstLine;
 }
@@ -43,7 +46,10 @@ export default async function ApplicationsPage() {
       null,
     );
     const headline = Object.values(variants)
-      .map((variant) => (variant.cvJson as { header?: { headline?: string } } | null)?.header?.headline)
+      .map(
+        (variant) =>
+          (variant.cvJson as { header?: { headline?: string } } | null)?.header?.headline,
+      )
       .find(Boolean);
     const jdText = application.jdText ?? "";
 

@@ -23,15 +23,7 @@ export function HeroVisual() {
     >
       {/* The sheet behind, just enough of it to read as a stack rather than a
           single floating rectangle. */}
-      <rect
-        height="360"
-        opacity="0.06"
-        rx="14"
-        width="290"
-        x="128"
-        y="52"
-        fill="currentColor"
-      />
+      <rect height="360" opacity="0.06" rx="14" width="290" x="128" y="52" fill="currentColor" />
       <rect
         height="360"
         opacity="0.1"

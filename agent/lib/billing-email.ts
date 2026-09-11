@@ -70,9 +70,10 @@ async function send(options: {
 }
 
 function money(amount: number, currency: string): string {
-  return new Intl.NumberFormat("en", { style: "currency", currency: currency.toUpperCase() }).format(
-    amount,
-  );
+  return new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+  }).format(amount);
 }
 
 function longDate(value: Date | null): string | null {
@@ -260,11 +261,7 @@ export async function sendPaymentReceipt(options: {
 }
 
 /** 8. Most of the allowance is gone. */
-export async function sendQuotaWarning(
-  to: Recipient,
-  plan: PlanId,
-  used: number,
-): Promise<void> {
+export async function sendQuotaWarning(to: Recipient, plan: PlanId, used: number): Promise<void> {
   const limits = entitlements(plan);
   const left = Math.max(0, limits.applications - used);
 

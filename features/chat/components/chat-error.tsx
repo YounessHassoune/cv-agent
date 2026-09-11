@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { AlertCircleIcon, SparklesIcon } from "lucide-react";
+import Link from "next/link";
 import { isPaywall, isStuckThread } from "../lib/errors";
 
 type Props = {

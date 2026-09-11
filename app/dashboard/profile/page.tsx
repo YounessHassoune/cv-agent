@@ -1,7 +1,7 @@
 import { db } from "@/agent/lib/db.ts";
 import { requireUser } from "@/app/lib/current-user";
 import { DEFAULT_TEMPLATE, DEFAULT_THEME } from "@/lib/cv-templates";
-import { type ProfileForm, ProfileEditor } from "./profile-editor";
+import { ProfileEditor, type ProfileForm } from "./profile-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,9 @@ export default async function ProfilePage() {
   });
 
   if (!profile) {
-    return <ProfileEditor initial={{ ...empty, contact: { ...empty.contact, email: user.email } }} />;
+    return (
+      <ProfileEditor initial={{ ...empty, contact: { ...empty.contact, email: user.email } }} />
+    );
   }
 
   const contact = (profile.contact ?? {}) as Partial<ProfileForm["contact"]>;

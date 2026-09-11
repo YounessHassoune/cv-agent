@@ -1,9 +1,9 @@
 import {
-  type JdKeyword,
-  SEMANTIC_CONTROL_TEXT,
   cosine,
   embedText,
   idealCandidateText,
+  type JdKeyword,
+  SEMANTIC_CONTROL_TEXT,
 } from "./ats.ts";
 
 /**
@@ -72,7 +72,8 @@ export async function screenAssertedTerms(
 
   const known = new Set<string>();
   for (const keyword of context.keywords) {
-    for (const spelling of [keyword.term, ...(keyword.aliases ?? [])]) known.add(normalize(spelling));
+    for (const spelling of [keyword.term, ...(keyword.aliases ?? [])])
+      known.add(normalize(spelling));
   }
   for (const term of context.profileTerms) known.add(normalize(term));
 

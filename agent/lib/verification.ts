@@ -92,7 +92,12 @@ export async function consumeVerification(token: string | null): Promise<Consume
   const digest = hashToken(token);
   const record = await db.verificationToken.findUnique({
     where: { tokenHash: digest },
-    select: { id: true, expiresAt: true, tokenHash: true, user: { select: { id: true, email: true } } },
+    select: {
+      id: true,
+      expiresAt: true,
+      tokenHash: true,
+      user: { select: { id: true, email: true } },
+    },
   });
   if (!record) return { status: "invalid" };
 

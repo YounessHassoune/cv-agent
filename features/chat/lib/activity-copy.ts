@@ -78,7 +78,11 @@ export const AFTER_TOOL_PROGRESS: Record<string, readonly string[]> = {
     "Writing your recap…",
     "Almost there…",
   ],
-  compilepdf: ["Reading the compiled draft…", "Checking the match with the job next…", "Still on it…"],
+  compilepdf: [
+    "Reading the compiled draft…",
+    "Checking the match with the job next…",
+    "Still on it…",
+  ],
   writecv: ["Draft stored…", "Sending it to be compiled…", "Still on it…"],
   cvwriter: ["Reading the draft…", "Sending it to be compiled…", "Still on it…"],
   analyzejd: ["Job offer analyzed…", "Briefing the CV writer…", "Still on it…"],

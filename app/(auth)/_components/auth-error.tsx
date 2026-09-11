@@ -28,7 +28,9 @@ export function AuthError({ code }: { readonly code?: string }) {
       role="alert"
     >
       <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
-      <p className="text-foreground">{messages[code] ?? "Something went wrong. Please try again."}</p>
+      <p className="text-foreground">
+        {messages[code] ?? "Something went wrong. Please try again."}
+      </p>
     </div>
   );
 }

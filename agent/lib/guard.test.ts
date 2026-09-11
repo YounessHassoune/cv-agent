@@ -30,7 +30,10 @@ assert.deepEqual(findFabrications(cvWith(["k8s"]), profile, ["Kubernetes", "k8s"
 
 // A term in neither list is still an invention.
 assert.equal(findFabrications(cvWith(["C#"]), profile, ["TypeScript"]).length, 1);
-assert.ok(findFabrications(cvWith(["C#"]), profile).length === 1, "no JD vocabulary = old behaviour");
+assert.ok(
+  findFabrications(cvWith(["C#"]), profile).length === 1,
+  "no JD vocabulary = old behaviour",
+);
 
 // Employers and projects are facts and are never widened by the JD.
 const wrongEmployer = {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,12 +83,7 @@ export function AuthForm({
   const [pending, setPending] = useState(false);
 
   return (
-    <form
-      action={action}
-      className="space-y-4"
-      method="post"
-      onSubmit={() => setPending(true)}
-    >
+    <form action={action} className="space-y-4" method="post" onSubmit={() => setPending(true)}>
       {children}
       <button
         className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary font-medium text-primary-foreground text-sm shadow-soft transition-all hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/45 focus-visible:outline-none active:translate-y-px disabled:opacity-70"

@@ -1,15 +1,9 @@
 "use client";
 
+import { GemIcon, MenuIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
-import {
-  GemIcon,
-  MenuIcon,
-  PanelLeftCloseIcon,
-  PanelLeftOpenIcon,
-  PlusIcon,
-} from "lucide-react";
 
 import { usePlan } from "@/components/plan-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -84,6 +78,7 @@ function NavLinks({
       {[...primaryNav, ...secondaryNav].map((item) => {
         const active = isActive(pathname, item.href);
         const link = (
+          // biome-ignore lint/correctness/useJsxKeyInIterable: the key lives on the wrapper returned below, not on this extracted element.
           <Link
             aria-current={active ? "page" : undefined}
             className={cn(
@@ -139,17 +134,15 @@ function UsageMeter({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?
     <div className="space-y-2 rounded-lg border bg-card/60 p-3">
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-medium text-xs">
-          {used} of {limits.applications} {limits.applications === 1 ? "application" : "applications"}
+          {used} of {limits.applications}{" "}
+          {limits.applications === 1 ? "application" : "applications"}
         </span>
         {credits > 0 ? (
           <span className="text-muted-foreground text-[11px]">+{credits} credits</span>
         ) : null}
       </div>
 
-      <Progress
-        indicatorClassName={cn(spent && "bg-warning")}
-        value={Math.min(100, percent)}
-      />
+      <Progress indicatorClassName={cn(spent && "bg-warning")} value={Math.min(100, percent)} />
 
       {free ? (
         <Link

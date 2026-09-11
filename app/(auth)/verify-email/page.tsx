@@ -1,7 +1,7 @@
+import { MailCheckIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { MailCheckIcon } from "lucide-react";
 
 import { getCurrentUser } from "@/app/lib/current-user";
 import { AuthError } from "../_components/auth-error";

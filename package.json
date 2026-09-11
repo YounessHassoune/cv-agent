@@ -21,7 +21,13 @@
     "db:studio": "prisma studio",
     "verify": "node scripts/verify-pipeline.ts",
     "check:templates": "node scripts/check-templates.ts",
-    "stripe:seed": "node --env-file=.env scripts/stripe-seed.ts"
+    "stripe:seed": "node --env-file=.env scripts/stripe-seed.ts",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "lint:ci": "biome ci .",
+    "format": "biome format --write .",
+    "check": "pnpm lint && pnpm typecheck",
+    "prepare": "husky"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -62,10 +68,13 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.13",
     "@types/node": "~26.2.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "19.2.3",
+    "husky": "^9.1.7",
     "just-bash": "^3.4.2",
+    "lint-staged": "^17.5.1",
     "prisma": "^7.9.1",
     "typescript": "6.0.3"
   },

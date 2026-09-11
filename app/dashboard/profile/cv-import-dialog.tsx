@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { FileUpIcon, Loader2Icon, LockIcon, UploadIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ImportedProfile } from "@/agent/lib/cv-import-schema.ts";
 import { LockPill, usePlan } from "@/components/plan-provider";

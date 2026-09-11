@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { CheckIcon } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,9 +87,7 @@ export function PasswordSection({ hasPassword }: { readonly hasPassword: boolean
               <CheckIcon className="size-3.5" /> Password updated.
             </span>
           ) : null}
-          {status === "error" ? (
-            <span className="text-destructive text-sm">{message}</span>
-          ) : null}
+          {status === "error" ? <span className="text-destructive text-sm">{message}</span> : null}
         </div>
       </form>
     </SettingsSection>

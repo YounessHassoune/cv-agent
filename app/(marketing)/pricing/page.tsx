@@ -18,10 +18,7 @@ export default async function PricingPage() {
   // already theirs, which is the difference between a price list and a billing
   // page.
   const user = await getCurrentUser();
-  const [plan, prices] = await Promise.all([
-    user ? planFor(user.userId) : null,
-    getPriceCatalog(),
-  ]);
+  const [plan, prices] = await Promise.all([user ? planFor(user.userId) : null, getPriceCatalog()]);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-14 md:px-8">
