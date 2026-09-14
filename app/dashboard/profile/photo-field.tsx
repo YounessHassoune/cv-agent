@@ -151,7 +151,7 @@ export function PhotoField({
             ) : null}
           </div>
           <p className="text-muted-foreground text-xs">
-            Stored on Cloudinary and shown in the preview only. Compiled PDFs stay photo-free — ATS
+            Stored on Cloudinary and shown in the preview only. Compiled PDFs stay photo-free. ATS
             parsers ignore images and some reject them outright.
           </p>
         </div>

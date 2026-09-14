@@ -59,7 +59,7 @@ function Terms({
   return (
     <div className="space-y-1.5">
       <p className="font-medium text-xs">
-        {title} <span className="text-muted-foreground">— {hint}</span>
+        {title} <span className="text-muted-foreground">({hint})</span>
       </p>
       <div className="flex flex-wrap gap-1.5">
         {terms.map((term) => (
@@ -341,7 +341,7 @@ export function InsightsPanel({
             Check {unsupported.length} claim{unsupported.length === 1 ? "" : "s"} before applying
           </p>
           <p className="text-muted-foreground text-xs leading-relaxed">
-            The CV says these; your profile does not. Keep only what is true — an interviewer will
+            The CV says these; your profile does not. Keep only what is true. An interviewer will
             assume every word is yours.
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -397,7 +397,7 @@ export function InsightsPanel({
         <ScoreRow
           action={
             report.breakdown.semantic === null
-              ? "Not measured — no embedding provider is configured."
+              ? "Not measured. No embedding provider is configured."
               : "Measures how closely the whole CV reads like this job ad. Ask the agent to rewrite your summary and bullets in the job's own words, leading with the work closest to the role."
           }
           label="Reads like the job"
@@ -422,7 +422,7 @@ export function InsightsPanel({
           action={
             report.breakdown.structure >= 85
               ? "Sections and formatting parse cleanly."
-              : "Mostly about numbers: bullets with a figure in them score higher. Ask the agent to quantify more bullets — only where you have a real number."
+              : "Mostly about numbers: bullets with a figure in them score higher. Ask the agent to quantify more bullets, only where you have a real number."
           }
           label="Layout and numbers"
           value={report.breakdown.structure}
@@ -470,7 +470,7 @@ function keywordAction(
   unclaimable: string[],
 ): string {
   if (blocking.length > 0) {
-    return `${blocking.length} required term${blocking.length === 1 ? "" : "s"} the profile can support ${blocking.length === 1 ? "is" : "are"} missing — ask the agent to work ${blocking.slice(0, 2).join(" and ")} into a bullet.`;
+    return `${blocking.length} required term${blocking.length === 1 ? "" : "s"} the profile can support ${blocking.length === 1 ? "is" : "are"} missing. Ask the agent to work ${blocking.slice(0, 2).join(" and ")} into a bullet.`;
   }
   if (listedOnly.length > 0) {
     return `${listedOnly.join(", ")} appear only in the skills list. A term evidenced in a bullet counts for more.`;

@@ -39,7 +39,7 @@ export function CvThemePicker({
     >
       {CV_THEME_LIST.map((option) => (
         <button
-          aria-label={`${option.label} — ${option.description}`}
+          aria-label={`${option.label}: ${option.description}`}
           aria-pressed={value === option.id}
           className={cn(
             dot,

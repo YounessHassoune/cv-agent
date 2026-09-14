@@ -195,7 +195,7 @@ export function UpgradeDialog({
             ) : (
               <UpgradeIcon className="size-3.5" />
             )}
-            {priceLabel === null ? "See plans" : `Upgrade — ${priceLabel}/mo`}
+            {priceLabel === null ? "See plans" : `Upgrade for ${priceLabel}/mo`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { HeroVisual } from "./_components/hero-visual";
 
 export const metadata: Metadata = {
-  title: "Wellsuited — a CV tailored to the job, without the fiction",
+  title: "Wellsuited: a CV tailored to the job, without the fiction",
   description:
     "Paste a job description and get a CV rewritten for it from your own master profile. Every claim checked against what you have actually done, scored against the screen it has to pass.",
 };
@@ -43,7 +43,7 @@ const steps: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: FileCheck2Icon,
     title: "Get a CV written for that job",
-    body: "Your experience, reframed for the role, compiled to a single-column ATS-safe PDF and scored against the ad — with the gaps named, not hidden.",
+    body: "Your experience, reframed for the role, compiled to a single-column ATS-safe PDF and scored against the ad, with the gaps named, not hidden.",
   },
 ];
 

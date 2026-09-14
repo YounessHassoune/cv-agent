@@ -26,7 +26,7 @@ export function ChatLockedNotice({
         plan.limits.applications === 1
           ? "You have used your free application"
           : `You have used all ${plan.limits.applications} applications`,
-      body: "Nothing is lost — every CV you have tailored stays in your account. A paid plan starts the count again and adds follow-up chat on each one.",
+      body: "Nothing is lost. Every CV you have tailored stays in your account. A paid plan starts the count again and adds follow-up chat on each one.",
     },
     turns: {
       title: `You have used all ${plan.limits.agentTurns} messages on ${plan.limits.label}`,
@@ -37,7 +37,7 @@ export function ChatLockedNotice({
     },
     applicationChat: {
       title: "Follow-up chat is part of Pro",
-      body: "Ask for a stronger summary, a different emphasis, or a rewritten bullet — and watch the CV change beside you.",
+      body: "Ask for a stronger summary, a different emphasis, or a rewritten bullet, and watch the CV change beside you.",
     },
   }[reason];
 

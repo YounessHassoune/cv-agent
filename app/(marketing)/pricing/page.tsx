@@ -37,7 +37,7 @@ export default async function PricingPage() {
         {[
           {
             q: "What counts as one application?",
-            a: "One job. Pasting a job description and getting a tailored CV back — including the revisions, the ATS scoring and every language you asked for — is one application, not several.",
+            a: "One job. Pasting a job description and getting a tailored CV back, including the revisions, the ATS scoring and every language you asked for, is one application, not several.",
           },
           {
             q: "Will it invent experience I do not have?",

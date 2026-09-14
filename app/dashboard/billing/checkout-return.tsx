@@ -47,7 +47,7 @@ export function CheckoutReturn({ plan }: { readonly plan: string }) {
     return (
       <p className="mb-6 flex items-center gap-2 rounded-lg bg-secondary px-3 py-2.5 text-sm">
         <LoaderIcon className="size-4 animate-spin" />
-        Payment received — activating your plan.
+        Payment received. Activating your plan.
       </p>
     );
   }

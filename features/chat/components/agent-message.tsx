@@ -392,7 +392,7 @@ function describeResult(activity: { done: string }, part: EveDynamicToolPart): s
   if (blocked !== undefined) return blocked;
 
   const score = readScore(part);
-  return score === undefined ? activity.done : `${activity.done} — ${score}`;
+  return score === undefined ? activity.done : `${activity.done}: ${score}`;
 }
 
 /**
@@ -402,8 +402,8 @@ function describeResult(activity: { done: string }, part: EveDynamicToolPart): s
  */
 function readBlocked(part: EveDynamicToolPart): string | undefined {
   const blocked = (part.output as { blocked?: unknown } | null | undefined)?.blocked;
-  if (blocked === "deleted") return "Stopped — you deleted this application";
-  if (blocked === "quota") return "Stopped — your plan's applications are used up";
+  if (blocked === "deleted") return "Stopped: you deleted this application";
+  if (blocked === "quota") return "Stopped: your plan's applications are used up";
   return undefined;
 }
 

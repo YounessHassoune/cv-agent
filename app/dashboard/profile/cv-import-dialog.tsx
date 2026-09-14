@@ -456,7 +456,7 @@ export function CvImportDialog({
 
         <p className="text-muted-foreground text-xs">
           {elapsed > USUAL_SECONDS * 2
-            ? "Taking longer than usual — still going."
+            ? "Taking longer than usual. Still going."
             : "Close this whenever you like. Refreshing or leaving the page is safe: the import finishes on its own and fills the form in when it lands."}
         </p>
       </div>

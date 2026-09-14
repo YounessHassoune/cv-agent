@@ -401,7 +401,7 @@ export function ProfileEditor({ initial }: { readonly initial: ProfileForm }) {
     const index = f.experiences.findIndex((e) => e.company && e.role && !e.start);
     if (index >= 0) {
       const { company, role } = f.experiences[index];
-      return `${role || company || `Experience ${index + 1}`} needs a start date — imported CVs often leave it out.`;
+      return `${role || company || `Experience ${index + 1}`} needs a start date. Imported CVs often leave it out.`;
     }
     return undefined;
   };

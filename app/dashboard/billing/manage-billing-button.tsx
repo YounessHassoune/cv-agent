@@ -39,7 +39,7 @@ export function ManageBillingButton({
       }
       setError(
         payload?.error === "no_customer"
-          ? "Nothing to manage yet — you have never been charged."
+          ? "Nothing to manage yet. You have never been charged."
           : "Could not open the billing portal. Try again in a moment.",
       );
     } catch {

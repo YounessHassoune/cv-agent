@@ -69,7 +69,7 @@ export default async function BillingPage() {
         <p className="mb-6 flex items-start gap-2 rounded-lg bg-warning/12 px-3 py-2.5 text-sm text-warning">
           <AlertTriangleIcon className="mt-0.5 size-4 shrink-0" />
           <span>
-            Your last payment did not go through. Nothing is locked yet — Stripe will retry, and
+            Your last payment did not go through. Nothing is locked yet. Stripe will retry, and
             updating your card in the billing portal settles it immediately.
           </span>
         </p>
@@ -92,7 +92,7 @@ export default async function BillingPage() {
                 {state.billing.cancelAtPeriodEnd ? "Ends" : "Renews"} {renews}
               </p>
             ) : (
-              <p className="text-muted-foreground text-sm">No subscription — free forever.</p>
+              <p className="text-muted-foreground text-sm">No subscription. Free forever.</p>
             )}
           </div>
 
