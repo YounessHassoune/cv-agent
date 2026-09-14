@@ -6,11 +6,11 @@ type Principal = {
 } | null;
 
 /**
- * Resolve the connected user's id from the session principal. Every tool
- * scopes its queries through this, so the agent can never touch another
- * user's profile or applications.
+ * The connected user's id, read from the session principal alone. Split out of
+ * `resolveUserId` because a dynamic-instructions resolver has auth but no
+ * managed state scope, so it cannot take the `cvLoop` stamp below.
  */
-export function resolveUserId(ctx: { session: { auth: unknown } }): string {
+export function principalUserId(ctx: { session: { auth: unknown } }): string {
   const auth = ctx.session.auth as { current?: Principal } | undefined;
   const current = auth?.current;
   const fromAttributes = current?.attributes?.userId;
@@ -31,6 +31,17 @@ export function resolveUserId(ctx: { session: { auth: unknown } }): string {
   if (userId === "local-dev" && process.env.NODE_ENV === "production") {
     throw new Error("No authenticated principal on this session.");
   }
+
+  return userId;
+}
+
+/**
+ * Resolve the connected user's id from the session principal. Every tool
+ * scopes its queries through this, so the agent can never touch another
+ * user's profile or applications.
+ */
+export function resolveUserId(ctx: { session: { auth: unknown } }): string {
+  const userId = principalUserId(ctx);
 
   /*
    * Remembered on the session, for the usage meter's benefit.

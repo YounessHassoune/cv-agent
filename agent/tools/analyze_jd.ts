@@ -6,6 +6,7 @@ import { resolveUserId } from "../lib/auth";
 import { billingState, consumeApplication, refundApplication } from "../lib/billing";
 import { db } from "../lib/db";
 import { analyzeJob } from "../lib/jd-analysis";
+import { COMPLETE_THRESHOLD, profileCompleteness } from "../lib/profile-completeness";
 import { cvLoop } from "../lib/state";
 
 /**
@@ -62,6 +63,29 @@ export default defineTool({
   }),
   async execute({ jdText, targetLanguages }, ctx) {
     const userId = resolveUserId(ctx);
+
+    /*
+     * A thin master profile is the one failure no amount of tailoring fixes:
+     * the writer can only draw on what the profile holds, so the run would
+     * spend an analysis call, an application from the user's quota and two
+     * model calls to produce a CV with nothing on it. Same scorer and same
+     * threshold as the banner above every page, so the chat and the banner
+     * never quote different numbers.
+     */
+    const completeness = await profileCompleteness(userId);
+    if (!completeness.complete) {
+      return {
+        blocked: "profile" as const,
+        percent: completeness.percent,
+        missing: completeness.missing,
+        message:
+          `The master profile is only ${completeness.percent}% complete (${COMPLETE_THRESHOLD}% is needed). ` +
+          `Tell the user — in their own language, briefly — that you need more of their profile before tailoring a CV, ` +
+          `name what is still missing (${completeness.missing.slice(0, 3).join(", ")}), link them to the profile builder ` +
+          `as a markdown link — [Complete my profile](/dashboard/profile), label in their language, never the bare path — ` +
+          `and stop. Do not call this tool again for this job until they say they have filled it in.`,
+      };
+    }
     /*
      * The row stores a truncated JD, so the truncated text — not the argument
      * — is what a later call must be compared against. Comparing the raw

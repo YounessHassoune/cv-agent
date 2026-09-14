@@ -571,10 +571,19 @@ function AttachmentPart({ part }: { readonly part: EveFilePart }) {
   const detail = [part.mediaType, formatBytes(part.size)].filter(Boolean).join(" - ");
   const isImage = part.mediaType.startsWith("image/") && part.url !== undefined;
   const Icon = isImage ? ImageIcon : FileIcon;
+  /*
+   * The src is whatever host the attachment came from, which `next/image` would need
+   * listed in `remotePatterns` ahead of time — and a 48px thumbnail is not worth an
+   * optimizer round trip.
+   */
+  const thumbnail = (
+    // biome-ignore lint/performance/noImgElement: arbitrary attachment host, see above
+    <img alt={label} className="size-12 shrink-0 rounded-sm object-cover" src={part.url} />
+  );
   const body = (
     <span className="flex max-w-sm items-center gap-3 rounded-md border bg-background/60 p-2 text-sm">
       {isImage ? (
-        <img alt={label} className="size-12 shrink-0 rounded-sm object-cover" src={part.url} />
+        thumbnail
       ) : (
         <span className="flex size-10 shrink-0 items-center justify-center rounded-sm bg-muted text-muted-foreground">
           <Icon className="size-4" />

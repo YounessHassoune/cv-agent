@@ -102,6 +102,17 @@ export function useResumableSession({
 
     void (async () => {
       /*
+       * A re-attach after a dropped stream waits before reconnecting, and waits
+       * longer the more of them there have been. `attempt` is what the caller
+       * bumps to re-run this, so spending it on the backoff is also what keeps
+       * a session that keeps dropping from reconnecting flat out.
+       */
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(attempt, 4) * 250));
+        if (cancelled) return;
+      }
+
+      /*
        * Always read the session, even when the server handed us a saved log.
        * That log is only written when a turn settles, so it is exactly the
        * thing that goes stale while a turn is running — trusting it is how a
@@ -207,7 +218,6 @@ export function useResumableSession({
       cancelled = true;
       controller.abort();
     };
-    // `attempt` re-runs this after a dropped stream on the same session.
   }, [attempt, paused, persistUrl, router, savedEvents, sessionId]);
 
   return { following, generation, restored, settled };

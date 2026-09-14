@@ -29,19 +29,23 @@ export function useCyclingMessage(
   useEffect(() => {
     indexRef.current = 0;
     setIndex(0);
-    if (last <= 0) return;
+    /*
+     * Counted back out of the signature rather than read from `steps`: callers
+     * rebuild that array every render, so the signature is the only identity
+     * this sequence has — and the effect should run on the value it uses.
+     */
+    const lastStep = signature.split("\u0000").length - 1;
+    if (lastStep <= 0) return;
 
     const timer = setInterval(() => {
       const next = indexRef.current + 1;
       indexRef.current = next;
       setIndex(next);
-      if (next >= last) clearInterval(timer);
+      if (next >= lastStep) clearInterval(timer);
     }, intervalMs);
 
     return () => clearInterval(timer);
-    // `signature` stands in for the array, which callers rebuild every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature, intervalMs, last]);
+  }, [signature, intervalMs]);
 
   return steps[Math.min(index, last)] ?? "";
 }

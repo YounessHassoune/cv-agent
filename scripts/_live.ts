@@ -54,7 +54,9 @@ try {
         ts(),
         `+${gap}ms`,
         event.type,
-        (event as any).data?.actions?.map((a: any) => a.toolName).join(",") ?? "",
+        (event as { data?: { actions?: { toolName?: string }[] } }).data?.actions
+          ?.map((action) => action.toolName)
+          .join(",") ?? "",
       );
     if (isBoundary(event)) break;
   }

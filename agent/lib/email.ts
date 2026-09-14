@@ -18,9 +18,24 @@ function client(): Resend {
   return new Resend(key);
 }
 
-/** The From address must belong to a domain verified in the Resend dashboard. */
+/**
+ * The From address must belong to a domain verified in the Resend dashboard —
+ * and verified means all three records, not just the MX/TXT pair Resend calls
+ * "verified": SPF and DKIM sign the mail, and a DMARC record on the domain is
+ * what stops Gmail filing a signed message under "unverified sender" anyway.
+ */
 function from(): string {
-  return process.env.EMAIL_FROM ?? "Wellsuited <noreply@younesshassoune.dev>";
+  return process.env.EMAIL_FROM ?? "Wellsuited <noreply@wellsuited.site>";
+}
+
+/**
+ * A From address nobody can answer is one of the strongest spam signals a
+ * transactional sender gives off, and `noreply@` cannot be answered by
+ * definition. A real, monitored Reply-To costs nothing and is read by every
+ * major filter as evidence of a sender who expects replies.
+ */
+function replyTo(): string {
+  return process.env.EMAIL_REPLY_TO ?? "support@wellsuited.site";
 }
 
 export async function sendEmail(options: {
@@ -32,11 +47,22 @@ export async function sendEmail(options: {
 }): Promise<void> {
   const { error } = await client().emails.send({
     from: from(),
+    replyTo: replyTo(),
     to: options.to,
     subject: options.subject,
     html: options.html,
     text: options.text,
     attachments: options.attachments,
+    headers: {
+      /*
+       * Gmail and Outlook both weigh a one-click unsubscribe, and its absence,
+       * on bulk-looking mail — which is what our billing notices look like from
+       * the outside. A mailto target needs no route to exist; swap it for an
+       * https one if an unsubscribe page is ever built.
+       * ponytail: mailto only, no preferences page until someone asks.
+       */
+      "List-Unsubscribe": `<mailto:${replyTo().replace(/.*<|>.*/g, "")}?subject=unsubscribe>`,
+    },
   });
   if (error) throw new Error(`Resend rejected the message: ${error.message}`);
 }

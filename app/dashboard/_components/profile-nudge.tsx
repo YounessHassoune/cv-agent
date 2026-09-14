@@ -20,7 +20,7 @@ export function ProfileNudge({
   readonly percent: number;
   readonly missing: string[];
 }) {
-  const onBuilder = usePathname() === "/profile";
+  const onBuilder = usePathname() === "/dashboard/profile";
   const gaps = missing.slice(0, 3);
 
   const body = (

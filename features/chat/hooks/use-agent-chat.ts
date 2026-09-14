@@ -149,7 +149,7 @@ export function useAgentChat({
       // store keeps streaming a copy of it that will never finish.
       if (TURN_SETTLED_EVENTS.has(event.type)) setTurnOpen(false);
     },
-    [noteTurnStarted],
+    [noteTurnStarted, refreshPage],
   );
 
   const agent = useEveAgent({
@@ -262,6 +262,17 @@ export function useAgentChat({
     });
   };
 
+  /*
+   * `dispatch` closes over state that changes every render, so the queue effect
+   * below cannot depend on it without re-running on every render. It reads the
+   * latest one through this ref instead: the effect fires on the queue, and the
+   * send it makes is never a stale closure.
+   */
+  const dispatchRef = useRef(dispatch);
+  useEffect(() => {
+    dispatchRef.current = dispatch;
+  });
+
   const sendSuggestion = (text: string) => {
     if (isBusy) return;
     dispatch(withContext(text));
@@ -354,10 +365,7 @@ export function useAgentChat({
   useEffect(() => {
     if (queued === undefined || isBusy) return;
     setQueued(undefined);
-    dispatch(queued);
-    // `dispatch` is stable enough here: it only closes over `agent`, which the
-    // hook keeps identity-stable across renders.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    dispatchRef.current(queued);
   }, [queued, isBusy]);
 
   // A settled turn ends the cancellation, whatever the outcome.

@@ -4,7 +4,7 @@
  * same profile read 13% on one screen and 10% on the other.
  *
  * Pure and dependency-free so the client editor can call it on every keystroke;
- * the database side lives in `app/lib/profile-completeness.ts`.
+ * the database side lives in `agent/lib/profile-completeness.ts`.
  */
 
 /**

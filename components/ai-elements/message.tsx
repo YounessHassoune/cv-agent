@@ -6,10 +6,11 @@ import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import type { UIMessage } from "ai";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import Link from "next/link";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import { createContext, memo, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { Streamdown } from "streamdown";
-import { Button } from "@/components/ui/button";
+import { type Components, Streamdown } from "streamdown";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -273,10 +274,35 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+/**
+ * Links the assistant writes are real navigation.
+ *
+ * A route of this app ("/dashboard/profile" — where the agent sends a user
+ * whose profile is too thin to tailor from) renders as a button and navigates
+ * through `Link`, so clicking it keeps the streaming chat alive instead of
+ * reloading the page out from under it. Anything else is someone else's site
+ * and opens in its own tab.
+ */
+const streamdownComponents: Components = {
+  a: ({ node: _node, children, ...rest }) => {
+    const { href, ...props } = rest as ComponentProps<"a">;
+    return href?.startsWith("/") ? (
+      <Link className={buttonVariants({ size: "sm", variant: "default" })} href={href} {...props}>
+        {children}
+      </Link>
+    ) : (
+      <a href={href} rel="noreferrer" target="_blank" {...props}>
+        {children}
+      </a>
+    );
+  },
+};
+
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => (
+  ({ className, components, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn("size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}
+      components={{ ...streamdownComponents, ...components }}
       plugins={streamdownPlugins}
       {...props}
     />

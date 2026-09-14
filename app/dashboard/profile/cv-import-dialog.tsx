@@ -308,6 +308,14 @@ export function CvImportDialog({
     void tick();
   };
 
+  /*
+   * The collection below runs once, on mount, with the first render's `watch`
+   * — which is what it has always done, since a mount effect keeps the closure
+   * it was created with. Pinning that closure in a ref makes it a real, stable
+   * dependency instead of an omitted one.
+   */
+  const startWatching = useRef(watch).current;
+
   // A refresh or a navigation mid-parse loses the response, never the parse:
   // the route runs it after the response and parks the result.
   useEffect(() => {
@@ -321,14 +329,13 @@ export function CvImportDialog({
     const running = recall();
     // A placeholder until the first poll says when it really started.
     if (running) setJob({ filename: running, stage: "upload", startedAt: Date.now() });
-    watch(running !== null);
+    startWatching(running !== null);
 
     return () => {
       alive.current = false;
       clearTimeout(timer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only collection
-  }, []);
+  }, [startWatching]);
 
   const send = async (file: File) => {
     setError(undefined);

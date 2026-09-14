@@ -17,9 +17,13 @@ export default defineConfig({
    * statement a different backend, so the advisory lock `migrate deploy`
    * takes is gone by the statement that needs it. The runtime adapter below
    * keeps the pooled URL, which is the one it wants.
+   *
+   * `||`, not `??`: a `.env` that carries `DIRECT_URL=` with nothing after it
+   * is the normal way to say "not using one", and `??` reads that empty string
+   * as a value — Prisma then fails with "Connection url is empty".
    */
   datasource: {
-    url: process.env.DIRECT_URL ?? process.env.DATABASE_URL!,
+    url: process.env.DIRECT_URL || process.env.DATABASE_URL!,
   },
   async adapter() {
     return new PrismaPg({ connectionString: process.env.DATABASE_URL! });
