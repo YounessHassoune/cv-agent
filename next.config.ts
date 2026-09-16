@@ -25,7 +25,8 @@ const nextConfig: NextConfig = {
   async headers() {
     const csp = [
       "default-src 'self'",
-      "frame-ancestors 'none'",
+      // 'self', not 'none': the PDF tab renders the CV in a same-origin iframe.
+      "frame-ancestors 'self'",
       "base-uri 'self'",
       "object-src 'none'",
       "form-action 'self'",
@@ -33,7 +34,7 @@ const nextConfig: NextConfig = {
     ].join("; ");
 
     const headers = [
-      { key: "X-Frame-Options", value: "DENY" },
+      { key: "X-Frame-Options", value: "SAMEORIGIN" },
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
