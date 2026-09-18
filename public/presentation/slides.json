@@ -21,7 +21,7 @@
               "school": "National School of Applied Sciences of Safi",
               "department": "Department of Computer Science, Networks and Telecommunications (IRT)"
             },
-            "kind": "Final Year Project Report",
+            "kind": "Final Year Project Presentation",
             "degreeIntro": "Submitted for the degree of",
             "degree": "Professional University Bachelor’s Degree",
             "degreeField": "in Information Systems Engineering and Design (LPU‑ICSI)",
@@ -41,7 +41,7 @@
                 "plate": true
               }
             ],
-            "defenseLead": "Defended on 19 September 2026 before the jury:",
+            "defenseLead": "Defended on 19 September 2026 in front of the jury:",
             "jury": [
               [
                 "Mr Said ECHCHADI",
@@ -218,7 +218,7 @@
           ]
         },
         {
-          "lede": "Read the ad, infer the real expectations, reorder experience, rephrase achievements in the role’s vocabulary, recompile. None of it creative."
+          "lede": "Read the job description, infer the real expectations, reorder experience, rephrase achievements in the role’s vocabulary, recompile. None of it creative."
         },
         {
           "lede": "**So people give up and send one generic document.**"
@@ -799,7 +799,7 @@
           "h2": "Two limits that keep it honest"
         },
         {
-          "lede": "**It may borrow six words at most**: words the job ad uses and your profile does not. More than six is padding, not tailoring, and the PDF is refused. Borrowing *none* is a failure too: then nothing was tailored."
+          "lede": "**It may borrow six words at most**: words the job description uses and your profile does not. More than six is padding, not tailoring, and the PDF is refused. Borrowing *none* is a failure too: then nothing was tailored."
         },
         {
           "small": "**And if you insist on a word your profile does not have, it is measured before it is allowed:**"
