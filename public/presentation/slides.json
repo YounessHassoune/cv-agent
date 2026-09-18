@@ -1,0 +1,987 @@
+{
+  "meta": {
+    "title": "Wellsuited PFE Defense",
+    "mark": {
+      "src": "logo-mark.png",
+      "alt": "Wellsuited",
+      "invertOnDark": true
+    },
+    "hint": "Edit this file and reload the page. Strings accept **bold**, *italic*, `code` and raw HTML (use 'single quotes' for attributes). Useful classes: chip pass, chip fail, num."
+  },
+  "slides": [
+    {
+      "title": "Cover",
+      "center": true,
+      "blocks": [
+        {
+          "cover": {
+            "institution": {
+              "country": "Kingdom of Morocco",
+              "university": "Cadi Ayyad University",
+              "school": "National School of Applied Sciences of Safi",
+              "department": "Department of Computer Science, Networks and Telecommunications (IRT)"
+            },
+            "kind": "Final Year Project Report",
+            "degreeIntro": "Submitted for the degree of",
+            "degree": "Professional University Bachelor’s Degree",
+            "degreeField": "in Information Systems Engineering and Design (LPU‑ICSI)",
+            "title": "Design and implementation of an AI agent SaaS platform for automated CV tailoring to job offers  <span class='text-accent font-semibold'>Wellsuited</span>",
+            "author": {
+              "label": "Prepared by",
+              "name": "Youness HASSOUNE"
+            },
+            "host": {
+              "label": "Carried out at",
+              "name": "CoraTech"
+            },
+            "logos": [
+              {
+                "src": "ensa-image.jpeg",
+                "alt": "ENSA Safi",
+                "plate": true
+              }
+            ],
+            "defenseLead": "Defended on 19 September 2026 before the jury:",
+            "jury": [
+              [
+                "Mr Said ECHCHADI",
+                "Professor at ENSA Safi"
+              ],
+              [
+                "Mr OUJAOURA",
+                "Professor at ENSA Safi"
+              ]
+            ],
+            "year": "Academic year 2025 – 2026"
+          }
+        }
+      ]
+    },
+    {
+      "title": "Agenda",
+      "eyebrow": [
+        "Agenda"
+      ],
+      "blocks": [
+        {
+          "agenda": [
+            [
+              "1",
+              "The problem",
+              [
+                "the hiring bottleneck",
+                "how an ATS reads a CV",
+                "the cost of doing it by hand",
+                "the problem statement"
+              ]
+            ],
+            [
+              "2",
+              "Why not just use ChatGPT or Gemini?",
+              [
+                "one prompt vs a pipeline",
+                "why fabrication disqualifies it",
+                "the market gap",
+                "the solution: Wellsuited"
+              ]
+            ],
+            [
+              "3",
+              "What an AI agent is, and the solution",
+              [
+                "a model alone vs an agent",
+                "how an agent works, one real turn",
+                "the solution"
+              ]
+            ],
+            [
+              "4",
+              "Architecture, technologies, and how it works",
+              [
+                "the architecture",
+                "the five tools",
+                "technologies",
+                "the truth guard",
+                "a full run",
+                "the service layer"
+              ]
+            ],
+            [
+              "5",
+              "Scoring",
+              [
+                "the formula",
+                "the required-skill coverage"
+              ]
+            ],
+            [
+              "6",
+              "Demo",
+              [
+                "the system running, end to end"
+              ]
+            ],
+            [
+              "7",
+              "Questions",
+              []
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "title": "1. The problem",
+      "part": "1 · The problem",
+      "center": true,
+      "eyebrow": [
+        "Part 1"
+      ],
+      "blocks": [
+        {
+          "h1": "The problem"
+        },
+        {
+          "sub": "Why a qualified candidate never reaches a human reader?"
+        }
+      ]
+    },
+    {
+      "title": "The hiring bottleneck",
+      "part": "1 · The problem",
+      "eyebrow": [
+        "1",
+        "The problem"
+      ],
+      "wide": true,
+      "blocks": [
+        {
+          "h2": "One posting. Hundreds of CVs. One program between them."
+        },
+        {
+          "diagram": "hiring-funnel"
+        },
+        {
+          "lede": "**A qualified candidate is filtered out before a human ever opens the file.** Not for lack of skill but for lack of the right words in the right structure."
+        }
+      ]
+    },
+    {
+      "title": "How an ATS reads your CV",
+      "part": "1 · The problem",
+      "eyebrow": [
+        "1",
+        "The problem"
+      ],
+      "blocks": [
+        {
+          "h2": "What the program actually does, in three stages"
+        },
+        {
+          "diagram": "ats-funnel"
+        },
+        {
+          "lede": "**A relevant CV that is lexically or structurally misaligned is *invisible* .**"
+        }
+      ],
+      "wide": true
+    },
+    {
+      "title": "Tailoring by hand does not scale",
+      "part": "1 · The problem",
+      "eyebrow": [
+        "1",
+        "The problem"
+      ],
+      "blocks": [
+        {
+          "h2": "And tailoring by hand does not scale"
+        },
+        {
+          "rows": [
+            [
+              "Per offer",
+              "<span class='num'>20–40 minutes</span>"
+            ],
+            [
+              "Repeated for",
+              "<span class='num'>every application</span>"
+            ],
+            [
+              "And again for",
+              "<span class='num'>every target language</span>"
+            ],
+            [
+              "15 serious applications",
+              "<span class='num'>one full working day</span>"
+            ]
+          ]
+        },
+        {
+          "lede": "Read the ad, infer the real expectations, reorder experience, rephrase achievements in the role’s vocabulary, recompile. None of it creative."
+        },
+        {
+          "lede": "**So people give up and send one generic document.**"
+        }
+      ]
+    },
+    {
+      "title": "Problem statement",
+      "part": "1 · The problem",
+      "eyebrow": [
+        "1",
+        "Problem statement"
+      ],
+      "blocks": [
+        {
+          "lede": "**How can the adaptation of a CV to a job offer be automated so as to maximise its readability by ATS software and its relevance to a recruiter , while guaranteeing by construction that no untrue information is introduced, leaving the user in control, and making the service economically measurable?**"
+        },
+        {
+          "rows": [
+            [
+              "Optimisation",
+              "maximise alignment with the offer"
+            ],
+            [
+              "Truthfulness",
+              "cannot be entrusted to the model itself"
+            ],
+            [
+              "Governance",
+              "the user arbitrates, not the machine"
+            ],
+            [
+              "Sustainability",
+              "measure what each application really costs"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "title": "2. Why not just use ChatGPT or Gemini?",
+      "part": "2 · Why not a chatbot",
+      "center": true,
+      "eyebrow": [
+        "Part 2"
+      ],
+      "blocks": [
+        {
+          "h1": "Why not just use ChatGPT or Gemini?"
+        },
+        {
+          "sub": "The obvious answer, and the three things it cannot give you"
+        }
+      ]
+    },
+    {
+      "title": "One prompt vs a tool pipeline",
+      "part": "2 · Why not a chatbot",
+      "wide": true,
+      "eyebrow": [
+        "2",
+        "Why not a chatbot"
+      ],
+      "blocks": [
+        {
+          "h2": "Why a chatbot prompt is not enough"
+        },
+        {
+          "diagram": "prompt-vs-pipeline"
+        },
+        {
+          "split": [
+            [
+              {
+                "h3": "What a prompt returns"
+              },
+              {
+                "rows": [
+                  [
+                    "Fabrication",
+                    "adds the technologies named in the ad"
+                  ],
+                  [
+                    "No measurement",
+                    "*asserts* it improved the CV"
+                  ],
+                  [
+                    "No document",
+                    "text, not a parser-safe PDF"
+                  ],
+                  [
+                    "No memory",
+                    "every application starts from zero"
+                  ]
+                ]
+              }
+            ],
+            [
+              {
+                "h3": "What the pipeline returns"
+              },
+              {
+                "rows": [
+                  [
+                    "A checked draft",
+                    "facts matched against the profile"
+                  ],
+                  [
+                    "A number",
+                    "the same input always scores the same"
+                  ],
+                  [
+                    "A document",
+                    "single-column PDF, read back after render"
+                  ],
+                  [
+                    "A history",
+                    "profile, session and every version kept"
+                  ]
+                ]
+              }
+            ]
+          ]
+        },
+        {
+          "callout": "**These are not prompt problems.** A better prompt makes fabrication rarer, never impossible."
+        }
+      ]
+    },
+    {
+      "title": "Why fabrication disqualifies it",
+      "part": "2 · Why not a chatbot",
+      "eyebrow": [
+        "2",
+        "Why not a chatbot"
+      ],
+      "blocks": [
+        {
+          "h2": "Why fabrication disqualifies the chatbot"
+        },
+        {
+          "lede": "A language model is optimised to satisfy the request. Asked to match a job offer, satisfying the request *means* claiming what the offer asks for."
+        },
+        {
+          "lede": "**A CV is a binding document. Fabrication is not a style flaw but it is a fault.**"
+        }
+      ]
+    },
+    {
+      "title": "The market: measure or write, never both",
+      "part": "2 · Why not a chatbot",
+      "wide": true,
+      "eyebrow": [
+        "2",
+        "State of the art"
+      ],
+      "blocks": [
+        {
+          "h2": "And the existing tools each solve only half of it"
+        },
+        {
+          "table": {
+            "head": [
+              "Solution",
+              "Limitation for this problem"
+            ],
+            "rows": [
+              [
+                "Jobscan",
+                "Analyses only. Does not write the CV, does not compile it"
+              ],
+              [
+                "Teal",
+                "Adaptation mostly manual; no measured convergence loop"
+              ],
+              [
+                "Rezi / Kickresume",
+                "AI content generation with **no truth guard**: nothing checks it against a persistent source of truth"
+              ],
+              [
+                "ChatGPT / Gemini",
+                "Uncontrolled fabrication, no measurement, no compiled document, no persistence"
+              ],
+              [
+                "Doing it by hand",
+                "Truthful, but expensive, not reproducible, no objective feedback"
+              ]
+            ]
+          }
+        },
+        {
+          "lede": "**The market splits into tools that *measure* without writing, and tools that *write* without measuring or verifying.**"
+        }
+      ]
+    },
+    {
+      "title": "The solution: Wellsuited",
+      "part": "2 · The solution",
+      "eyebrow": [
+        "2",
+        "The solution"
+      ],
+      "center": true,
+      "blocks": [
+        {
+          "h2": "The solution: <span class='text-accent font-semibold'>Wellsuited</span>"
+        },
+        {
+          "lede": "A SaaS platform built on an **AI agent**  not a prompt, not a script. The agent drives typed tools over one master profile. Deterministic code verifies every line before it reaches the page, and measures the result."
+        }
+      ]
+    },
+    {
+      "title": "3. What an AI agent is",
+      "part": "3 · What an agent is",
+      "center": true,
+      "eyebrow": [
+        "Part 3"
+      ],
+      "blocks": [
+        {
+          "h1": "What an AI agent is"
+        },
+        {
+          "sub": "The difference from a language model ? and why the solution is built on one"
+        }
+      ]
+    },
+    {
+      "title": "An LLM alone vs an agent",
+      "part": "3 · What an agent is",
+      "eyebrow": [
+        "3",
+        "Foundations"
+      ],
+      "blocks": [
+        {
+          "h2": "A model only writes text, an agent adds tools, rules and memory"
+        },
+        {
+          "diagram": "llm-vs-agent"
+        },
+        {
+          "split": [
+            [
+              {
+                "h3": "Give a model “Tailor my CV to this offer”"
+              },
+              {
+                "rows": [
+                  [
+                    "It returns",
+                    "a block of text that looks like a CV"
+                  ],
+                  [
+                    "It reads",
+                    "only what you pasted into the prompt"
+                  ],
+                  [
+                    "It may",
+                    "add Kubernetes because the offer asked for it"
+                  ],
+                  [
+                    "Afterwards",
+                    "nothing is saved, nothing is measured, there is no file"
+                  ]
+                ]
+              }
+            ],
+            [
+              {
+                "h3": "Give an agent the same sentence"
+              },
+              {
+                "rows": [
+                  [
+                    "It reads",
+                    "your master profile, from the database"
+                  ],
+                  [
+                    "It calls",
+                    "five tools in order, deciding which at runtime"
+                  ],
+                  [
+                    "It cannot",
+                    "name an employer the profile does not contain"
+                  ],
+                  [
+                    "Afterwards",
+                    "a PDF exists, a score exists, the cost is recorded"
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      ],
+      "wide": true
+    },
+    {
+      "title": "How an agent works",
+      "part": "3 · What an agent is",
+      "wide": true,
+      "eyebrow": [
+        "3",
+        "Foundations"
+      ],
+      "blocks": [
+        {
+          "h2": "The model asks. The code checks, runs it, reports back."
+        },
+        {
+          "diagram": "agent-loop"
+        },
+        {
+          "split": [
+            [
+              {
+                "h3": "What the harness adds"
+              },
+              {
+                "p": "**A raw model is stateless**: it answers with text, then forgets. **The harness makes it a loop:** plan → run → check → repeat, until the job is done. The model is the passenger; the harness drives."
+              }
+            ],
+            [
+              {
+                "h3": "The same loop, on your CV"
+              },
+              {
+                "rows": [
+                  [
+                    "Plan",
+                    "“write the English version”"
+                  ],
+                  [
+                    "Run",
+                    "the draft is written and stored"
+                  ],
+                  [
+                    "Check",
+                    "PDF blocked: the draft claims Kubernetes, your profile never mentions it"
+                  ],
+                  [
+                    "Repeat",
+                    "it rewrites, the PDF is made → *“68 out of 100”*"
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "title": "The solution",
+      "part": "3 · What an agent is",
+      "eyebrow": [
+        "3",
+        "The solution"
+      ],
+      "blocks": [
+        {
+          "h2": "The solution: <span class='text-accent font-semibold'>Wellsuited</span>"
+        },
+        {
+          "lede": "One master profile is the only source of facts. An agent drives five typed tools over it; deterministic code verifies, measures and bounds everything the model produces."
+        },
+        {
+          "list": [
+            "**One master profile**: experiences, projects, skills, education. Nothing else can become a fact on a CV.",
+            "**A closed tool catalogue**: five business tools, typed, user-scoped; the generic ones disabled.",
+            "**Model calls housed inside the tools**: the document goes straight to the database, never through the orchestrator.",
+            "**Verification outside the model**: the truth guard and the score are code, not prompt instructions.",
+            "**One bounded revision pass, then the user steers** in plain language.",
+            "**A measured service**: every model call records what it cost."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "4. Architecture and technologies",
+      "part": "4 · Architecture",
+      "center": true,
+      "eyebrow": [
+        "Part 4"
+      ],
+      "blocks": [
+        {
+          "h1": "Architecture and technologies"
+        },
+        {
+          "sub": "What is built, what it is built with, and how a run actually unfolds"
+        }
+      ]
+    },
+    {
+      "title": "Architecture",
+      "part": "4 · Architecture",
+      "wide": true,
+      "eyebrow": [
+        "4",
+        "Architecture"
+      ],
+      "blocks": [
+        {
+          "h2": "One repository, one origin, one database"
+        },
+        {
+          "diagram": "architecture-flow"
+        }
+      ]
+    },
+    {
+      "title": "The five tools",
+      "part": "4 · Architecture",
+      "wide": true,
+      "eyebrow": [
+        "4",
+        "The agent"
+      ],
+      "blocks": [
+        {
+          "h2": "Five tools, and nothing else"
+        },
+        {
+          "table": {
+            "head": [
+              "Tool",
+              "Role"
+            ],
+            "rows": [
+              [
+                "`get_profile`",
+                "Loads the master profile and the allowed vocabulary"
+              ],
+              [
+                "`analyze_jd`",
+                "Consumes quota, analyses the offer, creates the **single** application"
+              ],
+              [
+                "`write_cv`",
+                "Writes the CV for **one** language, saves the draft"
+              ],
+              [
+                "`compile_pdf`",
+                "Guards, renders the PDF, **re-extracts its text**"
+              ],
+              [
+                "`score_ats`",
+                "Scores the variant, returns the **stop decision**"
+              ]
+            ]
+          }
+        },
+        {
+          "small": "Plus `ask_question`, which the interface renders as buttons, and as checkboxes when the options are not mutually exclusive."
+        },
+        {
+          "callout": "**Eight generic tools disabled.** A CV-writing agent has no business reading the disk."
+        }
+      ]
+    },
+    {
+      "title": "Technologies",
+      "part": "4 · Architecture",
+      "wide": true,
+      "eyebrow": [
+        "4",
+        "Technologies"
+      ],
+      "blocks": [
+        {
+          "h2": "Technologies, and why each one"
+        },
+        {
+          "table": {
+            "head": [
+              "Layer",
+              "Choice",
+              "Why"
+            ],
+            "rows": [
+              [
+                "Language",
+                "TypeScript 6",
+                "Strict typing end to end, from schema to component"
+              ],
+              [
+                "Interface",
+                "Next.js 16 · React 19 · Tailwind 4",
+                "UI, API routes and the agent runtime in one deployment"
+              ],
+              [
+                "Agent runtime",
+                "eve 0.31",
+                "Durable sessions, stream resumption, typed tools, runtime hooks"
+              ],
+              [
+                "Models",
+                "Vercel AI Gateway (AI SDK 7)",
+                "One endpoint, several providers; the model is configuration, not code"
+              ],
+              [
+                "Validation",
+                "Zod 4",
+                "One schema shared by the tools, the structured outputs and the API routes"
+              ],
+              [
+                "Persistence",
+                "Prisma 7 · PostgreSQL 17",
+                "Versioned migrations, typed relations, `Json` columns for flexible fields"
+              ],
+              [
+                "Documents",
+                "@react-pdf/renderer 4",
+                "Declarative rendering, full control of a single-column layout"
+              ],
+              [
+                "Payments",
+                "Stripe",
+                "No card data ever touches the application"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "The truth guard",
+      "part": "4 · Architecture",
+      "wide": true,
+      "eyebrow": [
+        "4",
+        "The truth guard"
+      ],
+      "blocks": [
+        {
+          "h2": "Facts cannot change. Skills are only words."
+        },
+        {
+          "split": [
+            [
+              {
+                "diagram": "guard-sets"
+              }
+            ],
+            [
+              {
+                "h3": "<span class='chip fail'>Facts</span> employers · titles · dates · projects"
+              },
+              {
+                "p": "If it is not in your profile, the CV cannot say it. **Not even if you ask.**"
+              },
+              {
+                "h3": "<span class='chip pass'>Skills</span> the words you are allowed to use"
+              },
+              {
+                "p": "Your profile is never a complete list. A React developer obviously writes TypeScript, so the CV may say so **when the job asked for it**."
+              },
+              {
+                "small": "Anything the CV claims that your profile does not back up is shown to you before you send it."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Borrow budget and screening",
+      "part": "4 · Architecture",
+      "wide": true,
+      "eyebrow": [
+        "4",
+        "The truth guard"
+      ],
+      "blocks": [
+        {
+          "h2": "Two limits that keep it honest"
+        },
+        {
+          "lede": "**It may borrow six words at most**: words the job ad uses and your profile does not. More than six is padding, not tailoring, and the PDF is refused. Borrowing *none* is a failure too: then nothing was tailored."
+        },
+        {
+          "small": "**And if you insist on a word your profile does not have, it is measured before it is allowed:**"
+        },
+        {
+          "diagram": "screen-axis"
+        }
+      ]
+    },
+    {
+      "title": "One full run",
+      "part": "4 · Architecture",
+      "wide": true,
+      "eyebrow": [
+        "4",
+        "How it works"
+      ],
+      "blocks": [
+        {
+          "h2": "One full run, end to end"
+        },
+        {
+          "pre": "turn.started ──▶ hook resets this turn's compile budget\n\nanalyze_jd     quota → model call → jdHash → ONE application created\n               └─ writes UsageEvent + LlmUsage\n\nwrite_cv ×N    every language in parallel, in one response\n\ncompile_pdf    GUARD → real dates reprinted → render → re-extract text\n\nscore_ats      hybrid score → action: revise | stop\n               └─ revise: exactly ONE pass, then control returns\n\nclosing        six lines maximum, and never restates the score"
+        },
+        {
+          "lede": "Then **the user drives**. Every message opens a new turn with a fresh compile budget, running the same chain."
+        }
+      ]
+    },
+    {
+      "title": "From prototype to product",
+      "part": "4 · Architecture",
+      "wide": true,
+      "eyebrow": [
+        "4",
+        "The service layer"
+      ],
+      "blocks": [
+        {
+          "h2": "What makes it a service and not a demo"
+        },
+        {
+          "table": {
+            "head": [
+              "",
+              "Free",
+              "Pro",
+              "Max"
+            ],
+            "rows": [
+              [
+                "Applications",
+                "<span class='num'>1 lifetime</span>",
+                "<span class='num'>30 / period</span>",
+                "<span class='num'>100 / period</span>"
+              ],
+              [
+                "Agent turns",
+                "<span class='num'>15</span>",
+                "<span class='num'>800</span>",
+                "<span class='num'>2 500</span>"
+              ],
+              [
+                "Languages",
+                "<span class='num'>1</span>",
+                "<span class='num'>3</span>",
+                "<span class='num'>6</span>"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "5. Scoring",
+      "part": "5 · Scoring",
+      "center": true,
+      "eyebrow": [
+        "Part 5"
+      ],
+      "blocks": [
+        {
+          "h1": "Scoring"
+        },
+        {
+          "sub": "How the result is measured: deterministically, and decomposably"
+        }
+      ]
+    },
+    {
+      "title": "How the score is made",
+      "part": "5 · Scoring",
+      "eyebrow": [
+        "5",
+        "Scoring"
+      ],
+      "wide": true,
+      "blocks": [
+        {
+          "h2": "Four measures out of 100, and one that can override them all"
+        },
+        {
+          "diagram": "score-weights"
+        },
+        {
+          "split": [
+            [
+              {
+                "h3": "What the four measure"
+              },
+              {
+                "rows": [
+                  [
+                    "Vocabulary · <span class='num'>35</span>",
+                    "whether the CV names what the offer names"
+                  ],
+                  [
+                    "Meaning · <span class='num'>35</span>",
+                    "whether it describes the same kind of work"
+                  ],
+                  [
+                    "Structure · <span class='num'>15</span>",
+                    "whether a parser can read it as a CV at all"
+                  ],
+                  [
+                    "Fit · <span class='num'>15</span>",
+                    "whether the title and the seniority correspond"
+                  ]
+                ]
+              }
+            ],
+            [
+              {
+                "h3": "Why the requirements are not averaged"
+              },
+              {
+                "p": "An offer marks certain skills as indispensable. The four measures are combined, then **multiplied** by the proportion of those skills actually present: cover half, and the score is halved. A screening system discards a CV that lacks a required skill however well it reads, and the measure reproduces that rather than softening it."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "title": "6. Demo",
+      "part": "6 · Demo",
+      "center": true,
+      "eyebrow": [
+        "Part 6"
+      ],
+      "blocks": [
+        {
+          "h1": "Demo"
+        },
+        {
+          "sub": "The system running, end to end"
+        }
+      ]
+    },
+    {
+      "title": "Thank you",
+      "part": "7 · Questions",
+      "center": true,
+      "eyebrow": [
+        "Thank you"
+      ],
+      "blocks": [
+        {
+          "h1": "Thank you"
+        },
+        {
+          "sub": "Questions?"
+        },
+        {
+          "credits": [
+            "Youness HASSOUNE",
+            "ENSA Safi · Department IRT",
+            "LPU-ICSI · Cora Tech",
+            "Defended 19 September 2026"
+          ]
+        }
+      ]
+    }
+  ]
+}

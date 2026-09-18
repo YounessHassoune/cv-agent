@@ -1,0 +1,632 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wellsuited PFE Defense</title><style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.13"></script>
+
+<style type="text/tailwindcss">
+@import "tailwindcss";
+
+/*
+ * The palette lives in plain custom properties, not in @theme, because the
+ * theme has three states: an explicit choice stamps data-theme, and the default
+ * "system" setting stamps nothing at all. @theme then points at these, so every
+ * Tailwind colour utility resolves through whichever set is currently active.
+ */
+:root{
+  --p-bg:#EEF1F3; --p-surface:#FFFFFF;
+  --p-ink:#10161D; --p-muted:#5C6874; --p-rule:#CBD4DC;
+  --p-accent:#0B6E75; --p-accent-soft:rgba(11,110,117,.09);
+  --p-pass:#24693F; --p-fail:#A8301F; --p-warn:#8A5A14;
+  --p-pass-soft:rgba(36,105,63,.10); --p-fail-soft:rgba(168,48,31,.09);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --p-bg:#0D1116; --p-surface:#151B22;
+    --p-ink:#E6EBF0; --p-muted:#95A3B1; --p-rule:#28323C;
+    --p-accent:#3FC0C6; --p-accent-soft:rgba(63,192,198,.12);
+    --p-pass:#5FCB8B; --p-fail:#F08575; --p-warn:#E0B15C;
+    --p-pass-soft:rgba(95,203,139,.12); --p-fail-soft:rgba(240,133,117,.12);
+  }
+}
+:root[data-theme="dark"]{
+  --p-bg:#0D1116; --p-surface:#151B22;
+  --p-ink:#E6EBF0; --p-muted:#95A3B1; --p-rule:#28323C;
+  --p-accent:#3FC0C6; --p-accent-soft:rgba(63,192,198,.12);
+  --p-pass:#5FCB8B; --p-fail:#F08575; --p-warn:#E0B15C;
+  --p-pass-soft:rgba(95,203,139,.12); --p-fail-soft:rgba(240,133,117,.12);
+}
+
+@theme {
+  --color-paper:var(--p-bg);
+  --color-surface:var(--p-surface);
+  --color-ink:var(--p-ink);
+  --color-muted:var(--p-muted);
+  --color-rule:var(--p-rule);
+  --color-accent:var(--p-accent);
+  --color-accent-soft:var(--p-accent-soft);
+  --color-pass:var(--p-pass);
+  --color-fail:var(--p-fail);
+  --color-warn:var(--p-warn);
+  --color-pass-soft:var(--p-pass-soft);
+  --color-fail-soft:var(--p-fail-soft);
+
+  --font-sans:"Archivo",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+
+  /* Fluid type, named once. `text-h2` beats an arbitrary clamp() repeated in
+     the markup — and it is the only place a size is tuned. */
+  --text-h1:clamp(2.4rem,7.2vw,5.2rem);
+  --text-h2:clamp(1.75rem,4.4vw,3.35rem);
+  --text-h3:clamp(1.12rem,2.25vw,1.46rem);
+  --text-lede:clamp(1.2rem,2.25vw,1.68rem);
+  --text-sub:clamp(1rem,1.9vw,1.35rem);
+  --text-body:clamp(1.08rem,1.75vw,1.42rem);
+  --text-li:clamp(1.06rem,1.7vw,1.38rem);
+  --text-note:clamp(.95rem,1.5vw,1.16rem);
+  --text-row:clamp(.98rem,1.6vw,1.26rem);
+  --text-cell:clamp(.92rem,1.55vw,1.22rem);
+  --text-pre:clamp(.72rem,1.32vw,1.02rem);
+  --text-formula:clamp(.92rem,2.35vw,1.62rem);
+  --text-eyebrow:clamp(.7rem,1.2vw,.84rem);
+  --text-cap:clamp(.66rem,1.1vw,.8rem);
+  --text-agenda:clamp(1.15rem,2.45vw,1.78rem);
+
+  /* Page rhythm, also named: the gutter is the one a block measures its way
+     back out of, and the paddings are what the slide body subtracts. */
+  --spacing-gutter:clamp(1rem,5vw,4.5rem);
+  --spacing-padtop:clamp(1.4rem,3.4vh,3rem);
+  --spacing-padbot:clamp(3.6rem,7vh,5rem);
+  --spacing-band:clamp(.7rem,1.9vh,1.5rem);
+  --spacing-tight:clamp(.3rem,.9vh,.6rem);
+  --spacing-rule:clamp(.5rem,1.6vh,1.1rem);
+  --spacing-colgap:clamp(1.6rem,4.5vw,4rem);
+
+  --animate-rise:rise .32s ease both;
+}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* The host paints its own ground behind the page, so body must claim one from
+   a token — a transparent body borrows the other theme's background. */
+body{
+  background:var(--p-bg); color:var(--p-ink);
+  font-family:var(--font-serif); font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+
+/*
+ * The only rules left that are not utilities, and each for a reason a class
+ * cannot cover: the host owns the <body> tag, an @keyframes has nowhere else to
+ * live, and `invert-dark` keys off the theme state rather than a breakpoint.
+ */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) img.invert-dark{filter:invert(1)}
+}
+:root[data-theme="dark"] img.invert-dark{filter:invert(1)}
+
+
+</style>
+
+<main id="deck" class="text-ink">
+  <div class="px-gutter py-[clamp(2rem,6vw,5rem)] max-w-[70ch]">
+    <p class="font-serif text-note text-muted">Loading slides…</p>
+  </div>
+</main>
+
+<nav id="hud" hidden
+     class="fixed inset-x-0 bottom-0 z-20 flex items-center gap-[clamp(.6rem,2vw,1.2rem)]
+            px-gutter pt-2 pb-3 font-mono text-[.72rem] tracking-[.08em] text-muted
+            bg-linear-to-t from-paper from-62% to-transparent">
+  <span class="font-bold text-ink tabular-nums"><span id="cur">1</span> / <span id="tot">0</span></span>
+  <span class="relative flex-1 h-px bg-rule overflow-hidden">
+    <i id="bar" class="absolute inset-y-0 left-0 w-0 bg-accent transition-[width] duration-[250ms]"></i>
+  </span>
+  <span id="part"></span>
+  <button id="full" type="button" hidden
+          class="rounded-xs border border-rule px-[.6em] py-[.25em] cursor-pointer
+                 hover:text-accent hover:border-accent">Full screen</button>
+  <button id="idx" type="button"
+          class="rounded-xs border border-rule px-[.6em] py-[.25em] cursor-pointer
+                 hover:text-accent hover:border-accent">Index</button>
+</nav>
+
+<div id="panel" hidden
+     class="fixed inset-0 z-30 bg-paper text-ink overflow-y-auto
+            px-gutter pt-[clamp(1.2rem,4vw,3rem)] pb-20">
+  <h3 class="font-sans font-semibold text-h3 mb-4">Slides</h3>
+  <ol id="list" class="columns-2 max-[720px]:columns-1 gap-x-[clamp(1.5rem,4vw,3.5rem)]"></ol>
+</div>
+<script>
+/*
+ * The slides are data: every word on screen comes from slides.json, so editing
+ * the deck never means editing this file. Strings there accept **bold**,
+ * *italic*, `code` and raw HTML — the file is authored, not user input, so it
+ * is rendered as written.
+ *
+ * Styling is Tailwind. Repeated class strings are named in `C` rather than
+ * inlined at every call site, so a change to "what a lede looks like" is one
+ * edit and not fourteen.
+ */
+(function () {
+  var esc = function (s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  };
+  var inline = function (s) {
+    return String(s)
+      .replace(/\*\*([\s\S]+?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em class="italic">$1</em>')
+      .replace(/`([^`]+)`/g, '<code class="font-mono text-[.88em] text-accent">$1</code>');
+  };
+
+  /** Every repeated class string, named once. */
+  var C = {
+    slide: 'hidden h-[100svh] pt-padtop pb-padbot px-gutter flex-col justify-center overflow-hidden',
+    fit: 'flex flex-col gap-band w-full max-w-full origin-top ' +
+         'min-h-[calc(100svh-var(--spacing-padtop)-var(--spacing-padbot))]',
+    head: 'flex flex-col items-center gap-tight text-center pb-rule border-b border-rule',
+    body: 'flex-1 min-h-0 flex flex-col justify-center gap-band',
+    eyebrow: 'flex items-baseline justify-center gap-[.65em] font-mono text-eyebrow ' +
+             'tracking-[.14em] uppercase text-accent',
+    h1: 'font-sans font-bold text-h1 leading-[.98] tracking-[-.028em] text-balance',
+    h2: 'font-sans font-semibold text-h2 leading-[1.06] tracking-[-.022em] text-balance',
+    h3: 'font-sans font-semibold text-h3 leading-[1.24] tracking-[-.012em]',
+    sub: 'font-sans font-medium text-sub leading-[1.3] tracking-[-.01em] text-muted',
+    lede: 'text-lede leading-[1.36] text-muted',
+    p: 'text-body',
+    note: 'text-note text-muted',
+    measured: 'max-w-[min(66ch,100%)] mx-auto',
+    list: 'flex flex-col gap-[.55em] pl-[1.15em] text-li marker:text-accent',
+    callout: 'border-l-[3px] border-warn pl-[clamp(.8rem,2vw,1.2rem)] text-row ' +
+             '[&_strong]:text-warn [&_strong]:font-sans',
+    pre: 'font-mono text-pre leading-[1.6] bg-surface border border-rule rounded-xs ' +
+         'p-[clamp(.75rem,1.7vw,1.15rem)] overflow-x-auto whitespace-pre',
+    formula: 'font-mono font-bold text-formula leading-[1.85] bg-accent-soft ' +
+             'border-l-[3px] border-accent p-[clamp(.85rem,2vw,1.3rem)] ' +
+             'overflow-x-auto whitespace-pre',
+    table: 'w-full border-collapse text-cell',
+    th: 'text-left align-top pr-[.85em] py-[.5em] border-b border-ink font-sans ' +
+        'font-semibold text-[.82em] tracking-[.05em] uppercase text-muted',
+    td: 'text-left align-top pr-[.85em] py-[.5em] border-b border-rule',
+    rows: 'flex flex-col',
+    row: 'flex justify-between gap-6 py-[.6em] border-b border-rule last:border-0 text-row',
+    beat: 'grid grid-cols-[auto_1fr] gap-y-[.4em] gap-x-4 items-baseline',
+    dt: 'font-mono text-[.78em] tracking-[.09em] uppercase text-muted whitespace-nowrap',
+    dd: 'text-row',
+    split: 'grid grid-cols-2 max-[720px]:grid-cols-1 gap-[clamp(1rem,3vw,2.4rem)] items-start',
+    stack: 'flex flex-col gap-[.7em]',
+    figure: 'flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full',
+    cols: 'columns-2 max-[820px]:columns-1 gap-x-colgap w-full',
+    colItem: 'break-inside-avoid mb-band last:mb-0 w-full',
+    cover: 'flex flex-col justify-between items-center w-full ' +
+           'gap-[clamp(.9rem,3vh,2rem)] min-h-[min(76svh,880px)]',
+    coverTop: 'flex flex-wrap items-center justify-between w-full text-left ' +
+              'gap-[clamp(.7rem,3vw,2.5rem)] pt-[clamp(26px,4.4vh,50px)]',
+    coverInst: 'flex flex-col gap-[.18em] text-left max-[640px]:items-center max-[640px]:text-center',
+    coverLogos: 'flex flex-wrap items-center justify-end gap-[clamp(1rem,4vw,3rem)]',
+    logoImg: 'block w-auto h-auto object-contain max-h-[clamp(30px,6.4vh,62px)] max-w-[min(100%,340px)]',
+    logoPlate: 'flex bg-white rounded-[5px] px-[clamp(.35rem,.9vw,.7rem)] py-[clamp(.25rem,.7vh,.5rem)]',
+    logoSlot: 'flex items-center justify-center text-center px-4 rounded-xs border border-dashed ' +
+              'border-rule font-mono text-[.66rem] tracking-[.16em] uppercase text-muted ' +
+              'h-[clamp(30px,6.4vh,62px)] min-w-[clamp(88px,12vw,140px)]',
+    uni: 'font-sans font-semibold tracking-[-.012em] leading-[1.18] text-[clamp(.9rem,2.4vh,1.3rem)]',
+    school: 'font-sans font-medium tracking-[-.006em] leading-[1.22] text-muted text-[clamp(.8rem,2vh,1.08rem)]',
+    dept: 'text-muted leading-[1.3] max-w-[52ch] text-[clamp(.7rem,1.65vh,.92rem)]',
+    coverMid: 'flex flex-col items-center w-full gap-[clamp(.3rem,1.1vh,.7rem)]',
+    country: 'font-mono tracking-[.32em] uppercase text-accent leading-[1.4] text-[clamp(.6rem,1.5vh,.82rem)]',
+    kind: 'font-sans font-bold uppercase tracking-[.18em] text-accent leading-[1.12] ' +
+          'mt-[clamp(.2rem,.9vh,.6rem)] text-[clamp(.82rem,2.4vh,1.36rem)]',
+    degree: 'flex flex-col gap-[.1em] text-muted leading-[1.3] text-[clamp(.76rem,1.9vh,1.02rem)] ' +
+            '[&_b]:font-sans [&_b]:font-semibold [&_b]:text-ink [&_b]:leading-[1.2] ' +
+            '[&_b]:tracking-[-.01em] [&_b]:text-[clamp(.9rem,2.5vh,1.3rem)]',
+    coverTitle: 'w-full border-y border-rule text-balance font-sans font-semibold ' +
+                'tracking-[-.022em] leading-[1.16] mt-[clamp(.35rem,1.4vh,1rem)] ' +
+                'py-[clamp(.55rem,2.2vh,1.5rem)] text-[clamp(1.05rem,4.2vh,2.3rem)]',
+    year: 'font-mono tracking-[.2em] uppercase text-accent leading-[1.4] ' +
+          'mt-[clamp(.3rem,1.2vh,.8rem)] text-[clamp(.6rem,1.55vh,.84rem)]',
+    coverBottom: 'grid grid-cols-[minmax(0,1fr)_auto] max-[640px]:grid-cols-1 items-end w-full ' +
+                 'text-left gap-[clamp(1rem,4vw,3.5rem)] max-[640px]:gap-[clamp(.8rem,2.5vh,1.4rem)]',
+    coverLbl: 'font-mono tracking-[.15em] uppercase text-muted leading-[1.4] text-[clamp(.54rem,1.25vh,.66rem)]',
+    jury: 'block text-left [&_ul]:block [&_ul]:m-0 [&_ul]:p-0 [&_li]:block [&_li]:m-0 ' +
+          '[&_b]:font-sans [&_b]:font-semibold [&_b]:leading-[1.25] [&_b]:tracking-[-.01em] ' +
+          '[&_b]:text-[clamp(.82rem,2.05vh,1.1rem)] ' +
+          '[&_span]:text-muted [&_span]:text-[clamp(.7rem,1.75vh,.94rem)] ' +
+          "[&_span]:before:content-['\\2014'] [&_span]:before:mx-[.4em] [&_span]:before:text-rule",
+    people: 'flex flex-col items-start text-left gap-[clamp(.35rem,1.2vh,.7rem)] ' +
+            '[&>div]:flex [&>div]:flex-col [&>div]:gap-[.05em] ' +
+            '[&_b]:font-sans [&_b]:font-semibold [&_b]:tracking-[-.01em] [&_b]:leading-[1.2] ' +
+            '[&_b]:text-[clamp(.88rem,2.3vh,1.22rem)]',
+    agenda: 'flex flex-col max-w-full mx-0',
+    agendaLi: 'grid grid-cols-[2.6em_1fr] gap-4 items-baseline py-[.6em] ' +
+              'border-b border-rule last:border-0 font-sans font-semibold ' +
+              'tracking-[-.012em] text-agenda'
+  };
+
+  /* Sub-sections are lettered in roman, a different series from the section
+     numbers, so the two levels never read as one flat list. */
+  var ROMAN = [[10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];
+  function roman(n) {
+    var out = '';
+    ROMAN.forEach(function (pair) {
+      while (n >= pair[0]) { out += pair[1]; n -= pair[0]; }
+    });
+    return out;
+  }
+  /*
+   * Diagrams live here rather than in slides.json: they are drawings, not
+   * copy. Every node carries its own Tailwind classes — no stylesheet of
+   * their own. A slide refers to one by name — { "diagram": "ats-funnel" }.
+   */
+  var DIAGRAMS = {
+    "hiring-funnel": '<figure class="flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full"><svg class="w-full max-w-[min(1000px,100%)] h-auto block text-ink" role="img" viewBox="0 0 760 286" aria-label="Most CVs submitted for a posting are removed by the applicant tracking system before a human reads one"><defs><marker id="a-7" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-current"/></marker><marker id="ax-7" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-accent"/></marker><marker id="ar-7" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-fail"/></marker></defs><text class="fill-current font-mono text-[10.5px] tracking-[.08em] uppercase fill-muted" x="8" y="14" text-anchor="start">One job posting</text><rect class="fill-none stroke-rule stroke-[1.5]" x="40" y="26" width="680" height="44" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="380" y="46" text-anchor="middle">About 250 CVs submitted</text><text class="fill-current font-sans text-[11px] fill-muted" x="380" y="62" text-anchor="middle">for a single opening</text><rect class="fill-fail-soft stroke-fail stroke-[1.5]" x="145" y="96" width="470" height="44" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="380" y="116" text-anchor="middle">ATS gate</text><text class="fill-current font-sans text-[11px] fill-muted" x="380" y="132" text-anchor="middle">parsing then the must-have keyword filter</text><rect class="fill-none stroke-rule stroke-[1.5]" x="240" y="166" width="280" height="44" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="380" y="186" text-anchor="middle">About 25 surfaced</text><text class="fill-current font-sans text-[11px] fill-muted" x="380" y="202" text-anchor="middle">ranked by match score</text><rect class="fill-surface stroke-current stroke-[1.5]" x="305" y="236" width="150" height="44" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="380" y="256" text-anchor="middle">A handful read</text><text class="fill-current font-sans text-[11px] fill-muted" x="380" y="272" text-anchor="middle">by a human</text><path class="fill-none stroke-current stroke-[1.5]" d="M380 70 V90" marker-end="url(#a-7)"/><path class="fill-none stroke-current stroke-[1.5]" d="M380 140 V160" marker-end="url(#a-7)"/><path class="fill-none stroke-current stroke-[1.5]" d="M380 210 V230" marker-end="url(#a-7)"/><text class="fill-current font-sans text-[11px] fill-fail" x="625" y="114" text-anchor="start">most CVs stop here</text><text class="fill-current font-sans text-[11px] fill-fail" x="625" y="128" text-anchor="start">no human ever reads them</text></svg></figure>',
+    "llm-vs-agent": '<figure class="flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full"><svg class="w-full max-w-[min(1000px,100%)] h-auto block text-ink" role="img" viewBox="0 0 820 236" aria-label="A language model alone maps text to text, while an agent adds a harness, tools and memory around that model"><defs><marker id="a-8" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-current"/></marker><marker id="ax-8" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-accent"/></marker><marker id="ar-8" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-fail"/></marker></defs><text class="fill-current font-mono text-[10.5px] tracking-[.08em] uppercase fill-muted" x="8" y="20" text-anchor="start">A model alone</text><rect class="fill-none stroke-rule stroke-[1.5]" x="8" y="32" width="300" height="150" rx="3"/><rect class="fill-surface stroke-current stroke-[1.5]" x="24" y="82" width="72" height="40" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="60" y="107" text-anchor="middle">Text in</text><path class="fill-none stroke-current stroke-[1.5]" d="M96 102 H112" marker-end="url(#a-8)"/><rect class="fill-surface stroke-current stroke-[1.5]" x="118" y="74" width="84" height="56" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="160" y="99" text-anchor="middle">Model</text><text class="fill-current font-sans text-[11px] fill-muted" x="160" y="115" text-anchor="middle">predicts</text><path class="fill-none stroke-current stroke-[1.5]" d="M202 102 H218" marker-end="url(#a-8)"/><rect class="fill-surface stroke-current stroke-[1.5]" x="224" y="82" width="72" height="40" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="260" y="107" text-anchor="middle">Text out</text><text class="fill-current font-sans text-[11px] fill-fail" x="158" y="160" text-anchor="middle">no memory · no tools · nothing happens</text><text class="fill-current font-mono text-[10.5px] tracking-[.08em] uppercase fill-muted" x="340" y="20" text-anchor="start">An agent = model + harness + tools + memory</text><rect class="fill-none stroke-rule stroke-[1.5]" x="340" y="32" width="470" height="150" rx="3"/><rect class="fill-surface stroke-current stroke-[1.5]" x="351" y="60" width="100" height="52" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="401" y="90" text-anchor="middle">Model</text><text class="fill-current font-sans text-[11px] fill-muted" x="401" y="130" text-anchor="middle">decides what</text><text class="fill-current font-sans text-[11px] fill-muted" x="401" y="144" text-anchor="middle">to do next</text><rect class="fill-accent-soft stroke-accent stroke-[1.5]" x="467" y="60" width="100" height="52" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="517" y="90" text-anchor="middle">Harness</text><text class="fill-current font-sans text-[11px] fill-muted" x="517" y="130" text-anchor="middle">validates every</text><text class="fill-current font-sans text-[11px] fill-muted" x="517" y="144" text-anchor="middle">call first</text><rect class="fill-surface stroke-current stroke-[1.5]" x="583" y="60" width="100" height="52" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="633" y="90" text-anchor="middle">Tools</text><text class="fill-current font-sans text-[11px] fill-muted" x="633" y="130" text-anchor="middle">real code that</text><text class="fill-current font-sans text-[11px] fill-muted" x="633" y="144" text-anchor="middle">writes and renders</text><rect class="fill-surface stroke-current stroke-[1.5]" x="699" y="60" width="100" height="52" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="749" y="90" text-anchor="middle">Memory</text><text class="fill-current font-sans text-[11px] fill-muted" x="749" y="130" text-anchor="middle">profile, session,</text><text class="fill-current font-sans text-[11px] fill-muted" x="749" y="144" text-anchor="middle">history in Postgres</text><text class="fill-current font-sans text-[13px] font-semibold" x="459" y="92" text-anchor="middle">+</text><text class="fill-current font-sans text-[13px] font-semibold" x="575" y="92" text-anchor="middle">+</text><text class="fill-current font-sans text-[13px] font-semibold" x="691" y="92" text-anchor="middle">+</text><path class="fill-none stroke-current stroke-[1.5] stroke-accent [stroke-dasharray:5_4]" d="M351 170 H799" marker-end="url(#ax-8)"/><text class="fill-current font-sans text-[11px] fill-accent" x="575" y="164" text-anchor="middle">goal in → tool calls → verified effects → answer</text></svg><figcaption class="font-mono text-cap tracking-[.06em] text-muted text-center max-w-[72ch]">The model is one component of four. Everything that must be <em class=\'italic\'>guaranteed</em> lives in the other three.</figcaption></figure>',
+    "prompt-vs-pipeline": '<figure class="flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full"><svg class="w-full max-w-[min(1000px,100%)] h-auto block text-ink" role="img" viewBox="0 0 900 268" aria-label="A single chatbot prompt returns text, whereas a tool pipeline returns a checked document and a measured score"><defs><marker id="a-9" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-current"/></marker><marker id="ax-9" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-accent"/></marker><marker id="ar-9" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-fail"/></marker></defs><text class="fill-current font-mono text-[10.5px] tracking-[.08em] uppercase fill-muted" x="8" y="20" text-anchor="start">One prompt</text><rect class="fill-none stroke-rule stroke-[1.5]" x="8" y="32" width="250" height="204" rx="3"/><rect class="fill-surface stroke-current stroke-[1.5]" x="73" y="56" width="120" height="40" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="133" y="81" text-anchor="middle">CV + offer</text><rect class="fill-surface stroke-current stroke-[1.5]" x="73" y="118" width="120" height="40" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="133" y="143" text-anchor="middle">Chatbot</text><rect class="fill-surface stroke-current stroke-[1.5]" x="73" y="180" width="120" height="40" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="133" y="205" text-anchor="middle">Text</text><path class="fill-none stroke-current stroke-[1.5]" d="M133 96 V112" marker-end="url(#a-9)"/><path class="fill-none stroke-current stroke-[1.5]" d="M133 158 V174" marker-end="url(#a-9)"/><text class="fill-current font-sans text-[11px] fill-fail" x="133" y="228" text-anchor="middle">fabricates · no score · not a document</text><text class="fill-current font-mono text-[10.5px] tracking-[.08em] uppercase fill-muted" x="290" y="20" text-anchor="start">A tool pipeline</text><rect class="fill-none stroke-rule stroke-[1.5]" x="290" y="32" width="602" height="204" rx="3"/><text class="fill-current font-sans text-[11px] fill-muted" x="312" y="62" text-anchor="start">Master profile: the only source of facts</text><rect class="fill-surface stroke-current stroke-[1.5]" x="312" y="78" width="126" height="48" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="375" y="102" text-anchor="middle">analyze_jd</text><text class="fill-current font-sans text-[11px] fill-muted" x="375" y="118" text-anchor="middle">reads the offer</text><rect class="fill-surface stroke-current stroke-[1.5]" x="456" y="78" width="126" height="48" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="519" y="102" text-anchor="middle">write_cv</text><text class="fill-current font-sans text-[11px] fill-muted" x="519" y="118" text-anchor="middle">drafts one language</text><rect class="fill-accent-soft stroke-accent stroke-[1.5]" x="600" y="78" width="126" height="48" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="663" y="102" text-anchor="middle">compile_pdf</text><text class="fill-current font-sans text-[11px] fill-muted" x="663" y="118" text-anchor="middle">guard, then render</text><rect class="fill-surface stroke-current stroke-[1.5]" x="744" y="78" width="126" height="48" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="807" y="102" text-anchor="middle">score_ats</text><text class="fill-current font-sans text-[11px] fill-muted" x="807" y="118" text-anchor="middle">measures the result</text><path class="fill-none stroke-current stroke-[1.5]" d="M438 102 H450" marker-end="url(#a-9)"/><path class="fill-none stroke-current stroke-[1.5]" d="M582 102 H594" marker-end="url(#a-9)"/><path class="fill-none stroke-current stroke-[1.5]" d="M726 102 H738" marker-end="url(#a-9)"/><text class="fill-current font-sans text-[11px] fill-accent" x="663" y="148" text-anchor="middle">single-column ATS PDF</text><path class="fill-none stroke-current stroke-[1.5] stroke-accent [stroke-dasharray:5_4]" d="M807 126 V186 H519 V132" marker-end="url(#ax-9)"/><text class="fill-current font-sans text-[11px] fill-accent" x="663" y="202" text-anchor="middle">revise once, then the user drives</text></svg><figcaption class="font-mono text-cap tracking-[.06em] text-muted text-center max-w-[72ch]">Same model underneath. The difference is what the code around it refuses to let through.</figcaption></figure>',
+    "architecture-flow": '<figure class="flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full"><svg class="w-full max-w-[min(1000px,100%)] h-auto block text-ink" role="img" viewBox="0 0 820 306" aria-label="Layered architecture: browser, Next.js, the eve agent runtime beside the deterministic layer, and one PostgreSQL database"><defs><marker id="a-10" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-current"/></marker><marker id="ax-10" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-accent"/></marker><marker id="ar-10" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-fail"/></marker></defs><rect class="fill-surface stroke-current stroke-[1.5]" x="60" y="8" width="700" height="40" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="410" y="33" text-anchor="middle">Browser: React 19 · Tailwind CSS 4</text><path class="fill-none stroke-current stroke-[1.5]" d="M410 48 V66" marker-end="url(#a-10)"/><rect class="fill-surface stroke-current stroke-[1.5]" x="60" y="66" width="700" height="52" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="410" y="88" text-anchor="middle">Next.js 16, App Router</text><text class="fill-current font-sans text-[11px] fill-muted" x="410" y="105" text-anchor="middle">marketing · dashboard · REST API · /eve/v1/* behind a signed session cookie</text><path class="fill-none stroke-current stroke-[1.5]" d="M225 118 V142" marker-end="url(#a-10)"/><path class="fill-none stroke-current stroke-[1.5]" d="M595 118 V142" marker-end="url(#a-10)"/><rect class="fill-accent-soft stroke-accent stroke-[1.5]" x="60" y="142" width="330" height="74" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="225" y="165" text-anchor="middle">Agent runtime: eve</text><text class="fill-current font-sans text-[11px] fill-muted" x="225" y="182" text-anchor="middle">orchestrator · 5 typed tools</text><text class="fill-current font-sans text-[11px] fill-muted" x="225" y="196" text-anchor="middle">hooks · durable session state</text><rect class="fill-surface stroke-current stroke-[1.5]" x="430" y="142" width="330" height="74" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="595" y="165" text-anchor="middle">Deterministic layer: TypeScript</text><text class="fill-current font-sans text-[11px] fill-muted" x="595" y="182" text-anchor="middle">truth guard · hybrid ATS scorer</text><text class="fill-current font-sans text-[11px] fill-muted" x="595" y="196" text-anchor="middle">PDF render · entitlements · metering</text><path class="fill-none stroke-current stroke-[1.5]" d="M390 172 H424" marker-end="url(#a-10)"/><text class="fill-current font-sans text-[11px] fill-muted" x="407" y="164" text-anchor="middle">calls</text><path class="fill-none stroke-current stroke-[1.5]" d="M225 216 V244 H386" marker-end="url(#a-10)"/><path class="fill-none stroke-current stroke-[1.5]" d="M595 216 V244 H434" marker-end="url(#a-10)"/><rect class="fill-surface stroke-current stroke-[1.5]" x="250" y="244" width="320" height="42" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="410" y="262" text-anchor="middle">PostgreSQL 17 · Prisma 7</text><text class="fill-current font-sans text-[11px] fill-muted" x="410" y="278" text-anchor="middle">13 entities · every row scoped to one user</text><text class="fill-current font-sans text-[11px] fill-muted" x="410" y="300" text-anchor="middle">External: AI Gateway · Stripe · Resend · Cloudinary · Google OAuth</text></svg><figcaption class="font-mono text-cap tracking-[.06em] text-muted text-center max-w-[72ch]">The model never reaches the database. Every write goes through a tool the harness validated first.</figcaption></figure>',
+    "ats-funnel": '<figure class="flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full"><svg class="w-full max-w-[min(1000px,100%)] h-auto block text-ink" role="img" viewBox="0 0 760 172" aria-label="An applicant tracking system filters CVs in three stages before any human reads one"><defs><marker id="a-1" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-current"/></marker><marker id="ax-1" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-accent"/></marker><marker id="ar-1" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-fail"/></marker></defs><text class="fill-current font-mono text-[10.5px] tracking-[.08em] uppercase fill-muted" x="8" y="26">Applications</text><rect class="fill-none stroke-rule stroke-[1.5]" x="8" y="36" width="86" height="52" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="51" y="60" text-anchor="middle">200</text><text class="fill-current font-sans text-[13px] text-[11px] fill-muted" x="51" y="76" text-anchor="middle">received</text><rect class="fill-surface stroke-current stroke-[1.5]" x="150" y="30" width="140" height="64" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="220" y="56" text-anchor="middle">Parsing</text><text class="fill-current font-sans text-[13px] text-[11px] fill-muted" x="220" y="74" text-anchor="middle">file → fields</text><path class="fill-none stroke-current stroke-[1.5]" d="M290 62 H322" marker-end="url(#a-1)"/><rect class="fill-surface stroke-current stroke-[1.5]" x="330" y="30" width="140" height="64" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="400" y="56" text-anchor="middle">Keyword filter</text><text class="fill-current font-sans text-[13px] text-[11px] fill-muted" x="400" y="74" text-anchor="middle">must-haves</text><path class="fill-none stroke-current stroke-[1.5]" d="M470 62 H502" marker-end="url(#a-1)"/><rect class="fill-surface stroke-current stroke-[1.5]" x="510" y="30" width="140" height="64" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="580" y="56" text-anchor="middle">Ranking</text><text class="fill-current font-sans text-[13px] text-[11px] fill-muted" x="580" y="74" text-anchor="middle">match score</text><path class="fill-none stroke-current stroke-[1.5]" d="M94 62 H142" marker-end="url(#a-1)"/><path class="fill-none stroke-current stroke-[1.5]" d="M650 62 H686" marker-end="url(#a-1)"/><text class="fill-current font-mono text-[10.5px] tracking-[.08em] uppercase fill-muted" x="694" y="50">Human</text><text class="fill-current font-sans text-[13px] font-semibold" x="694" y="70">6</text><path class="fill-none stroke-current stroke-[1.5] stroke-fail [stroke-dasharray:5_4]" d="M220 94 V132" marker-end="url(#ar-1)"/><text class="fill-current font-sans text-[13px] text-[11px] fill-fail" x="228" y="128">layout breaks</text><path class="fill-none stroke-current stroke-[1.5] stroke-fail [stroke-dasharray:5_4]" d="M400 94 V132" marker-end="url(#ar-1)"/><text class="fill-current font-sans text-[13px] text-[11px] fill-fail" x="408" y="128">wrong words</text><path class="fill-none stroke-current stroke-[1.5] stroke-fail [stroke-dasharray:5_4]" d="M580 94 V132" marker-end="url(#ar-1)"/><text class="fill-current font-sans text-[13px] text-[11px] fill-fail" x="588" y="128">ranked low</text><text class="fill-current font-mono text-[10.5px] tracking-[.08em] uppercase fill-fail" x="8" y="152">Never read by a human</text><path class="fill-none stroke-current stroke-[1.5] stroke-fail" d="M8 160 H720"/></svg></figure>',
+    "agent-loop": '<figure class="flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full"><svg class="w-full max-w-[min(1000px,100%)] h-auto block text-ink" role="img" viewBox="0 0 760 222" aria-label="A loop of three steps: the model plans, the harness runs the step for real, the model checks the result, and the cycle repeats until the job is done"><defs><marker id="a-2" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-current"/></marker><marker id="ax-2" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-accent"/></marker><marker id="ar-2" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-fail"/></marker></defs><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase fill-muted" x="115" y="26" text-anchor="middle">The model</text><rect class="fill-surface stroke-current stroke-[1.5]" x="20" y="40" width="190" height="84" rx="3"/><text class="fill-current font-sans text-[14px] font-semibold" x="115" y="78" text-anchor="middle">1 · Plan</text><text class="fill-current font-sans text-[11px] fill-muted" x="115" y="100" text-anchor="middle">picks the next step</text><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase fill-accent" x="380" y="26" text-anchor="middle">The harness</text><rect class="fill-accent-soft stroke-accent stroke-[1.5]" x="285" y="40" width="190" height="84" rx="3"/><text class="fill-current font-sans text-[14px] font-semibold" x="380" y="78" text-anchor="middle">2 · Run</text><text class="fill-current font-sans text-[11px] fill-muted" x="380" y="100" text-anchor="middle">does it for real</text><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase fill-muted" x="645" y="26" text-anchor="middle">The model</text><rect class="fill-surface stroke-current stroke-[1.5]" x="550" y="40" width="190" height="84" rx="3"/><text class="fill-current font-sans text-[14px] font-semibold" x="645" y="78" text-anchor="middle">3 · Check</text><text class="fill-current font-sans text-[11px] fill-muted" x="645" y="100" text-anchor="middle">reads what happened</text><path class="fill-none stroke-current stroke-[1.5]" d="M210 82 H279" marker-end="url(#a-2)"/><path class="fill-none stroke-current stroke-[1.5]" d="M475 82 H544" marker-end="url(#a-2)"/><path class="fill-none stroke-current stroke-[1.5] stroke-accent [stroke-dasharray:5_4]" d="M645 124 V170 H115 V130" marker-end="url(#ax-2)"/><text class="fill-current font-sans text-[11px] fill-accent" x="380" y="192" text-anchor="middle">4 · Repeat, until the job is done. Then it answers you</text></svg></figure>',
+    "tool-call-path": '<figure class="flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full"><svg class="w-full max-w-[min(1000px,100%)] h-auto block text-ink" role="img" viewBox="0 0 760 218" aria-label="Before, the whole CV travelled through the orchestrator twice; after, it goes straight from the tool to the database"><defs><marker id="a-3" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-current"/></marker><marker id="ax-3" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-accent"/></marker><marker id="ar-3" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-fail"/></marker></defs><text class="fill-current font-mono text-[10.5px] tracking-[.08em] uppercase fill-fail" x="10" y="18">Before: sub-agents</text><rect class="fill-surface stroke-current stroke-[1.5]" x="10" y="34" width="130" height="46" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="75" y="62" text-anchor="middle">Orchestrator</text><rect class="fill-surface stroke-current stroke-[1.5]" x="10" y="140" width="130" height="46" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="75" y="168" text-anchor="middle">Sub-agent</text><rect class="fill-none stroke-rule stroke-[1.5]" x="210" y="140" width="110" height="46" rx="3"/><text class="fill-current font-sans text-[13px] fill-muted" x="265" y="168" text-anchor="middle">Database</text><path class="fill-none stroke-current stroke-[1.5] stroke-fail stroke-[5] [stroke-linecap:round]" d="M60 136 V86" marker-end="url(#ar-3)"/><path class="fill-none stroke-current stroke-[1.5] stroke-fail stroke-[5] [stroke-linecap:round]" d="M108 86 V136" marker-end="url(#ar-3)"/><text class="fill-current font-sans text-[13px] text-[11px] fill-fail" x="124" y="106">full CV,</text><text class="fill-current font-sans text-[13px] text-[11px] fill-fail" x="124" y="120">both ways</text><text class="fill-current font-sans text-[13px] text-[11px] fill-fail" x="10" y="208">retyped by the orchestrator · 40–60 s per step</text><path class="fill-none stroke-rule stroke-[1.5]" d="M360 10 V215"/><text class="fill-current font-mono text-[10.5px] tracking-[.08em] uppercase fill-pass" x="400" y="18">After: the call lives in the tool</text><rect class="fill-surface stroke-current stroke-[1.5]" x="400" y="34" width="130" height="46" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="465" y="62" text-anchor="middle">Orchestrator</text><rect class="fill-surface stroke-current stroke-[1.5]" x="400" y="140" width="130" height="46" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="465" y="168" text-anchor="middle">Tool</text><rect class="fill-accent-soft stroke-accent stroke-[1.5]" x="600" y="140" width="130" height="46" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="665" y="168" text-anchor="middle">Database</text><path class="fill-none stroke-current stroke-[1.5]" d="M440 86 V134" marker-end="url(#a-3)"/><text class="fill-current font-sans text-[13px] text-[11px] fill-muted" x="356" y="114">applicationId</text><path class="fill-none stroke-current stroke-[1.5]" d="M496 134 V86" marker-end="url(#a-3)"/><text class="fill-current font-sans text-[13px] text-[11px] fill-muted" x="504" y="106">receipt</text><text class="fill-current font-sans text-[13px] text-[11px] fill-muted" x="504" y="120">“6 terms”</text><path class="fill-none stroke-current stroke-[1.5] stroke-pass stroke-[5] [stroke-linecap:round]" d="M530 163 H594" marker-end="url(#a-3)"/><text class="fill-current font-sans text-[13px] text-[11px] fill-pass" x="562" y="204" text-anchor="middle">full CV</text><text class="fill-current font-sans text-[13px] text-[11px] fill-pass" x="400" y="208">the document never enters the model’s context</text></svg><figcaption class="font-mono text-cap tracking-[.06em] text-muted text-center max-w-[72ch]">The only thing that moved is where the thick arrow points. That is the difference between 40–60 s per step and a one-line receipt.</figcaption></figure>',
+    "guard-sets": '<figure class="flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full"><svg class="w-full max-w-[min(1000px,100%)] h-auto block text-ink" role="img" viewBox="0 0 640 320" aria-label="Three overlapping circles: what is in your profile, what this offer asks for, and what you asked to add. Only words inside them may appear on the CV"><defs><marker id="ar-4" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-fail"/></marker></defs><circle class="fill-none stroke-rule stroke-[1.5]" cx="230" cy="130" r="105"/><circle class="fill-none stroke-rule stroke-[1.5]" cx="360" cy="130" r="105"/><circle class="fill-accent-soft stroke-accent stroke-[1.5]" cx="295" cy="212" r="62"/><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase" x="163" y="66" text-anchor="middle">Your profile</text><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase" x="428" y="66" text-anchor="middle">This offer</text><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase fill-accent" x="295" y="262" text-anchor="middle">You asked for it</text><text class="fill-current font-sans text-[13px] font-semibold" x="295" y="126" text-anchor="middle">ALLOWED</text><text class="fill-current font-sans text-[11px] fill-muted" x="295" y="144" text-anchor="middle">may appear on the CV</text><path class="fill-none stroke-fail stroke-[1.5] [stroke-dasharray:5_4]" d="M520 120 H472" marker-end="url(#ar-4)"/><text class="fill-current font-sans text-[11px] fill-fail" x="530" y="108" text-anchor="start">Anything else</text><text class="fill-current font-sans text-[11px] fill-fail" x="530" y="124" text-anchor="start">is invented,</text><text class="fill-current font-sans text-[11px] fill-fail" x="530" y="140" text-anchor="start">the PDF is</text><text class="fill-current font-sans text-[11px] fill-fail" x="530" y="156" text-anchor="start">refused</text><text class="fill-current font-sans text-[11px] fill-muted" x="320" y="306" text-anchor="middle">This applies to skills only. Employers, titles and dates come from the profile, always.</text></svg></figure>',
+    "score-weights": '<figure class="flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full"><svg class="w-full max-w-[min(1000px,100%)] h-auto block text-ink" role="img" viewBox="0 0 700 246" aria-label="The formula: four weighted measures give a base score, which is multiplied by the proportion of required skills present"><defs><marker id="a-5" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-current"/></marker></defs><text class="fill-current font-mono text-[12px]" x="20" y="20" text-anchor="start">base  = 0.35·vocabulary + 0.35·meaning + 0.15·structure + 0.15·fit</text><text class="fill-current font-mono text-[12px] font-bold" x="20" y="40" text-anchor="start">total = round( base × required-skill coverage )</text><path class="fill-none stroke-rule stroke-[1.5]" d="M20 54 H680"/><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase fill-muted" x="20" y="74" text-anchor="start">The four measures</text><rect class="fill-accent" x="20" y="84" width="221" height="44" rx="2" opacity=".9"/><text class="fill-current font-sans text-[12px] font-semibold fill-paper" x="130" y="104" text-anchor="middle">vocabulary</text><text class="fill-current font-sans text-[11px] fill-paper" x="130" y="120" text-anchor="middle">35 %</text><rect class="fill-accent" x="244" y="84" width="221" height="44" rx="2" opacity=".9"/><text class="fill-current font-sans text-[12px] font-semibold fill-paper" x="354" y="104" text-anchor="middle">meaning</text><text class="fill-current font-sans text-[11px] fill-paper" x="354" y="120" text-anchor="middle">35 %</text><rect class="fill-muted" x="468" y="84" width="93" height="44" rx="2" opacity=".35"/><text class="fill-current font-sans text-[12px] font-semibold fill-paper" x="514" y="104" text-anchor="middle">structure</text><text class="fill-current font-sans text-[11px] fill-paper" x="514" y="120" text-anchor="middle">15 %</text><rect class="fill-muted" x="564" y="84" width="93" height="44" rx="2" opacity=".35"/><text class="fill-current font-sans text-[12px] font-semibold fill-paper" x="610" y="104" text-anchor="middle">fit</text><text class="fill-current font-sans text-[11px] fill-paper" x="610" y="120" text-anchor="middle">15 %</text><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase fill-muted" x="20" y="156" text-anchor="start">Required-skill coverage</text><rect class="fill-none stroke-rule stroke-[1.5]" x="20" y="166" width="380" height="40" rx="2"/><rect class="fill-pass" x="20" y="166" width="253" height="40" rx="2" opacity=".5"/><text class="fill-current font-sans text-[12px] font-semibold" x="146" y="191" text-anchor="middle">4 of the 6 present</text><text class="fill-current font-sans text-[11px] fill-fail" x="336" y="191" text-anchor="middle">2 missing</text><path class="fill-none stroke-current stroke-[1.5]" d="M408 186 H446" marker-end="url(#a-5)"/><text class="fill-current font-mono text-[12px] font-bold" x="458" y="182" text-anchor="start">total = base × 0.67</text><text class="fill-current font-sans text-[11px] fill-muted" x="458" y="200" text-anchor="start">a third of the score, gone</text><text class="fill-current font-sans text-[11px] fill-muted" x="20" y="234" text-anchor="start">A missing requirement cannot be offset by strong writing: the coverage multiplies, it does not average.</text></svg></figure>',
+    "screen-axis": '<figure class="flex flex-col items-center gap-[clamp(.4rem,1.2vh,.8rem)] w-full"><svg class="w-full max-w-[min(1000px,100%)] h-auto block text-ink" role="img" viewBox="0 0 720 336" aria-label="Top: the word you asked for and the job ad each become a list of numbers, and how close the two lists are gives a score. Bottom: that score is compared with the threshold of 0.20 to accept or refuse the word"><defs><marker id="a-6" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-current"/></marker><marker id="ax-6" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto"><path d="M0 0 L10 4 L0 8 z" class="fill-accent"/></marker></defs><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase fill-muted" x="8" y="18" text-anchor="start">1 · Where the number comes from</text><rect class="fill-surface stroke-current stroke-[1.5]" x="8" y="28" width="136" height="44" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="76" y="50" text-anchor="middle">Databricks</text><text class="fill-current font-sans text-[11px] fill-muted" x="76" y="66" text-anchor="middle">the word you asked for</text><rect class="fill-surface stroke-current stroke-[1.5]" x="8" y="86" width="136" height="44" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="76" y="108" text-anchor="middle">The job ad</text><text class="fill-current font-sans text-[11px] fill-muted" x="76" y="124" text-anchor="middle">its whole text</text><rect class="fill-surface stroke-current stroke-[1.5]" x="190" y="50" width="150" height="52" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="265" y="76" text-anchor="middle">Each becomes</text><text class="fill-current font-sans text-[11px] fill-muted" x="265" y="92" text-anchor="middle">a list of numbers</text><rect class="fill-surface stroke-current stroke-[1.5]" x="390" y="50" width="160" height="52" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold" x="470" y="76" text-anchor="middle">Measure how close</text><text class="fill-current font-sans text-[11px] fill-muted" x="470" y="92" text-anchor="middle">the two lists are</text><rect class="fill-accent-soft stroke-accent stroke-[1.5]" x="600" y="56" width="90" height="40" rx="3"/><text class="fill-current font-sans text-[13px] font-semibold fill-accent" x="645" y="81" text-anchor="middle">0.49</text><path class="fill-none stroke-current stroke-[1.5]" d="M144 50 H167 V76 H184" marker-end="url(#a-6)"/><path class="fill-none stroke-current stroke-[1.5]" d="M144 108 H167 V76 H184" marker-end="url(#a-6)"/><path class="fill-none stroke-current stroke-[1.5]" d="M340 76 H384" marker-end="url(#a-6)"/><path class="fill-none stroke-current stroke-[1.5]" d="M550 76 H594" marker-end="url(#a-6)"/><text class="fill-current font-sans text-[11px] fill-muted" x="470" y="120" text-anchor="middle">0 = nothing in common · 1 = the same thing</text><path class="fill-none stroke-rule stroke-[1.5]" d="M8 142 H712"/><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase fill-muted" x="8" y="162" text-anchor="start">2 · How that number decides</text><path class="fill-none stroke-fail stroke-[3]" d="M60 258 H210"/><path class="fill-none stroke-pass stroke-[3]" d="M210 258 H660"/><path class="fill-none stroke-accent stroke-[1.5]" d="M210 176 V274"/><text class="fill-current font-sans text-[13px] font-semibold fill-accent" x="210" y="170" text-anchor="middle">0.20</text><text class="fill-current font-sans text-[12px] fill-fail" x="90" y="212" text-anchor="middle">Horse riding</text><path class="fill-none stroke-fail stroke-[1.5]" d="M90 218 V252"/><circle class="fill-fail" cx="90" cy="258" r="4"/><text class="fill-current font-sans text-[12px] fill-fail" x="165" y="194" text-anchor="middle">Carpentry</text><path class="fill-none stroke-fail stroke-[1.5]" d="M165 200 V252"/><circle class="fill-fail" cx="165" cy="258" r="4"/><text class="fill-current font-sans text-[12px] fill-fail" x="195" y="212" text-anchor="middle">Plumbing</text><path class="fill-none stroke-fail stroke-[1.5]" d="M195 218 V252"/><circle class="fill-fail" cx="195" cy="258" r="4"/><text class="fill-current font-sans text-[12px] fill-pass" x="225" y="194" text-anchor="middle">dbt</text><path class="fill-none stroke-pass stroke-[1.5]" d="M225 200 V252"/><circle class="fill-pass" cx="225" cy="258" r="4"/><text class="fill-current font-sans text-[12px] fill-pass" x="345" y="212" text-anchor="middle">Airflow</text><path class="fill-none stroke-pass stroke-[1.5]" d="M345 218 V252"/><circle class="fill-pass" cx="345" cy="258" r="4"/><text class="fill-current font-sans text-[12px] fill-pass" x="420" y="194" text-anchor="middle">Excel</text><path class="fill-none stroke-pass stroke-[1.5]" d="M420 200 V252"/><circle class="fill-pass" cx="420" cy="258" r="4"/><text class="fill-current font-sans text-[12px] fill-pass" x="570" y="212" text-anchor="middle">Data governance</text><path class="fill-none stroke-pass stroke-[1.5]" d="M570 218 V252"/><circle class="fill-pass" cx="570" cy="258" r="4"/><text class="fill-current font-sans text-[12px] fill-pass" x="645" y="194" text-anchor="middle">Databricks</text><path class="fill-none stroke-pass stroke-[1.5]" d="M645 200 V252"/><circle class="fill-pass" cx="645" cy="258" r="4"/><path class="fill-none stroke-accent stroke-[1.5] [stroke-dasharray:5_4]" d="M645 96 V182" marker-end="url(#ax-6)"/><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase fill-fail" x="135" y="286" text-anchor="middle">Below 0.20: refused</text><text class="fill-current font-mono text-[10px] tracking-[.12em] uppercase fill-pass" x="435" y="286" text-anchor="middle">0.20 or above: accepted</text><text class="fill-current font-sans text-[11px] fill-muted" x="360" y="312" text-anchor="middle">An unrelated control text scores 0.12, so the line was drawn just above it, at 0.20.</text><text class="fill-current font-sans text-[11px] fill-muted" x="360" y="328" text-anchor="middle">0.49 is well past the line, so Databricks goes on the CV.</text></svg></figure>',
+  };
+
+  /* Blocks that want the page's full width and must never be put in a column. */
+  var WIDE = ['pre', 'formula', 'table', 'split', 'cover', 'agenda', 'diagram'];
+  function isWide(b) {
+    return WIDE.some(function (k) { return k in b; });
+  }
+
+  /** One data block → one piece of the slide. Unknown keys render nothing. */
+  function block(b) {
+    if (b.h1) return '<h1 class="' + C.h1 + '">' + inline(b.h1) + '</h1>';
+    if (b.h2) return '<h2 class="' + C.h2 + '">' + inline(b.h2) + '</h2>';
+    if (b.h3) return '<h3 class="' + C.h3 + '">' + inline(b.h3) + '</h3>';
+    if (b.sub) return '<p class="' + C.sub + '">' + inline(b.sub) + '</p>';
+    if (b.lede) return '<p class="' + C.lede + '">' + inline(b.lede) + '</p>';
+    if (b.small) return '<p class="' + C.note + '">' + inline(b.small) + '</p>';
+    if (b.p) return '<p class="' + C.p + '">' + inline(b.p) + '</p>';
+    if (b.callout) return '<p class="' + C.callout + '">' + inline(b.callout) + '</p>';
+    if (b.diagram) return DIAGRAMS[b.diagram] || '';
+
+    // Diagrams and formulas are never marked up — asterisks and backticks are
+    // content there, not syntax.
+    if (b.pre) return '<pre class="' + C.pre + '">' + esc(b.pre) + '</pre>';
+    if (b.formula) return '<pre class="' + C.formula + '">' + esc(b.formula) + '</pre>';
+
+    if (b.list) {
+      var tag = b.ordered ? 'ol' : 'ul';
+      return '<' + tag + ' class="' + C.list + ' ' + (b.ordered ? 'list-decimal' : 'list-disc') + '">' +
+        b.list.map(function (li) { return '<li>' + inline(li) + '</li>'; }).join('') +
+        '</' + tag + '>';
+    }
+    if (b.credits) {
+      return '<div class="flex flex-wrap gap-y-[.4em] gap-x-8 font-mono text-cap tracking-[.03em] text-muted">' +
+        b.credits.map(function (c) { return '<span>' + inline(c) + '</span>'; }).join('') + '</div>';
+    }
+    if (b.agenda) {
+      return '<ol class="' + C.agenda + '">' + b.agenda.map(function (r) {
+        var subs = (r[2] && r[2].length)
+          ? '<span class="flex flex-wrap gap-y-[.15em] gap-x-[1.15em] font-serif font-normal ' +
+              'tracking-normal text-[.56em] leading-[1.4] text-muted">' +
+            r[2].map(function (t, j) {
+              return '<span class="inline-flex items-baseline gap-[.4em]">' +
+                '<i class="not-italic font-mono text-[.82em] tracking-[.04em] uppercase ' +
+                'text-accent min-w-[2.1em] text-right">' + roman(j + 1) + '</i>' +
+                inline(t) + '</span>';
+            }).join('') + '</span>'
+          : '';
+        return '<li class="' + C.agendaLi + '">' +
+          '<i class="not-italic font-mono font-normal text-[.62em] tracking-[.08em] text-accent">' +
+          esc(r[0]) + '</i><div class="flex flex-col gap-[.2em]">' + inline(r[1]) + subs + '</div></li>';
+      }).join('') + '</ol>';
+    }
+    if (b.rows) {
+      return '<div class="' + C.rows + '">' + b.rows.map(function (r) {
+        return '<div class="' + C.row + '"><b class="font-sans font-semibold">' +
+          inline(r[0]) + '</b><span>' + inline(r[1]) + '</span></div>';
+      }).join('') + '</div>';
+    }
+    if (b.beat) {
+      return '<dl class="' + C.beat + '">' + b.beat.map(function (r) {
+        return '<dt class="' + C.dt + '">' + inline(r[0]) + '</dt>' +
+          '<dd class="' + C.dd + ' m-0">' + inline(r[1]) + '</dd>';
+      }).join('') + '</dl>';
+    }
+    if (b.table) {
+      var head = b.table.head
+        ? '<tr>' + b.table.head.map(function (h) {
+            return '<th class="' + C.th + ' last:pr-0">' + inline(h) + '</th>';
+          }).join('') + '</tr>'
+        : '';
+      var rows = (b.table.rows || []).map(function (row) {
+        return '<tr>' + row.map(function (c) {
+          return '<td class="' + C.td + ' last:pr-0">' + inline(c) + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+      return '<div class="overflow-x-auto"><table class="' + C.table + '">' + head + rows + '</table></div>';
+    }
+    if (b.split) {
+      return '<div class="' + C.split + '">' + b.split.map(function (col) {
+        return '<div class="' + C.stack + '">' + col.map(block).join('') + '</div>';
+      }).join('') + '</div>';
+    }
+
+    if (b.cover) {
+      var c = b.cover, inst = c.institution || {};
+      var line = function (cls, v) { return v ? '<span class="' + cls + '">' + inline(v) + '</span>' : ''; };
+
+      var logos = (c.logos && c.logos.length)
+        ? '<div class="' + C.coverLogos + '">' + c.logos.map(function (l) {
+            if (!l.src) return '<span class="' + C.logoSlot + '" data-slot="' + esc(l.alt || 'logo') + '">' + inline(l.alt || 'logo') + '</span>';
+            var img = '<img src="' + esc(l.src) + '" alt="' + esc(l.alt || '') +
+              '" class="' + C.logoImg + (l.invertOnDark ? ' invert-dark' : '') + '"' +
+              ' data-slot="' + esc(l.alt || 'logo') + '">';
+            return l.plate ? '<span class="' + C.logoPlate + '">' + img + '</span>' : img;
+          }).join('') + '</div>'
+        : '';
+
+      var top = '<header class="' + C.coverTop + '"><div class="' + C.coverInst + '">' +
+        line(C.uni, inst.university) + line(C.school, inst.school) +
+        line(C.dept, inst.department) + '</div>' + logos + '</header>';
+
+      var degree = (c.degreeIntro || c.degree || c.degreeField)
+        ? '<div class="' + C.degree + '">' +
+            (c.degreeIntro ? '<span>' + inline(c.degreeIntro) + '</span>' : '') +
+            (c.degree ? '<b>' + inline(c.degree) + '</b>' : '') +
+            (c.degreeField ? '<span>' + inline(c.degreeField) + '</span>' : '') + '</div>'
+        : '';
+      var mid = '<div class="' + C.coverMid + '">' + line(C.country, inst.country) +
+        (c.kind ? '<div class="' + C.kind + '">' + inline(c.kind) + '</div>' : '') + degree +
+        (c.title ? '<div class="' + C.coverTitle + '">' + inline(c.title) + '</div>' : '') +
+        (c.year ? '<div class="' + C.year + '">' + inline(c.year) + '</div>' : '') + '</div>';
+
+      var jury = (c.jury && c.jury.length)
+        ? '<div class="' + C.jury + '">' +
+            (c.defenseLead ? '<p class="' + C.coverLbl + ' mb-[clamp(.5rem,1.5vh,1rem)]">' + inline(c.defenseLead) + '</p>' : '') +
+            '<ul>' + c.jury.map(function (j) {
+              return '<li><b>' + inline(j[0]) + '</b><span>' + inline(j[1] || '') + '</span></li>';
+            }).join('') + '</ul></div>'
+        : '<div></div>';
+      var people = [c.author, c.host].filter(Boolean).map(function (person) {
+        return '<div><span class="' + C.coverLbl + '">' + inline(person.label || '') + '</span><b>' +
+          inline(person.name || '') + '</b></div>';
+      }).join('');
+      var bottom = '<footer class="' + C.coverBottom + '">' + jury +
+        '<div class="' + C.people + '">' + people + '</div></footer>';
+
+      return '<div class="' + C.cover + '">' + top + mid + bottom + '</div>';
+    }
+    return '';
+  }
+
+  function slide(s) {
+    var blocks = (s.blocks || []).slice();
+    var head = '';
+    if (s.eyebrow && s.eyebrow.length) {
+      head += '<div class="' + C.eyebrow + '"><b class="font-bold">' + esc(s.eyebrow[0]) + '</b>' +
+        (s.eyebrow[1] ? '<span class="text-muted tracking-[.1em]">' + esc(s.eyebrow[1]) + '</span>' : '') +
+        '</div>';
+    }
+    // The opening heading belongs to the header band, not to the flowing body.
+    if (blocks.length && (blocks[0].h1 || blocks[0].h2)) head += block(blocks.shift());
+    if (head) head = '<div class="' + C.head + '">' + head + '</div>';
+
+    /*
+     * Group what is left: wide blocks stand alone, and each run of two or more
+     * prose blocks flows into two columns so the body fills the page.
+     */
+    var body = '', run = [];
+    function flush() {
+      if (!run.length) return;
+      body += run.length > 1
+        ? '<div class="' + C.cols + '">' + run.map(function (h) {
+            return '<div class="' + C.colItem + '">' + h + '</div>'; }).join('') + '</div>'
+        : '<div class="' + C.measured + '">' + run[0] + '</div>';
+      run = [];
+    }
+    blocks.forEach(function (b) {
+      if (isWide(b)) { flush(); body += block(b); }
+      else { run.push(block(b)); }
+    });
+    flush();
+
+    var el = document.createElement('section');
+    el.className = C.slide + (s.center ? ' items-center text-center' : '');
+    el.dataset.part = s.part || '';
+    el.dataset.title = s.title || '';
+    el.innerHTML = '<div class="w-full flex ' + (s.center ? 'justify-center' : 'justify-start') + '">' +
+      '<div class="fit ' + C.fit + '">' + head +
+      '<div class="' + C.body + '">' + body + '</div></div></div>';
+    return el;
+  }
+
+  var deck = document.getElementById('deck');
+
+  /*
+   * Shrinks a slide that would otherwise run past the fold, so no slide ever
+   * scrolls. Only the ones that need it are touched — the rest keep the full
+   * type size. A hidden slide measures as zero, so this runs on the active one.
+   */
+  function fitSlide(el) {
+    if (!el) return;
+    var box = el.firstElementChild;
+    var inner = box && box.firstElementChild;
+    if (!inner) return;
+
+    box.style.height = '';
+    inner.style.transform = '';
+
+    var natural = inner.getBoundingClientRect().height;
+    if (!natural) return;
+    var cs = getComputedStyle(el);
+    var room = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if (room <= 0) return;
+
+    var scale = Math.min(1, room / natural);
+    if (scale >= 0.999) return;
+    inner.style.transform = 'scale(' + scale + ')';
+    // The transform is visual only, so the box still has to claim the height
+    // the scaled content actually occupies or the slide stays off-centre.
+    box.style.height = natural * scale + 'px';
+  }
+
+  function fail(message) {
+    deck.innerHTML =
+      '<div class="px-gutter py-[clamp(2rem,6vw,5rem)] max-w-[70ch] flex flex-col gap-3">' +
+      '<h2 class="' + C.h2 + '">Slides could not load</h2>' +
+      '<p class="' + C.lede + '">' + esc(message) + '</p>' +
+      '<p class="' + C.note + '">This page reads <code class="font-mono">slides.json</code> over HTTP, ' +
+      'which a <code class="font-mono">file://</code> tab cannot do. Run ' +
+      '<code class="font-mono">pnpm dev</code> and open ' +
+      '<code class="font-mono">http://localhost:3000/presentation/</code>.</p></div>';
+  }
+
+  fetch('slides.json', { cache: 'no-store' })
+    .then(function (r) {
+      if (!r.ok) throw new Error('slides.json returned ' + r.status);
+      return r.json();
+    })
+    .then(function (data) { start(data); })
+    .catch(function (e) { fail(e.message); });
+
+  function start(file) {
+    var data = file.slides || [];
+    var meta = file.meta || {};
+    if (!data.length) return fail('slides.json contains no slides.');
+
+    // The app mark rides above the stage rather than inside a slide, so it sits
+    // in the same corner on every one of them without being repeated in data.
+    if (meta.mark && meta.mark.src) {
+      var markEl = document.createElement('div');
+      markEl.className = 'fixed z-10 pointer-events-none right-gutter top-[clamp(.85rem,2.6vh,1.7rem)]';
+      markEl.innerHTML = '<img src="' + esc(meta.mark.src) + '" alt="' +
+        esc(meta.mark.alt || '') + '" class="block w-auto opacity-90 ' +
+        'h-[clamp(24px,3.4vh,36px)]' + (meta.mark.invertOnDark ? ' invert-dark' : '') + '">';
+      markEl.querySelector('img').addEventListener('error', function () { markEl.remove(); });
+      document.body.appendChild(markEl);
+    }
+
+    deck.innerHTML = '';
+    var slides = data.map(function (s) {
+      var el = slide(s);
+      deck.appendChild(el);
+      return el;
+    });
+
+    var hud = document.getElementById('hud');
+    var cur = document.getElementById('cur');
+    var bar = document.getElementById('bar');
+    var part = document.getElementById('part');
+    var panel = document.getElementById('panel');
+    var list = document.getElementById('list');
+    hud.hidden = false;
+    document.getElementById('tot').textContent = slides.length;
+    var at = 0;
+
+    function show(n) {
+      at = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach(function (s, i) {
+        s.classList.toggle('hidden', i !== at);
+        s.classList.toggle('flex', i === at);
+        s.classList.toggle('animate-rise', i === at);
+      });
+      cur.textContent = at + 1;
+      bar.style.width = ((at + 1) / slides.length * 100) + '%';
+      part.textContent = slides[at].dataset.part || '';
+      fitSlide(slides[at]);
+      window.scrollTo(0, 0);
+      try { location.hash = at ? 's' + (at + 1) : ''; } catch (e) { /* sandboxed */ }
+    }
+
+    slides.forEach(function (s, i) {
+      var li = document.createElement('li');
+      li.className = 'break-inside-avoid';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'w-full text-left cursor-pointer grid grid-cols-[2.4em_1fr] gap-[.8em] ' +
+        'items-baseline py-[.42em] border-b border-rule font-sans font-medium ' +
+        'tracking-[-.01em] text-[clamp(.85rem,1.35vw,1rem)] text-ink hover:text-accent';
+      b.innerHTML = '<i class="not-italic font-mono text-[.78em] text-muted">' +
+        String(i + 1).padStart(2, '0') + '</i>';
+      b.appendChild(document.createTextNode(s.dataset.title || ''));
+      b.addEventListener('click', function () { panel.hidden = true; show(i); });
+      li.appendChild(b);
+      list.appendChild(li);
+    });
+
+    document.getElementById('idx').addEventListener('click', function () {
+      panel.hidden = !panel.hidden;
+    });
+
+    /*
+     * Full screen is offered only where the browser actually allows it — inside
+     * a sandboxed frame the request is refused, and a button that does nothing
+     * is worse than no button.
+     */
+    var full = document.getElementById('full');
+    function toggleFullscreen() {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(function () { full.hidden = true; });
+    }
+    if (document.fullscreenEnabled) {
+      full.hidden = false;
+      full.addEventListener('click', toggleFullscreen);
+      document.addEventListener('fullscreenchange', function () {
+        full.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+        fitSlide(slides[at]);
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      var k = e.key;
+      if (k === 'Escape' || k === 'o' || k === 'O') {
+        panel.hidden = !panel.hidden; e.preventDefault(); return;
+      }
+      if (k === 'f' || k === 'F') {
+        if (document.fullscreenEnabled) toggleFullscreen();
+        e.preventDefault(); return;
+      }
+      if (!panel.hidden) return;
+      if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter') { show(at + 1); e.preventDefault(); }
+      else if (k === 'ArrowLeft' || k === 'PageUp' || k === 'Backspace') { show(at - 1); e.preventDefault(); }
+      else if (k === 'Home') { show(0); e.preventDefault(); }
+      else if (k === 'End') { show(slides.length - 1); e.preventDefault(); }
+    });
+
+    // A logo whose file is not in place yet falls back to the dashed slot,
+    // so the cover never shows a broken-image icon while assets are missing.
+    deck.querySelectorAll('img[data-slot]').forEach(function (img) {
+      img.addEventListener('error', function () {
+        var slot = document.createElement('span');
+        slot.className = C.logoSlot;
+        slot.textContent = img.dataset.slot || 'logo';
+        img.replaceWith(slot);
+      });
+    });
+
+    var m = /^#s(\d+)$/.exec(location.hash);
+    show(m ? parseInt(m[1], 10) - 1 : 0);
+
+    /*
+     * Every measurement below can only be trusted once the styles that drive it
+     * exist. Web fonts land after first paint, and Tailwind's browser build
+     * generates its stylesheet from the DOM we just built — so re-fit on both,
+     * and once more on load as the backstop.
+     */
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { fitSlide(slides[at]); });
+    }
+    new MutationObserver(function () { fitSlide(slides[at]); })
+      .observe(document.head, { childList: true, subtree: true });
+    window.addEventListener('load', function () { fitSlide(slides[at]); });
+
+    var resizeTimer;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () { fitSlide(slides[at]); }, 120);
+    });
+  }
+})();
+</script>
+</body></html>

@@ -17,6 +17,7 @@
       "!**/dist",
       "!**/agent/generated",
       "!**/prisma/migrations",
+      "!**/public/presentation",
       "!**/pnpm-lock.yaml",
       "!**/next-env.d.ts",
       "!**/*.tsbuildinfo"

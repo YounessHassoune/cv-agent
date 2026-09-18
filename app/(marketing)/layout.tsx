@@ -32,6 +32,14 @@ export default function MarketingLayout({ children }: { readonly children: React
             >
               How it works
             </Link>
+            {/* Static deck under public/, so a plain anchor: the router has no
+                route for it and <Link> would client-navigate into a 404. */}
+            <a
+              className="text-muted-foreground text-sm transition-colors hover:text-foreground"
+              href="/presentation/index.html"
+            >
+              Presentation
+            </a>
           </nav>
         </div>
       </footer>
